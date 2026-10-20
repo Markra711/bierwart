@@ -11,7 +11,9 @@ Strichliste mit Kasse für eine Amateurmannschaft. Flutter (Android zuerst) + Fi
 | `docs/styleguide.md` + `docs/design/tokens.json` | Design: Tokens, Komponenten, Texte |
 | `docs/decisions/` | ADRs; neue Grundsatzentscheidungen bekommen einen neuen ADR |
 
-Externe Quellen (verbindlich, `docs/` spiegelt sie): Anforderungsdokument, Design System, Design-Canvas. Die Links stehen am Kopf der jeweiligen Datei in `docs/`.
+**Anforderungen:** `docs/requirements.md` ist maßgeblich. Das Online-Anforderungsdokument ist eingefroren und wird nicht mehr gepflegt. Anforderungen ändern sich nur dort, mit IDs, im selben Commit wie der Code.
+
+**Design:** Design System und Design-Canvas sind die externen, verbindlichen Quellen. `docs/styleguide.md` und `docs/design/tokens.json` spiegeln sie. Die Links stehen am Kopf von `docs/styleguide.md`.
 
 ## Befehle
 
