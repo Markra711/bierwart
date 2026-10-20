@@ -1,1 +1,41 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"bier-wart","appId":"1:797384576516:android:92ac51067bd79ec8fa6f51","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"bier-wart","configurations":{"android":"1:797384576516:android:92ac51067bd79ec8fa6f51","ios":"1:797384576516:ios:bc02e350b566c332fa6f51"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "bier-wart",
+          "appId": "1:797384576516:android:92ac51067bd79ec8fa6f51",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "bier-wart",
+          "configurations": {
+            "android": "1:797384576516:android:92ac51067bd79ec8fa6f51",
+            "ios": "1:797384576516:ios:bc02e350b566c332fa6f51"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "functions": {
+      "port": 5001
+    },
+    "ui": {
+      "enabled": true
+    },
+    "singleProjectMode": true
+  }
+}
