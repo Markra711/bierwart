@@ -1,9 +1,249 @@
 rules_version = '2';
 
-// Platzhalter: alles gesperrt, bis die Rules aus docs/architecture.md
-// umgesetzt und im Emulator getestet sind (NFA-07).
+// Security Rules für Bierwart, Release 1 ohne Cloud Functions (ADR-0009).
+// Die Rules sind die Geschäftslogik: Jede Buchung ist ein Batch aus Buchung
+// und Summen, und die Rules prüfen, dass beides zusammenpasst.
+// Muster und Wirkungen: docs/architecture.md, „Summen“ und „Buchungen“.
+// Tests: rules-tests/.
+//
+// Stand: Buchungen. Stammdaten und Verwaltung folgen; bis dahin dürfen
+// Clients dort nichts schreiben.
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    match /kassen/{k} {
+      function pfad(sammlung, id) {
+        return /databases/$(database)/documents/kassen/$(k)/$(sammlung)/$(id);
+      }
+      function nachher(sammlung, id) {
+        return getAfter(pfad(sammlung, id)).data;
+      }
+      function istBierwart() {
+        return request.auth != null && exists(pfad('bierwarte', request.auth.uid));
+      }
+      function istKassenwart() {
+        return get(/databases/$(database)/documents/kassen/$(k)).data.kassenwartUid == request.auth.uid;
+      }
+      // Eigenes Portemonnaie, als Kassenwart auch die Kasse (ADR-0004).
+      function ortErlaubt(ortId) {
+        return ortId == request.auth.uid || (ortId == 'kasse' && istKassenwart());
+      }
+      function betragGueltig(betrag) {
+        return betrag is int && betrag > 0;   // ADR-0002
+      }
+
+      // ---- Summen -----------------------------------------------------------
+
+      // Die Buchung, auf die ein Summen-Dokument verweist, muss in genau
+      // diesem Request entstehen: Ihr Serverzeitstempel ist request.time.
+      function buchungDiesesRequests() {
+        let b = nachher('buchungen', request.resource.data.letzteBuchungId);
+        return b.stempel.am == request.time ? b : null;
+      }
+      function nurFelder(felder) {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(felder);
+      }
+      function delta(feld) {
+        return request.resource.data[feld] - resource.data[feld];
+      }
+      function summeGeaendert(feld, wirkung) {
+        return nurFelder([feld, 'letzteBuchungId'])
+          && wirkung == delta(feld);
+      }
+
+      // Wirkung einer Buchung b auf den Saldo eines Mitglieds.
+      function saldoWirkung(b, mitgliedId) {
+        return b.get('mitgliedId', '') != mitgliedId ? 0
+          : b.typ == 'strich' ? b.preisCents
+          : b.typ == 'zahlung' ? -b.betragCents
+          : b.typ == 'storno' && b.bezugTyp == 'strich' ? -b.preisCents
+          : 0;
+      }
+
+      // Wirkung auf den Bestand einer Sorte. Absolute Buchungen
+      // (bestandKorrektur) wirken mit ihrer Differenz.
+      function bestandWirkung(b, sorteId) {
+        return (b.typ == 'strich' || b.typ == 'strichBar') && b.sorteId == sorteId ? -1
+          : b.typ == 'storno' && b.sorteId == sorteId ? 1
+          : b.typ == 'einkauf' ? b.zeilen.get(sorteId, 0)
+          : b.typ == 'bestandKorrektur' && b.sorteId == sorteId ? b.differenz
+          : 0;
+      }
+
+      // Wirkung auf den Stand eines Orts (Kasse oder Portemonnaie).
+      function standWirkung(b, ortId) {
+        return b.typ == 'uebergabe' ?
+            (b.vonOrtId == ortId ? -b.betragCents : b.nachOrtId == ortId ? b.betragCents : 0)
+          : b.typ == 'kassensturz' ? (ortId == 'kasse' ? b.differenzCents : 0)
+          : b.get('ortId', '') != ortId ? 0
+          : b.typ == 'strichBar' ? b.preisCents
+          : b.typ == 'storno' && b.bezugTyp == 'strichBar' ? -b.preisCents
+          : b.typ == 'zahlung' ? b.betragCents
+          : b.typ == 'einkauf' ? -b.betragCents
+          : b.typ == 'einzahlung' ? b.betragCents
+          : b.typ == 'auszahlung' ? -b.betragCents
+          : 0;
+      }
+
+      allow read: if istBierwart();
+
+      match /bierwarte/{uid} {
+        allow read: if istBierwart();
+      }
+
+      match /mitglieder/{mitgliedId} {
+        allow read: if istBierwart();
+        allow update: if buchungDiesesRequests() != null
+          && summeGeaendert('saldoCents', saldoWirkung(buchungDiesesRequests(), mitgliedId));
+      }
+
+      match /sorten/{sorteId} {
+        function bestandGueltig(b) {
+          // Einkauf: jede Zeile eine positive ganze Zahl (BES-04).
+          return (b.typ != 'einkauf' || (delta('bestand') is int && delta('bestand') > 0))
+            // Bestandskorrektur: gezählter Wert gesetzt, Differenz zum Serverstand (BES-06).
+            && (b.typ != 'bestandKorrektur' || request.resource.data.bestand == b.gezaehlt);
+        }
+        allow read: if istBierwart();
+        allow update: if buchungDiesesRequests() != null
+          && summeGeaendert('bestand', bestandWirkung(buchungDiesesRequests(), sorteId))
+          && bestandGueltig(buchungDiesesRequests());
+      }
+
+      match /orte/{ortId} {
+        function standGueltig(b) {
+          // Kassensturz: gezählter Betrag gesetzt, Differenz zum Serverstand (GEL-06).
+          return b.typ != 'kassensturz' || request.resource.data.standCents == b.gezaehltCents;
+        }
+        allow read: if istBierwart();
+        allow update: if buchungDiesesRequests() != null
+          && summeGeaendert('standCents', standWirkung(buchungDiesesRequests(), ortId))
+          && standGueltig(buchungDiesesRequests());
+      }
+
+      // ---- Buchungen --------------------------------------------------------
+
+      // Alle Summen-Dokumente, die eine Buchung betrifft, müssen im selben
+      // Batch auf sie verweisen. Sonst gäbe es Buchungen ohne Wirkung.
+      function verweistAuf(sammlung, id, buchungId) {
+        return nachher(sammlung, id).letzteBuchungId == buchungId;
+      }
+      function felder(d, zusatz) {
+        return d.keys().hasOnly(['typ', 'stempel'].concat(zusatz))
+          && d.keys().hasAll(['typ', 'stempel'].concat(zusatz));
+      }
+      // Gebucht wird nur auf aktive Mitglieder; auf „Gäste“ nur bar (KAD-03).
+      function mitgliedBuchbar(mitgliedId, offen) {
+        let m = nachher('mitglieder', mitgliedId);
+        return m.get('entfernt', false) != true && !(offen && m.get('istGast', false) == true);
+      }
+      // Preis zum Buchungszeitpunkt: aktueller oder vorheriger (BES-02, ADR-0009).
+      function preisGueltig(d) {
+        let s = nachher('sorten', d.sorteId);
+        return d.preisCents is int
+          && (d.preisCents == s.preisCents || d.preisCents == s.get('vorherigerPreisCents', -1));
+      }
+
+      // Einkauf: Regeln kennen keine Schleifen, deshalb ausgerollt bis 10 Zeilen
+      // (ADR-0009: im Emulator gehen 12, 10 als Sicherheitsabstand).
+      function zeileGebucht(d, i, buchungId) {
+        return d.zeilen.size() <= i || verweistAuf('sorten', d.zeilen.keys()[i], buchungId);
+      }
+      function zeilenGueltig(d, buchungId) {
+        return d.zeilen is map && d.zeilen.size() > 0 && d.zeilen.size() <= 10
+          && zeileGebucht(d, 0, buchungId) && zeileGebucht(d, 1, buchungId)
+          && zeileGebucht(d, 2, buchungId) && zeileGebucht(d, 3, buchungId)
+          && zeileGebucht(d, 4, buchungId) && zeileGebucht(d, 5, buchungId)
+          && zeileGebucht(d, 6, buchungId) && zeileGebucht(d, 7, buchungId)
+          && zeileGebucht(d, 8, buchungId) && zeileGebucht(d, 9, buchungId);
+      }
+
+      // Storno nur für Striche, nur einmal: feste ID storno-{bezugId} (STR-06).
+      function stornoGueltig(d, buchungId) {
+        let alt = get(pfad('buchungen', d.bezugId)).data;
+        return buchungId == 'storno-' + d.bezugId
+          && alt.typ in ['strich', 'strichBar']
+          && d.bezugTyp == alt.typ
+          && d.mitgliedId == alt.mitgliedId
+          && d.sorteId == alt.sorteId
+          && d.preisCents == alt.preisCents
+          && verweistAuf('sorten', d.sorteId, buchungId)
+          && (d.bezugTyp == 'strich'
+              ? felder(d, ['bezugId', 'bezugTyp', 'mitgliedId', 'sorteId', 'preisCents'])
+                && verweistAuf('mitglieder', d.mitgliedId, buchungId)
+              : felder(d, ['bezugId', 'bezugTyp', 'mitgliedId', 'sorteId', 'preisCents', 'ortId'])
+                && ortErlaubt(d.ortId)
+                && verweistAuf('orte', d.ortId, buchungId));
+      }
+
+      function buchungGueltig(d, buchungId) {
+        return (d.typ == 'strich'                                           // STR-02
+            && felder(d, ['mitgliedId', 'sorteId', 'preisCents'])
+            && mitgliedBuchbar(d.mitgliedId, true)
+            && preisGueltig(d)
+            && verweistAuf('mitglieder', d.mitgliedId, buchungId)
+            && verweistAuf('sorten', d.sorteId, buchungId))
+          || (d.typ == 'strichBar'                                          // STR-03
+            && felder(d, ['mitgliedId', 'sorteId', 'preisCents', 'ortId'])
+            && mitgliedBuchbar(d.mitgliedId, false)
+            && preisGueltig(d)
+            && ortErlaubt(d.ortId)
+            && verweistAuf('sorten', d.sorteId, buchungId)
+            && verweistAuf('orte', d.ortId, buchungId))
+          || (d.typ == 'storno' && stornoGueltig(d, buchungId))             // STR-04, STR-06
+          || (d.typ == 'zahlung'                                            // GEL-02, GEL-03
+            && felder(d, ['mitgliedId', 'betragCents', 'ortId'])
+            && betragGueltig(d.betragCents)
+            && mitgliedBuchbar(d.mitgliedId, false)
+            && ortErlaubt(d.ortId)
+            && verweistAuf('mitglieder', d.mitgliedId, buchungId)
+            && verweistAuf('orte', d.ortId, buchungId))
+          || (d.typ == 'einkauf'                                            // BES-04, BES-05
+            && felder(d, ['zeilen', 'betragCents', 'ortId'])
+            && d.betragCents is int && d.betragCents >= 0
+            && ortErlaubt(d.ortId)
+            && verweistAuf('orte', d.ortId, buchungId)
+            && zeilenGueltig(d, buchungId))
+          || (d.typ == 'bestandKorrektur'                                   // BES-06
+            && felder(d, ['sorteId', 'gezaehlt', 'differenz'])
+            && d.gezaehlt is int && d.differenz is int
+            && verweistAuf('sorten', d.sorteId, buchungId))
+          || (d.typ == 'uebergabe'                                          // GEL-04
+            && felder(d, ['vonOrtId', 'nachOrtId', 'betragCents'])
+            && istKassenwart()
+            && betragGueltig(d.betragCents)
+            && (d.vonOrtId == 'kasse') != (d.nachOrtId == 'kasse')
+            && verweistAuf('orte', d.vonOrtId, buchungId)
+            && verweistAuf('orte', d.nachOrtId, buchungId))
+          || ((d.typ == 'einzahlung' || d.typ == 'auszahlung')              // GEL-05
+            && felder(d, ['ortId', 'betragCents', 'grund'])
+            && betragGueltig(d.betragCents)
+            && d.grund is string && d.grund.size() > 0 && d.grund.size() <= 200
+            && ortErlaubt(d.ortId)
+            && verweistAuf('orte', d.ortId, buchungId))
+          || (d.typ == 'kassensturz'                                        // GEL-06
+            && felder(d, ['gezaehltCents', 'differenzCents'])
+            && istKassenwart()
+            && d.gezaehltCents is int && d.differenzCents is int
+            && verweistAuf('orte', 'kasse', buchungId));
+      }
+
+      function stempelGueltig(s) {
+        return s.keys().hasOnly(['uid', 'name', 'am', 'geraetAm'])
+          && s.uid == request.auth.uid
+          && s.am == request.time
+          && s.name == get(pfad('bierwarte', request.auth.uid)).data.name;
+      }
+
+      match /buchungen/{buchungId} {
+        allow read: if istBierwart();
+        allow create: if istBierwart()
+          && stempelGueltig(request.resource.data.stempel)
+          && buchungGueltig(request.resource.data, buchungId);
+        allow update, delete: if false;   // LOG-02
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

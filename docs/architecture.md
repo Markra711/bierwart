@@ -188,7 +188,7 @@ Die Rules sind in Release 1 die Geschäftslogik. Grundsätze (NFA-07):
 - Jede Verwaltungsaktion schreibt ihre Log-Buchung im selben Batch. Die Rules verlangen sie (`existsAfter`).
 - `einladungen` und `wiederherstellung`: nur `get` für Angemeldete, kein `list`.
 
-Das Muster für Buchungen ist im Prototyp umgesetzt und getestet (Branch `spike/rules-buchungen`, `firestore.rules` und `rules-tests/`). Auszug:
+Die Rules für **alle Buchungsarten** liegen in `firestore.rules` und sind mit 47 Emulator-Tests in `rules-tests/buchungen.test.js` abgedeckt: Strich offen und bar, Storno, Zahlung, Einkauf, Bestandskorrektur, Übergabe, Ein-/Auszahlung, Kassensturz, dazu die Fälle ohne passende Buchung und die Unveränderlichkeit des Logs. Kern des Musters:
 
 ```
 function buchungDiesesRequests() {
@@ -196,19 +196,22 @@ function buchungDiesesRequests() {
   return b.stempel.am == request.time ? b : null;
 }
 match /mitglieder/{mitgliedId} {
-  allow update: if nurFelder(['saldoCents', 'letzteBuchungId'])
-    && buchungDiesesRequests() != null
-    && saldoWirkung(buchungDiesesRequests(), mitgliedId) == delta('saldoCents');
+  allow update: if buchungDiesesRequests() != null
+    && summeGeaendert('saldoCents', saldoWirkung(buchungDiesesRequests(), mitgliedId));
 }
 match /buchungen/{buchungId} {
   allow create: if istBierwart()
-    && request.resource.data.stempel.uid == request.auth.uid
-    && request.resource.data.stempel.am == request.time
+    && stempelGueltig(request.resource.data.stempel)   // uid, Name des Bierwarts, am == request.time
     && buchungGueltig(request.resource.data, buchungId);   // je typ: Felder, Beträge int,
                                                            // Ort erlaubt, alle Summen verweisen auf diese Buchung
-  allow update: if false;
+  allow update, delete: if false;
 }
 ```
+
+Zusätzlich zu den Entscheidungen oben prüfen die Rules:
+- Der Name im Stempel ist der Name des buchenden Bierwarts (`bierwarte/{uid}.name`).
+- Auf entfernte Mitglieder wird nicht gebucht, und auf „Gäste“ nicht offen.
+- Storno geht nur für Striche (`strich`, `strichBar`). Die Felder müssen zur Ursprungsbuchung passen (siehe offene Frage 24).
 
 ### Verwaltung als Batches
 
@@ -239,11 +242,7 @@ match /buchungen/{buchungId} {
 
 Die Rules werden mit `@firebase/rules-unit-testing` gegen den Firestore-Emulator getestet: je Regel ein erlaubter und mindestens ein verbotener Fall. Die Tests liegen in `rules-tests/` (Node, Vitest).
 
-**Noch nicht im Prototyp getestet** und deshalb Pflicht, bevor die Rules auf `main` kommen:
-- Strich bar, Storno, Übergabe, Ein-/Auszahlung, Kassensturz, Bestandskorrektur
-- vorheriger Preis
-- alle Stammdaten und alle Verwaltungsaktionen aus der Tabelle
-- ob `hashing.sha256()` und die Umwandlung in eine Hex-ID so funktionieren wie geplant
+**Noch offen:** Rules und Tests für Stammdaten und alle Verwaltungsaktionen aus der Tabelle. Dazu die Prüfung, ob `hashing.sha256()` und die Umwandlung in eine Hex-ID so funktionieren wie geplant. Bis dahin dürfen Clients dort nichts schreiben.
 
 ### App Check
 
@@ -324,8 +323,8 @@ Bausteine:
 - Die App verbindet sich im Debug-Build mit den Emulatoren, wenn sie mit `--dart-define=USE_EMULATORS=true` gestartet wird.
 - Tests:
   - Dart: Unit-Tests für Domain (Geld, Buchungswirkung, Batch-Aufbau), Widget-Tests für Bildschirme.
-  - Rules: `rules-tests/` mit `@firebase/rules-unit-testing` gegen den Emulator (NFA-07): `firebase emulators:exec --only firestore --project demo-bierwart "npm --prefix rules-tests test"`.
-- CI (GitHub Actions): `flutter analyze`, `flutter test`. Die Rules-Tests kommen als eigener Job dazu, sobald die Rules auf `main` liegen.
+  - Rules: `rules-tests/` mit `@firebase/rules-unit-testing` gegen den Emulator (NFA-07): `npm --prefix rules-tests run test:emulator`. Die Firebase CLI ist dort als feste Version eingetragen, damit lokal und in der CI dasselbe läuft.
+- CI (GitHub Actions): Job „Analyze und Tests“ (`flutter analyze`, `flutter test`) und Job „Security Rules (Emulator)“ (Node 22, Java 21, Rules-Tests).
 
 ## Vor dem ersten Deploy
 
@@ -393,3 +392,4 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 21. ~~**Übernahme eines Mitglieds ohne App**~~ – entschieden: braucht dieselbe Bestätigung wie bei Bierwarten, weil der Name danach im Stempel steht (siehe [Verwaltung als Batches](#verwaltung-als-batches)).
 22. ~~**Ablauf einer Übernahme-Anfrage**~~ – entschieden: 7 Tage gültig, vorher vom neuen Gerät zurückziehbar.
 23. **Wo sehen Bierwarte offene Anfragen?** Hinweis auf der Strichliste, in den Einstellungen oder beides? Warte-Bildschirm und Anfrage-Ansicht fehlen im Design-Canvas.
+24. **Fehlerhafte Zahlung korrigieren:** STR-06 erlaubt nur, Striche zu stornieren, und die Rules lassen nur das zu. Wie wird eine versehentlich gebuchte Zahlung zurückgenommen: per Storno auch für Zahlungen (STR-06 erweitern) oder über eine Auszahlung mit Grund?
