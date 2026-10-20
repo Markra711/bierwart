@@ -100,7 +100,7 @@ wiederherstellung/{codeHash}                 nur Functions
 | `kassen/{k}/namen/{nameKey}` | `mitgliedId` | App, im selben Batch wie Anlegen/Umbenennen |
 | `kassen/{k}/sorten/{id}` | `name`, `preisCents`, `aktiv` (Ausblenden, BES-01), `bestand` (Flaschen, darf < 0, STR-05), `reihenfolge` | App (Name, Preis, aktiv), Functions (Bestand) |
 | `kassen/{k}/orte/{ortId}` | `art` (`kasse`/`portemonnaie`), `uid`, `name`, `standCents`, `ehemalig` (GEL-08) | Functions |
-| `kassen/{k}/buchungen/{id}` | siehe unten | App (anlegen), Function (nur `angewendet`, `differenzCents`) |
+| `kassen/{k}/buchungen/{id}` | siehe unten | App (anlegen), Function (nur `angewendet`, `fehler`, `differenz`, `differenzCents`) |
 | `kassen/{k}/intern/geheim` | `wiederherstellungHash` | Functions |
 | `einladungen/{code}` | `kasseId`, `gueltigBis`, `ersetzt` (bool) | Functions |
 | `wiederherstellung/{codeHash}` | `kasseId` | Functions |
@@ -127,10 +127,10 @@ Gemeinsame Felder:
 | `storno` | `bezugId` und die Felder der Ursprungsbuchung | Gegenwirkung der Ursprungsbuchung | STR-04, STR-06 |
 | `zahlung` | `mitgliedId`, `betragCents`, `ortId` | Saldo − Betrag, Ort + Betrag | GEL-02, GEL-03 |
 | `einkauf` | `zeilen: [{sorteId, anzahl}]`, `betragCents`, `ortId` | Bestand + Anzahl je Zeile, Ort − Betrag | BES-04, BES-05 |
-| `bestandKorrektur` | `sorteId`, `gezaehlt` | Bestand = gezählt | BES-06 |
+| `bestandKorrektur` | `sorteId`, `gezaehlt` | Bestand = gezählt; die Function rechnet `differenz` beim Anwenden aus | BES-06 |
 | `uebergabe` | `vonOrtId`, `nachOrtId`, `betragCents` | von − Betrag, nach + Betrag | GEL-04 |
 | `einzahlung` / `auszahlung` | `ortId`, `betragCents`, `grund` | Ort ± Betrag | GEL-05 |
-| `kassensturz` | `gezaehltCents` | Kasse = gezählt, `differenzCents` setzt die Function | GEL-06 |
+| `kassensturz` | `gezaehltCents` | Kasse = gezählt; die Function rechnet `differenzCents` beim Anwenden aus | GEL-06 |
 | `mitgliedAngelegt`, `mitgliedUmbenannt`, `mitgliedEntfernt`, `sorteGeaendert`, … | jeweils alt/neu | keine Geldwirkung, nur Log | LOG-01, UI-09 |
 | `rolleGeaendert`, `bierwartBeigetreten`, `bierwartEntfernt`, `ausgetreten`, `einladungErneuert`, `kasseUmbenannt` | jeweils alt/neu | nur Log, von Functions geschrieben | LOG-01, ADM-01 bis ADM-06 |
 
@@ -140,15 +140,17 @@ Gemeinsame Felder:
 
 Die Bildschirme brauchen Salden, Bestand und Ortsstände sofort, ohne jedes Mal alle Buchungen zu lesen (NFA-12, Kosten).
 
-**Vorschlag: serverseitige Aggregation per Trigger.**
+**Entschieden: serverseitige Aggregation per Trigger** ([ADR-0007](decisions/0007-aggregation-per-trigger.md)).
 
 1. Die App legt nur die Buchung an (`angewendet: false`).
 2. Die Function `buchungAnwenden` (Firestore `onDocumentCreated`) wendet die Wirkung in **einer Transaktion** auf `mitglieder.saldoCents`, `sorten.bestand` und `orte.standCents` an. Danach setzt sie `angewendet: true` und `kassen.letzteBuchungAm`. Weil Trigger mindestens einmal feuern, prüft sie in der Transaktion zuerst `angewendet`. So ist der Trigger idempotent.
 3. Die App zeigt **Aggregat + Wirkung aller noch nicht angewendeten Buchungen**. Dafür hört sie auf `buchungen where angewendet == false`. Das sind fast immer nur wenige Dokumente. Darin stecken auch eigene Offline-Buchungen und Buchungen anderer Geräte, die die Function noch nicht verarbeitet hat. So ist eine Buchung lokal sofort sichtbar (NFA-06), offline korrekt (NFA-02) und auf anderen Geräten sichtbar, sobald sie synchronisiert ist, unabhängig von der Trigger-Latenz (NFA-05).
 
-Die Wirkung einer Buchung ist deshalb **zweimal implementiert**: in Dart (Anzeige) und in TypeScript (Function). Gemeinsame Testfälle als JSON-Fixtures halten beide gleich.
+`bestandKorrektur` und `kassensturz` setzen absolute Werte. Die Function rechnet sie beim Anwenden in eine Differenz zum aktuellen Stand um und speichert diese an der Buchung. Damit sind alle angewendeten Wirkungen reine Plus- und Minusbeträge, und die Reihenfolge der Trigger spielt keine Rolle.
 
-Alternative (verworfen, aber offen zur Diskussion): Die App schreibt Buchung und `FieldValue.increment()` auf die Aggregate in einem Batch, und die Rules prüfen mit `getAfter()`, ob die Inkremente zur Buchung passen. Das geht ohne Function und ohne Doppel-Implementierung. Aber ein Einkauf mit vielen Zeilen sprengt das Limit von 20 `get`-Aufrufen pro Anfrage, und die Rules werden schwer prüfbar. Siehe offene Fragen.
+Die Wirkung einer Buchung ist deshalb **zweimal implementiert**: in Dart (Anzeige) und in TypeScript (Function). Gemeinsame Testfälle als JSON-Fixtures unter `fixtures/buchungswirkung/` halten beide gleich.
+
+Verworfene Alternative: Die App schreibt Buchung und `FieldValue.increment()` auf die Aggregate in einem Batch, und die Rules prüfen mit `getAfter()`, ob die Inkremente zur Buchung passen. Das geht ohne Function und ohne Doppel-Implementierung. Aber ein Einkauf mit vielen Zeilen sprengt das Limit von 20 `get`-Aufrufen pro Anfrage, und die Rules werden schwer prüfbar. Details in ADR-0007.
 
 ### Abfragen und Indizes
 
@@ -327,7 +329,7 @@ Diese Schätzung ist zu prüfen, sobald es echte Nutzung gibt.
 
 Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige Teil gebaut wird.
 
-1. **Aggregation:** Trigger-basiert (Vorschlag oben) oder Client-Inkremente mit Rules-Prüfung? Davon hängen Rules, Functions und die Domain-Doppelung ab. Danach als ADR-0006 festhalten.
+1. ~~**Aggregation**~~ – entschieden: per Trigger ([ADR-0007](decisions/0007-aggregation-per-trigger.md)).
 2. **„Das bin ich (neues Gerät)“ absichern (AUTH-07, UC-03):** Wer den Einladungslink hat, kann jeden vergebenen Namen übernehmen, samt Portemonnaie und Rollen. Reicht das, oder braucht es eine Bestätigung (durch den Admin, durch einen anderen Bierwart, einen persönlichen Code)?
 3. ~~**Paketname / applicationId**~~ – entschieden: `io.github.markra711.bierwart` ([ADR-0006](decisions/0006-paketname.md)). Offen ist nur noch der Schritt in der Konsole: eine neue Android-App mit diesem Paketnamen registrieren und die neue `google-services.json` einspielen, danach `firebase_options.dart` neu erzeugen.
 4. **SHA-256-Fingerabdrücke** für `assetlinks.json`: Upload-Key und Play App Signing gibt es erst mit einem Play-Console-Eintrag. Gibt es den schon?
