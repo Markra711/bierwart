@@ -229,7 +229,7 @@ Die Rules werden mit `@firebase/rules-unit-testing` gegen den Firestore-Emulator
 
 ## Cloud Functions
 
-TypeScript, 2nd gen, Admin SDK. Region: Vorschlag dieselbe wie Firestore (`europe-west10`), siehe offene Fragen.
+TypeScript, 2nd gen, Admin SDK. Region: **alle Functions in `europe-west10`**, wie die Firestore-Datenbank. Firestore-Trigger müssen in der Region der Datenbank laufen, und Callables liegen so neben ihren Daten. Die Region wird im Code global gesetzt (`setGlobalOptions({ region: "europe-west10" })`). Daten und Verarbeitung liegen damit in Deutschland (NFA-09).
 
 ### Callables (brauchen Netz, die App zeigt sonst eine klare Meldung, NFA-10)
 
@@ -338,6 +338,7 @@ Bis dahin läuft alles lokal gegen die Emulatoren. Das Projekt bleibt im Spark-T
 - [ ] Projekt `bier-wart` auf den Blaze-Tarif umstellen (Konsole, macht Marvin). Nötig für Cloud Functions und Cloud Scheduler (ADR-0003, ADR-0007, ADR-0008, AUTH-10, AUTH-11).
 - [ ] Budget-Alarm von 1 € im Monat einrichten (NFA-12). Der Alarm warnt nur, er begrenzt die Kosten nicht.
 - [ ] Security Rules mit Emulator-Tests fertig, bevor irgendetwas deployt wird (NFA-07).
+- [ ] Beim ersten Deploy prüfen, dass der Firestore-Trigger `buchungAnwenden` in `europe-west10` angelegt wird. Der Emulator prüft Regionen nicht.
 - [ ] Deploy nur mit ausdrücklicher Freigabe (siehe `CLAUDE.md`).
 
 ## Vor dem Store-Release
@@ -370,7 +371,7 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 3. ~~**Paketname / applicationId**~~ – entschieden: `io.github.markra711.bierwart` ([ADR-0006](decisions/0006-paketname.md)). Offen ist nur noch der Schritt in der Konsole: eine neue Android-App mit diesem Paketnamen registrieren und die neue `google-services.json` einspielen, danach `firebase_options.dart` neu erzeugen.
 4. ~~**SHA-256-Fingerabdrücke**~~ – entschieden: zunächst nur der Debug-Key (siehe [Einladungslinks](#einladungslinks-hosting--app-links)); Upload-Key und Play App Signing stehen unter [Vor dem Store-Release](#vor-dem-store-release).
 5. ~~**Blaze-Tarif**~~ – entschieden: Spark bis zum ersten Deploy, dann Blaze mit Budget-Alarm (siehe [Vor dem ersten Deploy](#vor-dem-ersten-deploy)).
-6. **Functions-Region:** `europe-west10` passend zur Firestore-Region (bitte bestätigen, dass alle benötigten Trigger dort verfügbar sind) oder `europe-west3`?
+6. ~~**Functions-Region**~~ – entschieden: alle Functions in `europe-west10` (siehe [Cloud Functions](#cloud-functions)).
 7. **Sprache der Functions:** TypeScript (Vorschlag) oder Dart/anderes?
 8. **Storno eines Bar-Strichs (STR-06):** Erscheinen bar bezahlte Striche im Mitglied-Detail und sind sie stornierbar? Wenn ja: Geht das Geld aus dem Portemonnaie dessen zurück, der ihn gebucht hat, oder dessen, der storniert?
 9. **„Rückgängig“ (STR-04):** Gibt es ein Zeitfenster, nach dem die Snackbar-Aktion verschwindet, und darf nur der Buchende rückgängig machen?
