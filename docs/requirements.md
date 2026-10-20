@@ -1,9 +1,10 @@
 # Bierwart – Anforderungen
 
-> Spiegel des Anforderungsdokuments [„Bierwart – Anforderungen“](https://claude.ai/code/artifact/2f47fa84-46ad-4910-ab27-16ca8f10dbf0), Stand 2026-10-19 (Revision 14), Autor: Marvin.
-> IDs sind unverändert übernommen. Diagramme sind als Mermaid bzw. Tabelle nachgebaut.
+> **Diese Datei ist die maßgebliche Fassung der Anforderungen** (seit 2026-10-21). Änderungen entstehen hier, im selben Commit wie der Code, der sie betrifft (siehe `CLAUDE.md`).
 >
-> **Abweichungen vom Online-Dokument** (dort noch nachzutragen):
+> Ursprung: das Online-Dokument [„Bierwart – Anforderungen“](https://claude.ai/code/artifact/2f47fa84-46ad-4910-ab27-16ca8f10dbf0) von Marvin, Stand 2026-10-19. Es ist seit 2026-10-21 **eingefroren** und wird nicht mehr gepflegt. Die IDs sind unverändert übernommen, die Diagramme als Mermaid bzw. Tabelle nachgebaut.
+>
+> **Änderungen seit dem Ursprung** (bis 2026-10-21 auch ins Online-Dokument übertragen):
 > - 2026-10-21: UC-03 und AUTH-07 – Übernahme braucht die Bestätigung eines Bierwarts ([ADR-0008](decisions/0008-uebernahme-bestaetigung.md)).
 > - 2026-10-21: AUTH-10 und AUTH-11 in Release 2, ADM-05 ohne „serverseitig“, Annahme zu Cloud Functions angepasst – Release 1 ohne Cloud Functions ([ADR-0009](decisions/0009-release-1-ohne-cloud-functions.md)).
 > - 2026-10-21: KAD-03 – Buchungen auf „Gäste“ sind immer bar, nicht nur standardmäßig (architecture.md, offene Frage 10).
