@@ -11,3 +11,4 @@ Vorlage: [`template.md`](template.md). Dateiname: `NNNN-kurzer-titel.md`.
 | [0003](0003-anonyme-auth-wiederherstellungscode.md) | Anonyme Auth + Wiederherstellungscode | Angenommen |
 | [0004](0004-geld-modell-kasse-portemonnaies.md) | Geld-Modell: Kasse und Portemonnaies | Angenommen |
 | [0005](0005-barlow-dark-neumorphism.md) | Barlow + Dark Neumorphism | Angenommen |
+| [0006](0006-paketname.md) | Paketname `io.github.markra711.bierwart` | Angenommen |

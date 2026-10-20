@@ -1,6 +1,6 @@
 # CLAUDE.md – Bierwart
 
-Strichliste mit Kasse für eine Amateurmannschaft. Flutter (Android zuerst) + Firebase (anonyme Auth, Firestore, Cloud Functions, Hosting). Projekt-ID `bier-wart`, Firestore-Region `europe-west10`.
+Strichliste mit Kasse für eine Amateurmannschaft. Flutter (Android zuerst) + Firebase (anonyme Auth, Firestore, Cloud Functions, Hosting). Projekt-ID `bier-wart`, Firestore-Region `europe-west10`, Android-Paket `io.github.markra711.bierwart` (ADR-0006).
 
 ## Pflichtlektüre
 

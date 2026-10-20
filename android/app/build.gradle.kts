@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.bier_wart"
+    namespace = "io.github.markra711.bierwart"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -18,8 +18,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.bier_wart"
+        applicationId = "io.github.markra711.bierwart"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 26 // NFA-01: Android 8.0

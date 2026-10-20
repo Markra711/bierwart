@@ -289,7 +289,7 @@ sequenceDiagram
 Bausteine:
 
 - **Hosting** (`hosting/public/`):
-  - `/.well-known/assetlinks.json` mit Paketname und SHA-256-Fingerabdrücken (Debug-Key, Upload-Key, Play App Signing). Header `Content-Type: application/json`.
+  - `/.well-known/assetlinks.json` mit Paketname (`io.github.markra711.bierwart`) und SHA-256-Fingerabdrücken (Debug-Key, Upload-Key, Play App Signing). Header `Content-Type: application/json`.
   - `firebase.json`-Rewrite `/j/**` → `/j.html`: eine statische Seite, die den Code aus der URL zeigt, einen Play-Store-Link mit `&referrer=code%3D{code}` anbietet und den Code zum Kopieren bereitstellt (für „Link einfügen“).
 - **Android**: `intent-filter` mit `android:autoVerify="true"` für `https://bier-wart.web.app/j/*` in `AndroidManifest.xml`.
 - **App**: Paket `app_links` empfängt eingehende Links. Paket für den Play Install Referrer (z. B. `play_install_referrer`) liest den Code nach der Erstinstallation (AUTH-12). Ein offener Code wird in `shared_preferences` gemerkt, bis die Namenswahl fertig ist (AUTH-06).
@@ -329,7 +329,7 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 
 1. **Aggregation:** Trigger-basiert (Vorschlag oben) oder Client-Inkremente mit Rules-Prüfung? Davon hängen Rules, Functions und die Domain-Doppelung ab. Danach als ADR-0006 festhalten.
 2. **„Das bin ich (neues Gerät)“ absichern (AUTH-07, UC-03):** Wer den Einladungslink hat, kann jeden vergebenen Namen übernehmen, samt Portemonnaie und Rollen. Reicht das, oder braucht es eine Bestätigung (durch den Admin, durch einen anderen Bierwart, einen persönlichen Code)?
-3. **Paketname / applicationId:** Aktuell `com.example.bier_wart`, das lehnt der Play Store ab. Welche ID soll es werden? Eine Änderung braucht eine neue Android-App in der Firebase-Konsole und eine neue `google-services.json`. Das machst du in der Konsole.
+3. ~~**Paketname / applicationId**~~ – entschieden: `io.github.markra711.bierwart` ([ADR-0006](decisions/0006-paketname.md)). Offen ist nur noch der Schritt in der Konsole: eine neue Android-App mit diesem Paketnamen registrieren und die neue `google-services.json` einspielen, danach `firebase_options.dart` neu erzeugen.
 4. **SHA-256-Fingerabdrücke** für `assetlinks.json`: Upload-Key und Play App Signing gibt es erst mit einem Play-Console-Eintrag. Gibt es den schon?
 5. **Blaze-Tarif:** Ist er für `bier-wart` aktiv? Ohne ihn keine Functions, also kein Erstellen, Beitreten, Auflösen und kein automatisches Löschen.
 6. **Functions-Region:** `europe-west10` passend zur Firestore-Region (bitte bestätigen, dass alle benötigten Trigger dort verfügbar sind) oder `europe-west3`?
