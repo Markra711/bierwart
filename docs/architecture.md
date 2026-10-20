@@ -95,7 +95,7 @@ wiederherstellung/{hashHex}                  Hash des Wiederherstellungscodes �
 | `kassen/{k}` | `name`, `adminUid`, `kassenwartUid`, `einladungCode`, `anzahlBierwarte`, `wiederherstellungHash` (Bytes), `leerSeit` (null oder Timestamp, für AUTH-10 in Release 2), `aufgeloest` (bool), `erstelltAm` | Bierwarte |
 | `kassen/{k}/bierwarte/{uid}` | `mitgliedId`, `name` (denormalisiert für den Stempel), `beigetretenAm`, `einladungCode` (mit dem beigetreten wurde) | Bierwarte |
 | `kassen/{k}/mitglieder/{id}` | `name`, `nameKey`, `istGast` (KAD-03), `bierwartUid` (oder null), `entfernt` (bool), `saldoCents` (offen; negativ = Guthaben), `letzteBuchungId`, `angelegtAm` | Bierwarte |
-| `kassen/{k}/uebernahmen/{id}` | `neueUid`, `mitgliedId`, `einladungCode`, `status` (`offen`/`bestaetigt`/`abgelehnt`), `angefragtAm`, `entschiedenVon`, `entschiedenAm` | Bierwarte und die anfragende UID |
+| `kassen/{k}/uebernahmen/{id}` | `neueUid`, `mitgliedId`, `einladungCode`, `status` (`offen`/`bestaetigt`/`abgelehnt`/`zurueckgezogen`), `angefragtAm`, `gueltigBis` (angefragtAm + 7 Tage), `entschiedenVon`, `entschiedenAm` | Bierwarte und die anfragende UID |
 | `kassen/{k}/namen/{nameKey}` | `mitgliedId` | Bierwarte |
 | `kassen/{k}/sorten/{id}` | `name`, `preisCents`, `vorherigerPreisCents` (oder null, BES-02), `aktiv` (BES-01), `bestand` (Flaschen, darf < 0, STR-05), `letzteBuchungId`, `reihenfolge` | Bierwarte |
 | `kassen/{k}/orte/{ortId}` | `art` (`kasse`/`portemonnaie`), `uid`, `name`, `standCents`, `ehemalig` (GEL-08), `letzteBuchungId` | Bierwarte |
@@ -134,7 +134,7 @@ Gemeinsame Felder:
 | `einzahlung` / `auszahlung` | `ortId`, `betragCents`, `grund` | Ort ± Betrag | GEL-05 |
 | `kassensturz` | `gezaehltCents`, `differenzCents` | Kasse = gezählt | GEL-06 |
 | `mitgliedAngelegt`, `mitgliedUmbenannt`, `mitgliedEntfernt`, `mitgliedWiederaufgenommen`, `sorteGeaendert`, … | jeweils alt/neu | keine Geldwirkung, nur Log | LOG-01, UI-09 |
-| `kasseErstellt`, `rolleGeaendert`, `bierwartBeigetreten`, `bierwartEntfernt`, `ausgetreten`, `einladungErneuert`, `kasseUmbenannt`, `adminWiederhergestellt`, `wiederherstellungscodeErneuert`, `uebernahmeAngefragt`, `uebernahmeBestaetigt`, `uebernahmeAbgelehnt` | jeweils alt/neu | nur Log | LOG-01, ADM-01 bis ADM-06 |
+| `kasseErstellt`, `rolleGeaendert`, `bierwartBeigetreten`, `bierwartEntfernt`, `ausgetreten`, `einladungErneuert`, `kasseUmbenannt`, `adminWiederhergestellt`, `wiederherstellungscodeErneuert`, `uebernahmeAngefragt`, `uebernahmeBestaetigt`, `uebernahmeAbgelehnt`, `uebernahmeZurueckgezogen` | jeweils alt/neu | nur Log | LOG-01, ADM-01 bis ADM-06 |
 
 „Rückgängig“ in der Snackbar (STR-04) erzeugt eine `storno`-Buchung, löscht also nichts.
 
@@ -217,8 +217,9 @@ match /buchungen/{buchungId} {
 | Kasse erstellen | Angemeldeter ohne Kasse | `kassen/{k}`, eigener `bierwarte`-Eintrag, eigenes Mitglied + Gäste-Mitglied + `namen`, Orte (Kasse mit Startbetrag, eigenes Portemonnaie 0), `einladungen/{code}`, `wiederherstellung/{hashHex}`, `users/{uid}`, Log | Ersteller ist `adminUid` und `kassenwartUid`, `anzahlBierwarte == 1`, `wiederherstellungHash` passt zur Dokument-ID unter `wiederherstellung/`, Startbetrag ist `int` | UC-01, AUTH-02, AUTH-03 |
 | Einladung prüfen | Angemeldeter | – (nur `get einladungen/{code}`) | nichts zu schreiben | AUTH-05 |
 | Beitreten | Angemeldeter | eigener `bierwarte`-Eintrag (mit `einladungCode`), Mitglied + `namen`, Portemonnaie, `anzahlBierwarte + 1` in Kasse und Einladung, `users/{uid}`, Log | Code ist `kassen.einladungCode`, Einladung nicht `ersetzt`, `request.time < gueltigBis` (AUTH-08), Name frei | UC-02, AUTH-07, AUTH-08 |
-| Übernahme anfragen | Angemeldeter | `uebernahmen/{id}` mit `einladungCode`, Log | gültiger Code wie beim Beitreten, `status == "offen"`, `neueUid` ist der Anfragende | UC-03, AUTH-07 |
-| Übernahme entscheiden | Bierwart | Status setzen; bei Bestätigung zusätzlich: `bierwarte/{neueUid}` anlegen, `bierwarte/{alteUid}` löschen, `mitglieder.bierwartUid`, Portemonnaie umziehen (`orte/{alteUid}` → `orte/{neueUid}`, gleicher Stand), Rollen in `kassen/{k}` umschreiben, Log | Anfrage war `offen`, Entscheider ist aktiver Bierwart, Stand und Rollen werden 1:1 übertragen | UC-03, AUTH-07, ADR-0008 |
+| Übernahme anfragen | Angemeldeter | `uebernahmen/{id}` mit `einladungCode` und `gueltigBis = request.time + 7 Tage`, Log | gültiger Code wie beim Beitreten, `status == "offen"`, `neueUid` ist der Anfragende. Gilt für **jeden vergebenen Namen**: Bierwart, ehemaliger Bierwart, Mitglied ohne App, entferntes Mitglied | UC-03, AUTH-07, KAD-08 |
+| Übernahme entscheiden | Bierwart | Status setzen; bei Bestätigung zusätzlich: `bierwarte/{neueUid}` anlegen, `bierwarte/{alteUid}` löschen, `mitglieder.bierwartUid`, Portemonnaie umziehen (`orte/{alteUid}` → `orte/{neueUid}`, gleicher Stand), Rollen in `kassen/{k}` umschreiben, Log | Anfrage war `offen` und `request.time < gueltigBis`, Entscheider ist aktiver Bierwart, Stand und Rollen werden 1:1 übertragen | UC-03, AUTH-07, ADR-0008 |
+| Übernahme zurückziehen | anfragende UID | `status = "zurueckgezogen"`, Log | Anfrage war `offen`, Anfragender ist `neueUid` | UC-03, AUTH-07 |
 | Link erneuern | Admin | neues `einladungen/{code}`, altes `ersetzt: true`, `kassen.einladungCode`, Log | Admin | ADM-01, UC-07 |
 | Bierwart entfernen | Admin | `bierwarte/{uid}` löschen, `orte/{uid}.ehemalig = true`, Link erneuern (wie oben), `anzahlBierwarte − 1`, Log | Admin; Entfernter ist nicht selbst Admin oder Kassenwart | ADM-02, UC-08, GEL-08 |
 | Rolle übertragen | Admin | `kassen.kassenwartUid` oder `adminUid`, Log | Admin; Ziel ist aktiver Bierwart | ADM-03, UC-09 |
@@ -389,6 +390,6 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 18. **Datenschutzhinweis (NFA-09):** Wer liefert den Text, und reicht ein Bildschirm in den Einstellungen? Er muss erwähnen, dass verlassene Kassen in Release 1 nicht automatisch gelöscht werden.
 19. ~~**Quelle der Wahrheit für Anforderungen**~~ – entschieden: `docs/requirements.md`; das Online-Dokument ist seit 2026-10-21 eingefroren (alle Änderungen bis dahin übertragen).
 20. ~~**Mitglied-Namen und Eindeutigkeit**~~ – entschieden: eindeutig für alle Mitglieder; entfernte behalten ihren Namen und lassen sich wieder aufnehmen (KAD-08, siehe [Dokumente](#dokumente)).
-21. **Übernahme eines Mitglieds ohne App:** Ist der vergebene Name ein Mitglied, das nie Bierwart war (z. B. ein Spieler wird Bierwart), gibt es weder Portemonnaie noch Rollen zu schützen. Braucht das trotzdem eine Bestätigung, oder verknüpft der Beitritt direkt?
-22. **Ablauf einer Übernahme-Anfrage:** Verfällt eine offene Anfrage (z. B. mit dem Einladungslink nach 7 Tagen), und darf das neue Gerät sie zurückziehen?
+21. ~~**Übernahme eines Mitglieds ohne App**~~ – entschieden: braucht dieselbe Bestätigung wie bei Bierwarten, weil der Name danach im Stempel steht (siehe [Verwaltung als Batches](#verwaltung-als-batches)).
+22. ~~**Ablauf einer Übernahme-Anfrage**~~ – entschieden: 7 Tage gültig, vorher vom neuen Gerät zurückziehbar.
 23. **Wo sehen Bierwarte offene Anfragen?** Hinweis auf der Strichliste, in den Einstellungen oder beides? Warte-Bildschirm und Anfrage-Ansicht fehlen im Design-Canvas.
