@@ -6,6 +6,7 @@
 > **Abweichungen vom Online-Dokument** (dort noch nachzutragen):
 > - 2026-10-21: UC-03 und AUTH-07 – Übernahme braucht die Bestätigung eines Bierwarts ([ADR-0008](decisions/0008-uebernahme-bestaetigung.md)).
 > - 2026-10-21: AUTH-10 und AUTH-11 in Release 2, ADM-05 ohne „serverseitig“, Annahme zu Cloud Functions angepasst – Release 1 ohne Cloud Functions ([ADR-0009](decisions/0009-release-1-ohne-cloud-functions.md)).
+> - 2026-10-21: KAD-03 – Buchungen auf „Gäste“ sind immer bar, nicht nur standardmäßig (architecture.md, offene Frage 10).
 
 ## Vision & Abgrenzung
 
@@ -138,7 +139,7 @@ Jede Anforderung hat eine ID und ein Release. Release 1 ist das MVP für Android
 | --- | --- | --- |
 | KAD-01 | Mitglieder mit einem Namensfeld (Vor- und Nachname) anlegen und umbenennen | 1 |
 | KAD-02 | jeden Bierwart automatisch als Mitglied führen; nach Austritt bleibt er Mitglied | 1 |
-| KAD-03 | den Eintrag „Gäste“ fest anlegen; Buchungen darauf sind standardmäßig sofort bar bezahlt | 1 |
+| KAD-03 | den Eintrag „Gäste“ fest anlegen; Buchungen darauf sind immer sofort bar bezahlt (Tippen und Halten) | 1 |
 | KAD-04 | Mitglieder nur bei offenem Betrag = 0 entfernen, sonst mit Begründung ablehnen | 1 |
 | KAD-05 | alle Mitglieder mit offenem Betrag oder Guthaben anzeigen, sortiert nach Höhe der Schulden | 1 |
 | KAD-06 | pro Mitglied die Striche mit Datum, Sorte, Preis und Stempel zeigen | 1 |
