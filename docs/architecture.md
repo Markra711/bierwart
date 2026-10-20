@@ -122,7 +122,7 @@ Gemeinsame Felder:
 | --- | --- | --- | --- |
 | `strich` | `mitgliedId`, `sorteId`, `preisCents` (aktueller oder vorheriger Preis der Sorte) | Saldo + Preis, Bestand − 1 | STR-02, BES-02 |
 | `strichBar` | `mitgliedId`, `sorteId`, `preisCents`, `ortId` | Bestand − 1, Ort + Preis | STR-03, KAD-03 |
-| `storno` | `bezugId` und die Felder der Ursprungsbuchung | Gegenwirkung der Ursprungsbuchung | STR-04, STR-06 |
+| `storno` | `bezugId`, die Felder der Ursprungsbuchung; beim Bar-Strich zusätzlich `ortId` des Stornierenden | Gegenwirkung der Ursprungsbuchung; beim Bar-Strich geht der Preis aus dem Ort des Stornierenden | STR-04, STR-06 |
 | `zahlung` | `mitgliedId`, `betragCents`, `ortId` | Saldo − Betrag, Ort + Betrag | GEL-02, GEL-03 |
 | `einkauf` | `zeilen: {sorteId: anzahl}` (höchstens 10), `betragCents`, `ortId` | Bestand + Anzahl je Zeile, Ort − Betrag | BES-04, BES-05 |
 | `bestandKorrektur` | `sorteId`, `gezaehlt`, `differenz` | Bestand = gezählt | BES-06 |
@@ -133,6 +133,13 @@ Gemeinsame Felder:
 | `kasseErstellt`, `rolleGeaendert`, `bierwartBeigetreten`, `bierwartEntfernt`, `ausgetreten`, `einladungErneuert`, `kasseUmbenannt`, `adminWiederhergestellt`, `uebernahmeAngefragt`, `uebernahmeBestaetigt`, `uebernahmeAbgelehnt` | jeweils alt/neu | nur Log | LOG-01, ADM-01 bis ADM-06 |
 
 „Rückgängig“ in der Snackbar (STR-04) erzeugt eine `storno`-Buchung, löscht also nichts.
+
+**Storno (STR-04, STR-06):**
+- Das Mitglied-Detail zeigt alle Striche, auch bar bezahlte, mit dem Vermerk „bar“ (KAD-06).
+- Strich offen stornieren: Saldo − Preis, Bestand + 1.
+- **Bar-Strich stornieren:** Bestand + 1, und der Preis geht aus dem Portemonnaie **dessen, der storniert**. Er gibt das Bargeld zurück. Der Kassenwart kann stattdessen die Kasse wählen. Das passt zur Regel, dass jeder nur das eigene Portemonnaie verändert. Storniert der, der gebucht hat, gleicht es sich genau aus.
+- **Nur einmal:** Die Storno-Buchung hat die feste ID `storno-{bezugId}`. Ein zweites Storno derselben Buchung wäre ein Schreibvorgang auf ein bestehendes Dokument, und den lehnen die Rules ab (Buchungen: kein `update`).
+- Stornos selbst sind nicht stornierbar. Wer sich vertan hat, bucht neu.
 
 ### Summen: Salden, Bestand, Ortsstände
 
@@ -344,7 +351,7 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 5. ~~**Blaze-Tarif**~~ – entschieden: Release 1 im Spark-Tarif; Blaze mit Budget-Alarm erst mit Release 2 (siehe [Vor dem ersten Functions-Deploy](#vor-dem-ersten-functions-deploy)).
 6. ~~**Functions-Region**~~ – entschieden: `europe-west10`, gilt ab Release 2 (siehe [Cloud Functions](#cloud-functions-ab-release-2)).
 7. **Sprache der Functions:** vertagt auf Release 2. Stand Oktober 2026: TypeScript ist ausgereift; Dart ist experimentell, Firestore-Trigger sind dort nicht deploybar. Für den reinen Scheduler-Job von Release 2 ist neu zu prüfen.
-8. **Storno eines Bar-Strichs (STR-06):** Erscheinen bar bezahlte Striche im Mitglied-Detail und sind sie stornierbar? Wenn ja: Geht das Geld aus dem Portemonnaie dessen zurück, der ihn gebucht hat, oder dessen, der storniert?
+8. ~~**Storno eines Bar-Strichs**~~ – entschieden: wer storniert, zahlt aus dem eigenen Portemonnaie zurück (Kassenwart wahlweise Kasse); jede Buchung nur einmal stornierbar (siehe [Buchungen](#buchungen-das-log)).
 9. **„Rückgängig“ (STR-04):** Gibt es ein Zeitfenster, nach dem die Snackbar-Aktion verschwindet, und darf nur der Buchende rückgängig machen?
 10. **Gäste-Buchungen (KAD-03):** „standardmäßig sofort bar“: Heißt Tippen auf „Gäste“ dann bar und Halten offen, oder immer bar?
 11. **Kassensturz und Bestandskorrektur offline:** Technisch werden sie abgelehnt, wenn sich der Stand zwischen Zählen und Sync geändert hat (siehe Summen, Punkt 7). Soll die App sie deshalb nur mit Netz zulassen?
