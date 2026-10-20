@@ -2,6 +2,9 @@
 
 > Spiegel des Anforderungsdokuments [„Bierwart – Anforderungen“](https://claude.ai/code/artifact/2f47fa84-46ad-4910-ab27-16ca8f10dbf0), Stand 2026-10-19 (Revision 14), Autor: Marvin.
 > IDs sind unverändert übernommen. Diagramme sind als Mermaid bzw. Tabelle nachgebaut.
+>
+> **Abweichungen vom Online-Dokument** (dort noch nachzutragen):
+> - 2026-10-21: UC-03 und AUTH-07 – Übernahme braucht die Bestätigung eines Bierwarts ([ADR-0008](decisions/0008-uebernahme-bestaetigung.md)).
 
 ## Vision & Abgrenzung
 
@@ -72,7 +75,7 @@ Release 1 umfasst 20 Anwendungsfälle in fünf Gruppen. Akteur ist immer ein Bie
 | --- | --- | --- | --- |
 | UC-01 | Kasse erstellen | neuer Nutzer | Kasse mit Name und Startbetrag existiert; Ersteller ist Admin und Kassenwart; Wiederherstellungscode wurde angezeigt |
 | UC-02 | Per Link beitreten | neuer Nutzer | nach Bestätigung „Kasse X beitreten?“ und Namenswahl ist er Bierwart und Mitglied |
-| UC-03 | Mit neuem Gerät zurückkehren | Bierwart | beim Beitritt mit vergebenem Namen bestätigt er „Das bin ich“ und übernimmt die alte Mitgliedschaft |
+| UC-03 | Mit neuem Gerät zurückkehren | Bierwart | beim Beitritt mit vergebenem Namen wählt er „Das bin ich“; nach Bestätigung durch einen anderen aktiven Bierwart (als einziger Bierwart: per Wiederherstellungscode) übernimmt er die alte Mitgliedschaft |
 | UC-04 | Admin-Rolle wiederherstellen | Bierwart | mit dem Wiederherstellungscode wird er Admin |
 | UC-05 | Austreten | Bierwart | nur bei Portemonnaie = 0; Admin und Kassenwart übergeben vorher ihre Rolle |
 | UC-06 | Einladungslink teilen | Bierwart | Link geht über das Teilen-Menü raus |
@@ -107,7 +110,7 @@ Jede Anforderung hat eine ID und ein Release. Release 1 ist das MVP für Android
 | AUTH-04 | Einladungslinks öffnen: App installiert → App öffnet sich; nicht installiert → Webseite mit Store-Link und Code | 1 |
 | AUTH-05 | nach dem Öffnen eines Links „Kasse X beitreten?“ mit Kassenname und Anzahl Bierwarte fragen, Ja oder Nein | 1 |
 | AUTH-06 | einen Link merken, der vor dem Onboarding geöffnet wurde, und nach der Namenswahl beitreten | 1 |
-| AUTH-07 | Namen pro Kasse eindeutig halten; bei vergebenem Namen „Das bin ich (neues Gerät)“ anbieten und die alte Mitgliedschaft übertragen | 1 |
+| AUTH-07 | Namen pro Kasse eindeutig halten; bei vergebenem Namen „Das bin ich (neues Gerät)“ anbieten; die alte Mitgliedschaft samt Portemonnaie und Rollen erst übertragen, wenn ein anderer aktiver Bierwart die Anfrage bestätigt; ohne anderen aktiven Bierwart nur per Wiederherstellungscode | 1 |
 | AUTH-08 | abgelaufene oder ersetzte Links mit klarer Meldung ablehnen, serverseitig geprüft | 1 |
 | AUTH-09 | Austreten nur bei Portemonnaie = 0 erlauben; Admin und Kassenwart müssen vorher einen Nachfolger wählen | 1 |
 | AUTH-10 | eine Kasse ohne Bierwarte nach 30 Tagen löschen; bis dahin per Wiederherstellungscode reaktivierbar | 1 |
