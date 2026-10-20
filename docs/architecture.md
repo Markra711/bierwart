@@ -105,6 +105,10 @@ wiederherstellung/{hashHex}                  Hash des Wiederherstellungscodes �
 
 - **Einladungen und Wiederherstellung:** Wer einen Code kennt, darf das zugehörige Dokument lesen. Der Code selbst ist der Nachweis. Abfragen über diese Sammlungen erlauben die Rules nicht, man kann also nicht nach Codes suchen. `kassenName` und `anzahlBierwarte` stehen in der Einladung, damit „Kasse X beitreten?“ (AUTH-05) vor dem Beitritt angezeigt werden kann. Die App pflegt beide Felder in denselben Batches wie die Kasse.
 - **Namen:** `nameKey` ist der normalisierte Name (klein, Leerzeichen zusammengefasst, Unicode NFC). Das Dokument `namen/{nameKey}` sorgt dafür, dass ein Name pro Kasse nur einmal vorkommt (AUTH-07, UI-09). Ein zweites `create` auf denselben Schlüssel scheitert an den Rules.
+  - Die Eindeutigkeit gilt für **alle Mitglieder** (AUTH-07, UI-09), auch für Bierwarte und „Gäste“.
+  - **Entfernte Mitglieder behalten ihren Namen** (KAD-08). `namen/{nameKey}` wird beim Entfernen nicht gelöscht, damit der Verlauf eindeutig bleibt.
+  - Legt jemand ein Mitglied mit einem solchen Namen an, bietet die App „Jonas Weber wieder aufnehmen?“ an. Bei Ja setzt ein Batch `entfernt = false` und schreibt die Log-Buchung `mitgliedWiederaufgenommen`. Saldo und Verlauf sind die alten, der Saldo war beim Entfernen 0 (KAD-04).
+  - Beim Umbenennen wird der alte Schlüssel frei: Der Batch löscht `namen/{alt}` und legt `namen/{neu}` an.
 
 ### Buchungen (das Log)
 
@@ -129,7 +133,7 @@ Gemeinsame Felder:
 | `uebergabe` | `vonOrtId`, `nachOrtId`, `betragCents` | von − Betrag, nach + Betrag | GEL-04 |
 | `einzahlung` / `auszahlung` | `ortId`, `betragCents`, `grund` | Ort ± Betrag | GEL-05 |
 | `kassensturz` | `gezaehltCents`, `differenzCents` | Kasse = gezählt | GEL-06 |
-| `mitgliedAngelegt`, `mitgliedUmbenannt`, `mitgliedEntfernt`, `sorteGeaendert`, … | jeweils alt/neu | keine Geldwirkung, nur Log | LOG-01, UI-09 |
+| `mitgliedAngelegt`, `mitgliedUmbenannt`, `mitgliedEntfernt`, `mitgliedWiederaufgenommen`, `sorteGeaendert`, … | jeweils alt/neu | keine Geldwirkung, nur Log | LOG-01, UI-09 |
 | `kasseErstellt`, `rolleGeaendert`, `bierwartBeigetreten`, `bierwartEntfernt`, `ausgetreten`, `einladungErneuert`, `kasseUmbenannt`, `adminWiederhergestellt`, `wiederherstellungscodeErneuert`, `uebernahmeAngefragt`, `uebernahmeBestaetigt`, `uebernahmeAbgelehnt` | jeweils alt/neu | nur Log | LOG-01, ADM-01 bis ADM-06 |
 
 „Rückgängig“ in der Snackbar (STR-04) erzeugt eine `storno`-Buchung, löscht also nichts.
@@ -384,7 +388,7 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 17. **Routing:** `go_router` (Vorschlag) in Ordnung?
 18. **Datenschutzhinweis (NFA-09):** Wer liefert den Text, und reicht ein Bildschirm in den Einstellungen? Er muss erwähnen, dass verlassene Kassen in Release 1 nicht automatisch gelöscht werden.
 19. ~~**Quelle der Wahrheit für Anforderungen**~~ – entschieden: `docs/requirements.md`; das Online-Dokument ist seit 2026-10-21 eingefroren (alle Änderungen bis dahin übertragen).
-20. **Mitglied-Namen (KAD-01) und Eindeutigkeit:** Gilt die Eindeutigkeit für alle Mitglieder oder nur für Bierwarte? Zählen entfernte Mitglieder mit?
+20. ~~**Mitglied-Namen und Eindeutigkeit**~~ – entschieden: eindeutig für alle Mitglieder; entfernte behalten ihren Namen und lassen sich wieder aufnehmen (KAD-08, siehe [Dokumente](#dokumente)).
 21. **Übernahme eines Mitglieds ohne App:** Ist der vergebene Name ein Mitglied, das nie Bierwart war (z. B. ein Spieler wird Bierwart), gibt es weder Portemonnaie noch Rollen zu schützen. Braucht das trotzdem eine Bestätigung, oder verknüpft der Beitritt direkt?
 22. **Ablauf einer Übernahme-Anfrage:** Verfällt eine offene Anfrage (z. B. mit dem Einladungslink nach 7 Tagen), und darf das neue Gerät sie zurückziehen?
 23. **Wo sehen Bierwarte offene Anfragen?** Hinweis auf der Strichliste, in den Einstellungen oder beides? Warte-Bildschirm und Anfrage-Ansicht fehlen im Design-Canvas.
