@@ -1,7 +1,8 @@
 # Bierwart – Architektur (Entwurf)
 
-- **Status:** Entwurf, Stand 2026-10-20. Punkte mit „Vorschlag“ sind noch nicht entschieden. Was offen ist, steht unter [Offene Fragen](#offene-fragen).
+- **Status:** Entwurf, Stand 2026-10-21. Punkte mit „Vorschlag“ sind noch nicht entschieden. Was offen ist, steht unter [Offene Fragen](#offene-fragen).
 - **Grundlage:** [requirements.md](requirements.md), [styleguide.md](styleguide.md), [ADRs](decisions/README.md)
+- **Release 1 kommt ohne Cloud Functions aus** ([ADR-0009](decisions/0009-release-1-ohne-cloud-functions.md)). Alle Rechte setzen die Security Rules durch. Cloud Functions kommen mit Release 2 (automatisches Löschen).
 
 ## Überblick
 
@@ -13,25 +14,22 @@ flowchart LR
     APP --> DATA["Daten<br/>Repositories"]
     DATA --> DOM
   end
-  DATA -- "Lesen + Buchungen<br/>(offline-fähig)" --> FS[("Firestore<br/>europe-west10")]
-  DATA -- "Verwaltung<br/>(online)" --> CF["Cloud Functions<br/>Callables"]
-  CF --> FS
-  FS -- "onCreate Buchung" --> TRG["Function<br/>buchungAnwenden"]
-  TRG --> FS
-  SCH["Function<br/>aufraeumen (täglich)"] --> FS
+  DATA -- "Lesen + Batches<br/>(offline-fähig)" --> RULES{{"Security Rules"}}
+  RULES --> FS[("Firestore<br/>europe-west10")]
   DATA -- anonym --> AUTH["Firebase Auth"]
   LINK["Einladungslink<br/>bier-wart.web.app/j/CODE"] --> HOST["Firebase Hosting<br/>assetlinks.json, Fallback-Seite"]
   LINK -- "App Links" --> UI
 ```
 
-Zwei Arten von Schreibzugriffen:
+Die App schreibt alles selbst, immer als **Batch**: die eigentliche Änderung plus alle Dokumente, die davon abhängen (Summen, Log, Zähler). Die Security Rules prüfen jeden Batch als Ganzes. Was die Rules nicht erlauben, kommt nicht in die Datenbank.
 
-| Art | Wer schreibt | Offline | Beispiele | Rechte geprüft durch |
-| --- | --- | --- | --- | --- |
-| **Buchungen** | App direkt in Firestore | ja (NFA-02) | Strich, Zahlung, Einkauf, Übergabe, Ein-/Auszahlung, Kassensturz, Bestand korrigieren, Storno | Security Rules |
-| **Verwaltung** | App ruft Callable Function | nein, braucht Netz | Kasse erstellen, beitreten, Link erneuern, Rollen, Bierwart entfernen, austreten, auflösen, Admin wiederherstellen | Function (Admin SDK) |
+| Art | Offline | Beispiele |
+| --- | --- | --- |
+| **Buchungen** | ja (NFA-02) | Strich, Zahlung, Einkauf, Übergabe, Ein-/Auszahlung, Storno; Kassensturz und Bestandskorrektur mit Einschränkung (siehe unten) |
+| **Stammdaten** | ja | Mitglieder und Sorten anlegen, umbenennen, ausblenden, entfernen |
+| **Verwaltung** | App verlangt Netz | Kasse erstellen, beitreten, Übernahme, Rollen, Link erneuern, Bierwart entfernen, austreten, auflösen, Admin wiederherstellen |
 
-Stammdaten (Mitglieder und Sorten anlegen oder umbenennen, Sorte ausblenden) schreibt die App direkt, ebenfalls offline-fähig und durch Rules geprüft.
+Verwaltungsaktionen würden offline technisch auch in die Warteschlange gehen. Die App lässt sie aber nur mit Netz zu, weil der Nutzer sofort wissen muss, ob es geklappt hat (NFA-10).
 
 ## Schichten in der App
 
@@ -46,7 +44,7 @@ lib/
     core/
       theme/                   Tokens, ThemeData, ThemeExtensions
       money/                   Cent-Formatierung und -Parsing (ADR-0002)
-      firebase/                Provider für Auth, Firestore, Functions; Emulator-Schalter
+      firebase/                Provider für Auth und Firestore; Emulator-Schalter
       routing/                 Routen und Guards (Onboarding vs. Kasse)
       widgets/                 Neumorphe Grundbausteine (Button, Card, Tile, Sheet, TabBar)
     features/
@@ -58,25 +56,25 @@ lib/
       einstellungen/           Einstellungen, Rollen, Austreten, Auflösen
       <feature>/
         domain/                reine Dart-Modelle und Regeln, ohne Flutter und Firebase
-        data/                  Repositories, Firestore-Mapping
+        data/                  Repositories, Firestore-Mapping, Batches
         application/           Notifier / Use Cases
         presentation/          Widgets, Seiten, Sheets
 ```
 
 Regeln:
 
-- **Domain** kennt weder Flutter noch Firebase. Hier liegen Modelle (`Mitglied`, `Sorte`, `Buchung`, `Ort`) und die Wirkung einer Buchung auf Salden und Bestand. Diese Logik ist in Dart **und** in der Function `buchungAnwenden` nötig. Sie muss in beiden Sprachen mit denselben Testfällen geprüft werden.
-- **Data** kapselt Firestore und die Callables. Nur hier werden Collections und Feldnamen verwendet.
+- **Domain** kennt weder Flutter noch Firebase. Hier liegen die Modelle (`Mitglied`, `Sorte`, `Buchung`, `Ort`) und die **Wirkung einer Buchung** auf Salden, Bestand und Ortsstände. Aus dieser Wirkung baut `data/` den Batch. Die Rules prüfen dieselbe Wirkung noch einmal, und die Rules-Tests halten beide gleich.
+- **Data** kapselt Firestore. Nur hier werden Collections, Feldnamen und Batches verwendet.
 - **Application** verbindet beides über Riverpod (ADR-0001).
 - **Presentation** liest nur Provider, keine Firestore-Typen.
 - Routing: Vorschlag `go_router` mit Redirect je nach Zustand (nicht angemeldet → Onboarding, in Kasse → Strichliste, UI-01).
 
 ## Datenmodell in Firestore
 
-Alle Daten einer Kasse liegen unter `kassen/{kasseId}`. So bleiben die Rules einfach, und das Auflösen ist ein rekursives Löschen eines Teilbaums. Geld ist immer `int` in Cent (ADR-0002).
+Alle Daten einer Kasse liegen unter `kassen/{kasseId}`. So bleiben die Rules einfach, und das Auflösen betrifft nur einen Teilbaum. Geld ist immer `int` in Cent (ADR-0002).
 
 ```
-users/{uid}                                  nur Function schreibt; Nutzer liest eigenes Dokument
+users/{uid}                                  welche Kasse zu diesem Nutzer gehört
 kassen/{kasseId}
   bierwarte/{uid}
   uebernahmen/{anfrageId}                    „Das bin ich“-Anfragen (ADR-0008)
@@ -85,29 +83,28 @@ kassen/{kasseId}
   sorten/{sorteId}
   orte/{ortId}                               "kasse" oder uid eines (ehemaligen) Bierwarts
   buchungen/{buchungId}                      unveränderliches Log
-  intern/geheim                              nur Functions (Hash Wiederherstellungscode)
-einladungen/{code}                           nur Functions
-wiederherstellung/{codeHash}                 nur Functions
+einladungen/{code}                           Einladungslink → Kasse
+wiederherstellung/{hashHex}                  Hash des Wiederherstellungscodes → Kasse
 ```
 
 ### Dokumente
 
-| Pfad | Felder | Geschrieben von |
+| Pfad | Felder | Lesen |
 | --- | --- | --- |
-| `users/{uid}` | `kasseId` (Release 4: Liste, AUTH-14) | Functions |
-| `kassen/{k}` | `name`, `adminUid`, `kassenwartUid`, `einladungCode`, `einladungGueltigBis`, `anzahlBierwarte`, `leerSeit` (null oder Timestamp, AUTH-10), `letzteBuchungAm` (AUTH-11), `erstelltAm` | Functions |
-| `kassen/{k}/bierwarte/{uid}` | `mitgliedId`, `name` (denormalisiert für Stempel), `beigetretenAm` | Functions |
-| `kassen/{k}/mitglieder/{id}` | `name`, `nameKey`, `istGast` (KAD-03), `bierwartUid` (oder null), `entfernt` (bool), `saldoCents` (offen; negativ = Guthaben), `angelegtAm` | App (Name, Entfernen), Functions (Saldo, Bierwart-Verknüpfung) |
-| `kassen/{k}/uebernahmen/{id}` | `neueUid`, `mitgliedId`, `status` (`offen`/`bestaetigt`/`abgelehnt`), `angefragtAm`, `entschiedenVon` (uid), `entschiedenAm` | Functions |
-| `kassen/{k}/namen/{nameKey}` | `mitgliedId` | App, im selben Batch wie Anlegen/Umbenennen |
-| `kassen/{k}/sorten/{id}` | `name`, `preisCents`, `aktiv` (Ausblenden, BES-01), `bestand` (Flaschen, darf < 0, STR-05), `reihenfolge` | App (Name, Preis, aktiv), Functions (Bestand) |
-| `kassen/{k}/orte/{ortId}` | `art` (`kasse`/`portemonnaie`), `uid`, `name`, `standCents`, `ehemalig` (GEL-08) | Functions |
-| `kassen/{k}/buchungen/{id}` | siehe unten | App (anlegen), Function (nur `angewendet`, `fehler`, `differenz`, `differenzCents`) |
-| `kassen/{k}/intern/geheim` | `wiederherstellungHash` | Functions |
-| `einladungen/{code}` | `kasseId`, `gueltigBis`, `ersetzt` (bool) | Functions |
-| `wiederherstellung/{codeHash}` | `kasseId` | Functions |
+| `users/{uid}` | `kasseId` (Release 4: Liste, AUTH-14) | nur der Nutzer selbst |
+| `kassen/{k}` | `name`, `adminUid`, `kassenwartUid`, `einladungCode`, `anzahlBierwarte`, `wiederherstellungHash` (Bytes), `leerSeit` (null oder Timestamp, für AUTH-10 in Release 2), `aufgeloest` (bool), `erstelltAm` | Bierwarte |
+| `kassen/{k}/bierwarte/{uid}` | `mitgliedId`, `name` (denormalisiert für den Stempel), `beigetretenAm`, `einladungCode` (mit dem beigetreten wurde) | Bierwarte |
+| `kassen/{k}/mitglieder/{id}` | `name`, `nameKey`, `istGast` (KAD-03), `bierwartUid` (oder null), `entfernt` (bool), `saldoCents` (offen; negativ = Guthaben), `letzteBuchungId`, `angelegtAm` | Bierwarte |
+| `kassen/{k}/uebernahmen/{id}` | `neueUid`, `mitgliedId`, `einladungCode`, `status` (`offen`/`bestaetigt`/`abgelehnt`), `angefragtAm`, `entschiedenVon`, `entschiedenAm` | Bierwarte und die anfragende UID |
+| `kassen/{k}/namen/{nameKey}` | `mitgliedId` | Bierwarte |
+| `kassen/{k}/sorten/{id}` | `name`, `preisCents`, `vorherigerPreisCents` (oder null, BES-02), `aktiv` (BES-01), `bestand` (Flaschen, darf < 0, STR-05), `letzteBuchungId`, `reihenfolge` | Bierwarte |
+| `kassen/{k}/orte/{ortId}` | `art` (`kasse`/`portemonnaie`), `uid`, `name`, `standCents`, `ehemalig` (GEL-08), `letzteBuchungId` | Bierwarte |
+| `kassen/{k}/buchungen/{id}` | siehe unten | Bierwarte |
+| `einladungen/{code}` | `kasseId`, `kassenName`, `anzahlBierwarte`, `gueltigBis`, `ersetzt` (bool) | jeder Angemeldete per `get`, nie per Abfrage |
+| `wiederherstellung/{hashHex}` | `kasseId` | jeder Angemeldete per `get`, nie per Abfrage |
 
-`nameKey` ist der normalisierte Name (klein, Leerzeichen zusammengefasst, Unicode NFC). Das Dokument `namen/{nameKey}` sorgt dafür, dass ein Name pro Kasse nur einmal vorkommt (AUTH-07, UI-09). Ein zweites `create` auf denselben Schlüssel scheitert an den Rules.
+- **Einladungen und Wiederherstellung:** Wer einen Code kennt, darf das zugehörige Dokument lesen. Der Code selbst ist der Nachweis. Abfragen über diese Sammlungen erlauben die Rules nicht, man kann also nicht nach Codes suchen. `kassenName` und `anzahlBierwarte` stehen in der Einladung, damit „Kasse X beitreten?“ (AUTH-05) vor dem Beitritt angezeigt werden kann. Die App pflegt beide Felder in denselben Batches wie die Kasse.
+- **Namen:** `nameKey` ist der normalisierte Name (klein, Leerzeichen zusammengefasst, Unicode NFC). Das Dokument `namen/{nameKey}` sorgt dafür, dass ein Name pro Kasse nur einmal vorkommt (AUTH-07, UI-09). Ein zweites `create` auf denselben Schlüssel scheitert an den Rules.
 
 ### Buchungen (das Log)
 
@@ -118,159 +115,129 @@ Gemeinsame Felder:
 | Feld | Inhalt |
 | --- | --- |
 | `typ` | siehe Tabelle unten |
-| `stempel` | `{ uid, name, am: serverTimestamp, geraetAm: Client-Zeit }` (Stempel) |
-| `angewendet` | `false` beim Anlegen; die Function setzt `true`, sobald die Wirkung in den Aggregaten steckt |
+| `stempel` | `{ uid, name, am: serverTimestamp, geraetAm: Client-Zeit }` (Stempel). `am` ist beim Schreiben immer `request.time`, das prüfen die Rules |
 | `bezugId` | bei `storno`: ID der stornierten Buchung |
 
 | `typ` | Zusatzfelder | Wirkung | Anforderung |
 | --- | --- | --- | --- |
-| `strich` | `mitgliedId`, `sorteId`, `preisCents` (Preis zum Buchungszeitpunkt) | Saldo + Preis, Bestand − 1 | STR-02, BES-02 |
+| `strich` | `mitgliedId`, `sorteId`, `preisCents` (aktueller oder vorheriger Preis der Sorte) | Saldo + Preis, Bestand − 1 | STR-02, BES-02 |
 | `strichBar` | `mitgliedId`, `sorteId`, `preisCents`, `ortId` | Bestand − 1, Ort + Preis | STR-03, KAD-03 |
 | `storno` | `bezugId` und die Felder der Ursprungsbuchung | Gegenwirkung der Ursprungsbuchung | STR-04, STR-06 |
 | `zahlung` | `mitgliedId`, `betragCents`, `ortId` | Saldo − Betrag, Ort + Betrag | GEL-02, GEL-03 |
-| `einkauf` | `zeilen: [{sorteId, anzahl}]`, `betragCents`, `ortId` | Bestand + Anzahl je Zeile, Ort − Betrag | BES-04, BES-05 |
-| `bestandKorrektur` | `sorteId`, `gezaehlt` | Bestand = gezählt; die Function rechnet `differenz` beim Anwenden aus | BES-06 |
+| `einkauf` | `zeilen: {sorteId: anzahl}` (höchstens 10), `betragCents`, `ortId` | Bestand + Anzahl je Zeile, Ort − Betrag | BES-04, BES-05 |
+| `bestandKorrektur` | `sorteId`, `gezaehlt`, `differenz` | Bestand = gezählt | BES-06 |
 | `uebergabe` | `vonOrtId`, `nachOrtId`, `betragCents` | von − Betrag, nach + Betrag | GEL-04 |
 | `einzahlung` / `auszahlung` | `ortId`, `betragCents`, `grund` | Ort ± Betrag | GEL-05 |
-| `kassensturz` | `gezaehltCents` | Kasse = gezählt; die Function rechnet `differenzCents` beim Anwenden aus | GEL-06 |
+| `kassensturz` | `gezaehltCents`, `differenzCents` | Kasse = gezählt | GEL-06 |
 | `mitgliedAngelegt`, `mitgliedUmbenannt`, `mitgliedEntfernt`, `sorteGeaendert`, … | jeweils alt/neu | keine Geldwirkung, nur Log | LOG-01, UI-09 |
-| `rolleGeaendert`, `bierwartBeigetreten`, `bierwartEntfernt`, `ausgetreten`, `einladungErneuert`, `kasseUmbenannt`, `uebernahmeAngefragt`, `uebernahmeBestaetigt`, `uebernahmeAbgelehnt` | jeweils alt/neu | nur Log, von Functions geschrieben | LOG-01, ADM-01 bis ADM-06 |
+| `kasseErstellt`, `rolleGeaendert`, `bierwartBeigetreten`, `bierwartEntfernt`, `ausgetreten`, `einladungErneuert`, `kasseUmbenannt`, `adminWiederhergestellt`, `uebernahmeAngefragt`, `uebernahmeBestaetigt`, `uebernahmeAbgelehnt` | jeweils alt/neu | nur Log | LOG-01, ADM-01 bis ADM-06 |
 
 „Rückgängig“ in der Snackbar (STR-04) erzeugt eine `storno`-Buchung, löscht also nichts.
 
-### Aggregate: Salden, Bestand, Ortsstände
+### Summen: Salden, Bestand, Ortsstände
 
-Die Bildschirme brauchen Salden, Bestand und Ortsstände sofort, ohne jedes Mal alle Buchungen zu lesen (NFA-12, Kosten).
+Die Bildschirme brauchen Salden, Bestand und Ortsstände sofort, ohne jedes Mal alle Buchungen zu lesen (NFA-12, Kosten). Entschieden in [ADR-0009](decisions/0009-release-1-ohne-cloud-functions.md):
 
-**Entschieden: serverseitige Aggregation per Trigger** ([ADR-0007](decisions/0007-aggregation-per-trigger.md)).
-
-1. Die App legt nur die Buchung an (`angewendet: false`).
-2. Die Function `buchungAnwenden` (Firestore `onDocumentCreated`) wendet die Wirkung in **einer Transaktion** auf `mitglieder.saldoCents`, `sorten.bestand` und `orte.standCents` an. Danach setzt sie `angewendet: true` und `kassen.letzteBuchungAm`. Weil Trigger mindestens einmal feuern, prüft sie in der Transaktion zuerst `angewendet`. So ist der Trigger idempotent.
-3. Die App zeigt **Aggregat + Wirkung aller noch nicht angewendeten Buchungen**. Dafür hört sie auf `buchungen where angewendet == false`. Das sind fast immer nur wenige Dokumente. Darin stecken auch eigene Offline-Buchungen und Buchungen anderer Geräte, die die Function noch nicht verarbeitet hat. So ist eine Buchung lokal sofort sichtbar (NFA-06), offline korrekt (NFA-02) und auf anderen Geräten sichtbar, sobald sie synchronisiert ist, unabhängig von der Trigger-Latenz (NFA-05).
-
-`bestandKorrektur` und `kassensturz` setzen absolute Werte. Die Function rechnet sie beim Anwenden in eine Differenz zum aktuellen Stand um und speichert diese an der Buchung. Damit sind alle angewendeten Wirkungen reine Plus- und Minusbeträge, und die Reihenfolge der Trigger spielt keine Rolle.
-
-Die Wirkung einer Buchung ist deshalb **zweimal implementiert**: in Dart (Anzeige) und in TypeScript (Function). Gemeinsame Testfälle als JSON-Fixtures unter `fixtures/buchungswirkung/` halten beide gleich.
-
-Verworfene Alternative: Die App schreibt Buchung und `FieldValue.increment()` auf die Aggregate in einem Batch, und die Rules prüfen mit `getAfter()`, ob die Inkremente zur Buchung passen. Das geht ohne Function und ohne Doppel-Implementierung. Aber ein Einkauf mit vielen Zeilen sprengt das Limit von 20 `get`-Aufrufen pro Anfrage, und die Rules werden schwer prüfbar. Details in ADR-0007.
+1. **Ein Batch je Buchung.** Die App schreibt die Buchung und ändert im selben Batch `mitglieder.saldoCents`, `sorten.bestand` und `orte.standCents` mit `FieldValue.increment()`. Jedes geänderte Summen-Dokument bekommt `letzteBuchungId = <id der Buchung>`.
+2. **Die Rules prüfen in beide Richtungen.**
+   - Eine Summe darf sich nur ändern, wenn `letzteBuchungId` auf eine Buchung zeigt, deren `stempel.am == request.time` ist, die also in genau diesem Request entsteht. Und die Änderung muss genau der Wirkung dieser Buchung entsprechen.
+   - Eine Buchung darf nur entstehen, wenn alle Summen, die sie betrifft, im selben Batch auf sie verweisen.
+3. **Gleichzeitigkeit:** `increment()` addiert auf dem Server. Zwei Geräte, die dasselbe Mitglied belasten, verlieren keine Buchung (NFA-03). Die Rules prüfen gegen den Stand auf dem Server, nicht gegen den Stand des Geräts.
+4. **Offline:** Firestore überträgt offline geschriebene Batches beim Reconnect in Reihenfolge. Lokal sind Summe und Buchung sofort sichtbar (NFA-06), weil der Cache den Batch schon angewendet hat.
+5. **Einkauf:** höchstens 10 Sorten pro Buchung. Im Emulator gingen 12, ab 13 greift das Limit der Dokumentzugriffe pro Request. Größere Einkäufe teilt die App in mehrere Buchungen.
+6. **Preis (BES-02):** Erlaubt sind `preisCents` und `vorherigerPreisCents` der Sorte. Ein offline gebuchter Strich zum alten Preis scheitert so nach einer Preisänderung nicht. Erst nach einer zweiten Preisänderung würde er abgelehnt.
+7. **Absolute Buchungen** (`bestandKorrektur`, `kassensturz`): Die App schreibt den gezählten Wert direkt, also ohne `increment()`, und die Differenz zum Stand, den sie sieht, in die Buchung. Die Rules prüfen `nachher == gezählt` und `nachher − vorher == differenz`. Hat ein anderes Gerät die Summe zwischendurch geändert, stimmt `vorher` nicht mehr, und der Batch wird abgelehnt. Die App meldet das und bittet, neu zu zählen (siehe offene Frage 11).
 
 ### Abfragen und Indizes
 
 | Bildschirm | Abfrage |
 | --- | --- |
-| Strichliste | `sorten where aktiv == true`, `mitglieder where entfernt == false`, unangewendete Buchungen |
+| Strichliste | `sorten where aktiv == true`, `mitglieder where entfernt == false` |
 | Kader | `mitglieder where entfernt == false` (Sortierung nach Saldo im Client, KAD-05) |
 | Mitglied-Detail | `buchungen where mitgliedId == X orderBy stempel.am desc` (Index nötig, KAD-06) |
 | Geld | `orte`, `kassen/{k}` |
 | Verlauf | `buchungen orderBy stempel.am desc`, optional `where stempel.uid == X` oder `mitgliedId == X`, seitenweise (LOG-03) |
+| Einstellungen | `bierwarte`, `uebernahmen where status == "offen"` |
 
 Zusammengesetzte Indizes kommen in `firestore.indexes.json`.
 
 ## Security Rules
 
-Grundsätze (NFA-07):
+Die Rules sind in Release 1 die Geschäftslogik. Grundsätze (NFA-07):
 
-- Ohne Anmeldung kein Zugriff. Jeder Zugriff unter `kassen/{k}` setzt voraus, dass `kassen/{k}/bierwarte/{request.auth.uid}` existiert.
-- Clients schreiben **nie** in `kassen/{k}`, `bierwarte`, `orte`, `intern`, `users`, `einladungen` und `wiederherstellung`. Das machen nur Functions mit dem Admin SDK.
-- Aggregatfelder (`saldoCents`, `bestand`, `standCents`) sind für Clients schreibgeschützt.
-- Buchungen: nur `create`, nie `update`/`delete` (LOG-02).
+- Ohne Anmeldung kein Zugriff. Jeder Zugriff unter `kassen/{k}` setzt voraus, dass `kassen/{k}/bierwarte/{request.auth.uid}` existiert und die Kasse nicht `aufgeloest` ist.
+- Summenfelder (`saldoCents`, `bestand`, `standCents`) ändern sich nur zusammen mit einer passenden Buchung (siehe oben).
+- Buchungen: nur `create`, nie `update`. `delete` nur beim Auflösen (LOG-02).
+- Jede Verwaltungsaktion schreibt ihre Log-Buchung im selben Batch. Die Rules verlangen sie (`existsAfter`).
+- `einladungen` und `wiederherstellung`: nur `get` für Angemeldete, kein `list`.
 
-Skizze:
+Das Muster für Buchungen ist im Prototyp umgesetzt und getestet (Branch `spike/rules-buchungen`, `firestore.rules` und `rules-tests/`). Auszug:
 
 ```
-function signedIn() { return request.auth != null; }
-function kasse(k) { return get(/databases/$(database)/documents/kassen/$(k)).data; }
-function istBierwart(k) { return signedIn() && exists(/databases/$(database)/documents/kassen/$(k)/bierwarte/$(request.auth.uid)); }
-function istKassenwart(k) { return istBierwart(k) && kasse(k).kassenwartUid == request.auth.uid; }
-
-match /kassen/{k} {
-  allow read: if istBierwart(k);
-  allow write: if false;
-
-  match /bierwarte/{uid} { allow read: if istBierwart(k); allow write: if false; }
-  match /orte/{ortId}    { allow read: if istBierwart(k); allow write: if false; }
-  match /uebernahmen/{id} {                       // ADR-0008
-    allow read: if istBierwart(k) || (signedIn() && resource.data.neueUid == request.auth.uid);
-    allow write: if false;
-  }
-  match /intern/{doc}    { allow read, write: if false; }
-
-  match /mitglieder/{id} {
-    allow read: if istBierwart(k);
-    allow create: if istBierwart(k) && neuesMitgliedGueltig()          // saldoCents == 0, namen/{key} im selben Batch (existsAfter)
-    allow update: if istBierwart(k) && nurFelder(['name','nameKey','entfernt'])
-                  && (!request.resource.data.entfernt || resource.data.saldoCents == 0)   // KAD-04
-                  && !resource.data.istGast;                                            // Gäste nicht löschbar
-  }
-  match /namen/{key} { allow read: if istBierwart(k); allow create, delete: if istBierwart(k) && …; }
-
-  match /sorten/{id} {
-    allow read: if istBierwart(k);
-    allow create: if istBierwart(k) && request.resource.data.bestand == 0 && request.resource.data.preisCents is int;
-    allow update: if istBierwart(k) && nurFelder(['name','preisCents','aktiv','reihenfolge']);
-  }
-
-  match /buchungen/{id} {
-    allow read: if istBierwart(k);
-    allow create: if istBierwart(k)
-      && request.resource.data.stempel.uid == request.auth.uid
-      && request.resource.data.angewendet == false
-      && buchungGueltig(k, request.resource.data);   // je typ: Pflichtfelder, Beträge int > 0,
-                                                     // ortId == eigene uid ODER ("kasse" und istKassenwart),
-                                                     // uebergabe/kassensturz nur Kassenwart
-    allow update, delete: if false;
-  }
+function buchungDiesesRequests() {
+  let b = getAfter(pfad('buchungen', request.resource.data.letzteBuchungId)).data;
+  return b.stempel.am == request.time ? b : null;
 }
-match /users/{uid} { allow read: if signedIn() && request.auth.uid == uid; allow write: if false; }
-match /{document=**} { allow read, write: if false; }
+match /mitglieder/{mitgliedId} {
+  allow update: if nurFelder(['saldoCents', 'letzteBuchungId'])
+    && buchungDiesesRequests() != null
+    && saldoWirkung(buchungDiesesRequests(), mitgliedId) == delta('saldoCents');
+}
+match /buchungen/{buchungId} {
+  allow create: if istBierwart()
+    && request.resource.data.stempel.uid == request.auth.uid
+    && request.resource.data.stempel.am == request.time
+    && buchungGueltig(request.resource.data, buchungId);   // je typ: Felder, Beträge int,
+                                                           // Ort erlaubt, alle Summen verweisen auf diese Buchung
+  allow update: if false;
+}
 ```
 
-Die Rules werden mit `@firebase/rules-unit-testing` gegen den Firestore-Emulator getestet: je Regel ein erlaubter und ein verbotener Fall.
+### Verwaltung als Batches
 
-## Cloud Functions
+| Aktion | Wer | Batch | Die Rules prüfen | Anforderungen |
+| --- | --- | --- | --- | --- |
+| Kasse erstellen | Angemeldeter ohne Kasse | `kassen/{k}`, eigener `bierwarte`-Eintrag, eigenes Mitglied + Gäste-Mitglied + `namen`, Orte (Kasse mit Startbetrag, eigenes Portemonnaie 0), `einladungen/{code}`, `wiederherstellung/{hashHex}`, `users/{uid}`, Log | Ersteller ist `adminUid` und `kassenwartUid`, `anzahlBierwarte == 1`, `wiederherstellungHash` passt zur Dokument-ID unter `wiederherstellung/`, Startbetrag ist `int` | UC-01, AUTH-02, AUTH-03 |
+| Einladung prüfen | Angemeldeter | – (nur `get einladungen/{code}`) | nichts zu schreiben | AUTH-05 |
+| Beitreten | Angemeldeter | eigener `bierwarte`-Eintrag (mit `einladungCode`), Mitglied + `namen`, Portemonnaie, `anzahlBierwarte + 1` in Kasse und Einladung, `users/{uid}`, Log | Code ist `kassen.einladungCode`, Einladung nicht `ersetzt`, `request.time < gueltigBis` (AUTH-08), Name frei | UC-02, AUTH-07, AUTH-08 |
+| Übernahme anfragen | Angemeldeter | `uebernahmen/{id}` mit `einladungCode`, Log | gültiger Code wie beim Beitreten, `status == "offen"`, `neueUid` ist der Anfragende | UC-03, AUTH-07 |
+| Übernahme entscheiden | Bierwart | Status setzen; bei Bestätigung zusätzlich: `bierwarte/{neueUid}` anlegen, `bierwarte/{alteUid}` löschen, `mitglieder.bierwartUid`, Portemonnaie umziehen (`orte/{alteUid}` → `orte/{neueUid}`, gleicher Stand), Rollen in `kassen/{k}` umschreiben, Log | Anfrage war `offen`, Entscheider ist aktiver Bierwart, Stand und Rollen werden 1:1 übertragen | UC-03, AUTH-07, ADR-0008 |
+| Link erneuern | Admin | neues `einladungen/{code}`, altes `ersetzt: true`, `kassen.einladungCode`, Log | Admin | ADM-01, UC-07 |
+| Bierwart entfernen | Admin | `bierwarte/{uid}` löschen, `orte/{uid}.ehemalig = true`, Link erneuern (wie oben), `anzahlBierwarte − 1`, Log | Admin; Entfernter ist nicht selbst Admin oder Kassenwart | ADM-02, UC-08, GEL-08 |
+| Rolle übertragen | Admin | `kassen.kassenwartUid` oder `adminUid`, Log | Admin; Ziel ist aktiver Bierwart | ADM-03, UC-09 |
+| Kasse umbenennen | Admin | `kassen.name`, `einladungen/{code}.kassenName`, Log | Admin | ADM-04 |
+| Austreten | Bierwart | eigenen `bierwarte`-Eintrag löschen, `anzahlBierwarte − 1`, ggf. `leerSeit = request.time`, Log | eigenes Portemonnaie `standCents == 0`; nicht Admin oder Kassenwart (vorher übertragen) | AUTH-09, UC-05, KAD-02 |
+| Admin wiederherstellen | Angemeldeter | `kassen.adminUid = uid`, neuer `wiederherstellungHash` + neues `wiederherstellung/{hashHex}`, altes löschen, Feld `wiederherstellungNachweis` mit dem alten Code, ggf. eigener `bierwarte`-Eintrag, `leerSeit = null`, Log | `hashing.sha256(nachweis) == wiederherstellungHash` | ADM-06, UC-04 |
+| Auflösen | Admin | 1. `kassen.aufgeloest = true` mit `aufloesenBestaetigung == name`; 2. alle Dokumente seitenweise löschen; 3. Kasse, Einladung, Wiederherstellung, `users/{uid}` löschen | Admin; Bestätigung entspricht dem Kassennamen (ADM-05); Löschen nur bei `aufgeloest` | ADM-05, UC-10 |
 
-TypeScript, 2nd gen, Admin SDK. Region: **alle Functions in `europe-west10`**, wie die Firestore-Datenbank. Firestore-Trigger müssen in der Region der Datenbank laufen, und Callables liegen so neben ihren Daten. Die Region wird im Code global gesetzt (`setGlobalOptions({ region: "europe-west10" })`). Daten und Verarbeitung liegen damit in Deutschland (NFA-09).
+- **Wiederherstellung:** Der gesendete alte Code steht danach im Dokument. Er ist aber wertlos, weil im selben Batch ein neuer Code gesetzt wird. Die App zeigt den neuen Code einmal an.
+- **Auflösen:** Bricht das Löschen ab (App geschlossen, kein Netz), bleibt die Kasse `aufgeloest`. Sie ist dann für niemanden mehr sichtbar, und die App des Admins setzt das Löschen beim nächsten Start fort.
 
-### Callables (brauchen Netz, die App zeigt sonst eine klare Meldung, NFA-10)
+Die Rules werden mit `@firebase/rules-unit-testing` gegen den Firestore-Emulator getestet: je Regel ein erlaubter und mindestens ein verbotener Fall. Die Tests liegen in `rules-tests/` (Node, Vitest).
 
-| Function | Wer | Tut | Anforderungen |
+**Noch nicht im Prototyp getestet** und deshalb Pflicht, bevor die Rules auf `main` kommen:
+- Strich bar, Storno, Übergabe, Ein-/Auszahlung, Kassensturz, Bestandskorrektur
+- vorheriger Preis
+- alle Stammdaten und alle Verwaltungsaktionen aus der Tabelle
+- ob `hashing.sha256()` und die Umwandlung in eine Hex-ID so funktionieren wie geplant
+
+## Cloud Functions (ab Release 2)
+
+Release 1 hat keine Cloud Functions ([ADR-0009](decisions/0009-release-1-ohne-cloud-functions.md)). Mit Release 2 kommt die erste:
+
+| Function | Auslöser | Tut | Anforderung |
 | --- | --- | --- | --- |
-| `kasseErstellen(name, eigenerName, startCents)` | jeder angemeldete Nutzer ohne Kasse | Legt Kasse, Gäste-Mitglied, eigenes Mitglied, Bierwart, Orte (Kasse mit Startbetrag, eigenes Portemonnaie 0), Einladungscode und Wiederherstellungscode (Hash) an. Gibt den Code **einmal** zurück. | UC-01, AUTH-02, AUTH-03 |
-| `einladungPruefen(code)` | jeder angemeldete Nutzer | Gibt Kassenname und Anzahl Bierwarte zurück oder einen Fehler (abgelaufen, ersetzt) | AUTH-05, AUTH-08 |
-| `beitreten(code, name)` | jeder angemeldete Nutzer | Prüft Code serverseitig. Legt Mitglied + Bierwart + Portemonnaie an. Ist der Name vergeben, kommt ein Fehler mit der `mitgliedId`, damit die App „Das bin ich“ anbieten kann | UC-02, AUTH-07, AUTH-08 |
-| `uebernahmeAnfragen(code, mitgliedId)` | jeder angemeldete Nutzer | Prüft Code serverseitig und legt eine offene Anfrage an. Hat das Mitglied keinen anderen aktiven Bierwart neben sich, lehnt die Function ab und verweist auf den Wiederherstellungscode | UC-03, AUTH-07 |
-| `uebernahmeEntscheiden(anfrageId, bestaetigen)` | aktiver Bierwart der Kasse | Bei Bestätigung: Mitgliedschaft, Portemonnaie und Rollen gehen auf die neue UID über, die alte UID verliert den Zugang, `users/{neueUid}.kasseId` wird gesetzt. Bei Ablehnung: nur Status | UC-03, AUTH-07, ADR-0008 |
-| `einladungErneuern()` | Admin | Neuer Code, alter sofort `ersetzt` | ADM-01, UC-07 |
-| `bierwartEntfernen(uid)` | Admin | Zugang weg, Mitglied bleibt, Portemonnaie `ehemalig`, Link erneuert | ADM-02, UC-08, GEL-08 |
-| `rolleUebertragen(rolle, uid)` | Admin | Kassenwart bestimmen oder Admin übergeben | ADM-03, UC-09 |
-| `kasseUmbenennen(name)` | Admin | | ADM-04 |
-| `kasseAufloesen(bestaetigungName)` | Admin | Prüft den abgetippten Namen, löscht `kassen/{k}` rekursiv, dazu Einladungen, Wiederherstellungseintrag und `users/*.kasseId` | ADM-05, UC-10 |
-| `adminWiederherstellen(code)` | jeder angemeldete Nutzer | Hash nachschlagen; Nutzer wird Bierwart (falls nötig) und Admin, bisheriger Admin normaler Bierwart; `leerSeit` zurücksetzen | ADM-06, UC-04, AUTH-10 |
-| `austreten(nachfolger?)` | Bierwart | Nur bei Portemonnaie = 0. Admin/Kassenwart müssen einen Nachfolger angeben. Mitglied bleibt. Letzter Bierwart → `leerSeit = jetzt` | AUTH-09, UC-05, KAD-02 |
+| `aufraeumen` | täglich (Cloud Scheduler) | Löscht Kassen mit `leerSeit` älter als 30 Tage, Kassen ohne Buchung seit 12 Monaten und abgelaufene Einladungen, jeweils rekursiv mit dem Admin SDK | AUTH-10, AUTH-11 |
 
-Jede Callable schreibt ihre Log-Buchung im selben Batch wie die Änderung.
+Festgelegt für dann:
+- Region **`europe-west10`**, wie die Firestore-Datenbank. Gesetzt im Code über `setGlobalOptions({ region: "europe-west10" })`. Daten und Verarbeitung liegen damit in Deutschland (NFA-09).
+- Blaze-Tarif mit Budget-Alarm (siehe [Vor dem ersten Functions-Deploy](#vor-dem-ersten-functions-deploy)).
 
-### Trigger
-
-| Function | Auslöser | Tut |
-| --- | --- | --- |
-| `buchungAnwenden` | `onDocumentCreated kassen/{k}/buchungen/{id}` | Wendet die Wirkung idempotent auf die Aggregate an (siehe oben). Ungültige Buchungen, die die Rules durchgelassen haben, werden nicht angewendet, sondern markiert (`angewendet: true`, `fehler`). |
-
-### Zeitgesteuert: automatisches Löschen
-
-`aufraeumen`, täglich (Cloud Scheduler, im Blaze-Tarif enthalten):
-
-| Regel | Abfrage | Anforderung |
-| --- | --- | --- |
-| Kasse ohne Bierwarte seit 30 Tagen | `kassen where leerSeit <= jetzt − 30 Tage` | AUTH-10 |
-| Kasse ohne Buchung seit 12 Monaten | `kassen where letzteBuchungAm <= jetzt − 12 Monate` | AUTH-11 |
-| Abgelaufene Einladungen | `einladungen where gueltigBis <= jetzt − 7 Tage` | Hygiene |
-
-Gelöscht wird mit `firestore.recursiveDelete()`, dieselbe Routine wie bei `kasseAufloesen`. Jeder Lauf schreibt die gelöschten IDs ins Function-Log.
+„Keine Buchung seit 12 Monaten“ liest die Function aus der neuesten Buchung jeder Kasse. Release 1 muss dafür kein eigenes Feld pflegen.
 
 ## Einladungslinks: Hosting + App Links
 
-Format: `https://bier-wart.web.app/j/{code}`. `code` ist zufällig und URL-sicher. Der Link ist 7 Tage gültig. Geprüft wird immer serverseitig in `einladungPruefen`/`beitreten` (AUTH-08).
+Format: `https://bier-wart.web.app/j/{code}`. `code` ist zufällig und URL-sicher, mit mindestens 96 Bit Zufall. Ohne Server-Code gibt es keine Bremse gegen Durchprobieren, also muss der Code selbst sicher genug sein. Der Link ist 7 Tage gültig. Geprüft wird in den Rules beim Beitreten (AUTH-08).
 
 ```mermaid
 sequenceDiagram
@@ -279,7 +246,7 @@ sequenceDiagram
   participant H as Hosting
   participant P as Play Store
   participant App
-  participant F as Functions
+  participant FS as Firestore (Rules)
   B->>N: teilt Link (UC-06)
   alt App installiert (verifizierter App Link)
     N->>App: öffnet /j/CODE direkt
@@ -290,10 +257,10 @@ sequenceDiagram
     P-->>App: Install Referrer enthält CODE (AUTH-12)
   end
   App->>App: Code merken (AUTH-06), Onboarding falls nötig
-  App->>F: einladungPruefen(CODE)
-  F-->>App: Kassenname, Anzahl Bierwarte
+  App->>FS: get einladungen/CODE
+  FS-->>App: Kassenname, Anzahl Bierwarte, gültig bis
   App->>N: „Kasse X beitreten?“ (AUTH-05)
-  App->>F: beitreten(CODE, Name)
+  App->>FS: Batch „Beitreten“ (Rules prüfen Code und Ablauf)
 ```
 
 Bausteine:
@@ -316,30 +283,34 @@ Bausteine:
 ## Offline, Gleichzeitigkeit, Fehler
 
 - Firestore-Offline-Persistenz ist auf Android standardmäßig an. Buchungen und Stammdaten werden lokal geschrieben und später synchronisiert (NFA-02).
-- Jede Buchung ist ein neues Dokument mit Client-ID. Es gibt keine Read-Modify-Write-Zyklen auf dem Client und damit keine verlorenen Updates (NFA-03).
-- Lehnen die Rules eine Offline-Schreibung beim Sync ab (z. B. Name inzwischen vergeben), meldet die App das sichtbar (NFA-10). Dafür müssen die Write-Futures beobachtet werden, auch nach dem Verlassen des Bildschirms (globaler Fehlerkanal, Snackbar).
-- Callables haben ein Timeout. Ohne Netz zeigt die App sofort „Dafür brauchst du Netz“, statt endlos zu laden.
+- Jede Buchung ist ein neues Dokument mit Client-ID. Summen ändern sich nur per `increment()`. Damit gibt es keine verlorenen Updates (NFA-03). Ausnahme sind die absoluten Buchungen (siehe Summen, Punkt 7).
+- Lehnen die Rules eine Offline-Schreibung beim Sync ab (z. B. Name inzwischen vergeben, Stand beim Kassensturz geändert), nimmt Firestore den lokalen Batch zurück, und die App meldet das sichtbar (NFA-10). Dafür müssen die Write-Futures beobachtet werden, auch nach dem Verlassen des Bildschirms (globaler Fehlerkanal, Snackbar).
+- Verwaltungsaktionen prüft die App vorab auf Netz. Ohne Netz zeigt sie sofort „Dafür brauchst du Netz“, statt endlos zu warten.
 
 ## Lokale Entwicklung und Tests
 
-- Emulatoren: Auth, Firestore, Functions (und Hosting für die Fallback-Seite). Lokal mit Demo-Projekt `demo-bierwart`, damit nie echte Daten berührt werden.
+- Emulatoren: Auth, Firestore (und Hosting für die Fallback-Seite). Lokal mit Demo-Projekt `demo-bierwart`, damit nie echte Daten berührt werden.
 - Die App verbindet sich im Debug-Build mit den Emulatoren, wenn sie mit `--dart-define=USE_EMULATORS=true` gestartet wird.
 - Tests:
-  - Dart: Unit-Tests für Domain (Geld, Buchungswirkung), Widget-Tests für Bildschirme.
-  - Rules: `@firebase/rules-unit-testing` gegen den Emulator (NFA-07).
-  - Functions: Tests gegen den Emulator.
-  - Gemeinsame Fixtures für die Buchungswirkung (Dart und TypeScript).
-- CI (GitHub Actions): `flutter analyze`, `flutter test`. Rules- und Functions-Tests kommen dazu, sobald es `functions/` gibt.
+  - Dart: Unit-Tests für Domain (Geld, Buchungswirkung, Batch-Aufbau), Widget-Tests für Bildschirme.
+  - Rules: `rules-tests/` mit `@firebase/rules-unit-testing` gegen den Emulator (NFA-07): `firebase emulators:exec --only firestore --project demo-bierwart "npm --prefix rules-tests test"`.
+- CI (GitHub Actions): `flutter analyze`, `flutter test`. Die Rules-Tests kommen als eigener Job dazu, sobald die Rules auf `main` liegen.
 
 ## Vor dem ersten Deploy
 
-Bis dahin läuft alles lokal gegen die Emulatoren. Das Projekt bleibt im Spark-Tarif.
+Bis dahin läuft alles lokal gegen die Emulatoren. Release 1 braucht nur den Spark-Tarif.
 
-- [ ] Projekt `bier-wart` auf den Blaze-Tarif umstellen (Konsole, macht Marvin). Nötig für Cloud Functions und Cloud Scheduler (ADR-0003, ADR-0007, ADR-0008, AUTH-10, AUTH-11).
-- [ ] Budget-Alarm von 1 € im Monat einrichten (NFA-12). Der Alarm warnt nur, er begrenzt die Kosten nicht.
-- [ ] Security Rules mit Emulator-Tests fertig, bevor irgendetwas deployt wird (NFA-07).
-- [ ] Beim ersten Deploy prüfen, dass der Firestore-Trigger `buchungAnwenden` in `europe-west10` angelegt wird. Der Emulator prüft Regionen nicht.
+- [ ] Security Rules mit vollständigen Emulator-Tests fertig, bevor irgendetwas deployt wird (NFA-07).
+- [ ] Limit der Dokumentzugriffe beim Einkauf gegen das echte Projekt prüfen (Emulator: 12 Sorten). Dafür braucht es einen Rules-Deploy, also deine Freigabe.
 - [ ] Deploy nur mit ausdrücklicher Freigabe (siehe `CLAUDE.md`).
+
+## Vor dem ersten Functions-Deploy
+
+Erst mit Release 2 (AUTH-10, AUTH-11).
+
+- [ ] Projekt `bier-wart` auf den Blaze-Tarif umstellen (Konsole, macht Marvin). Nötig für Cloud Functions und Cloud Scheduler.
+- [ ] Budget-Alarm von 1 € im Monat einrichten (NFA-12). Der Alarm warnt nur, er begrenzt die Kosten nicht.
+- [ ] Beim ersten Deploy prüfen, dass die Functions in `europe-west10` angelegt werden. Der Emulator prüft Regionen nicht.
 
 ## Vor dem Store-Release
 
@@ -356,9 +327,9 @@ Aufgaben, die erst mit dem Play-Store-Eintrag anfallen. Keine davon blockiert di
 
 Annahme: eine Mannschaft, 5 Bierwarte, 30 Mitglieder, ca. 5.000 Buchungen pro Jahr.
 
-- Schreiben: ca. 15 Buchungen am Tag, je 1 Client-Schreibvorgang + ca. 3–4 durch den Trigger. Weit unter dem Gratiskontingent.
-- Lesen: Listener auf Mitglieder, Sorten, Orte und unangewendete Buchungen. Verlauf und Mitglied-Detail seitenweise. Bleibt bei Nutzung von Offline-Cache und kurzen Wiederverbindungen voraussichtlich im Gratiskontingent.
-- Functions, Scheduler, Hosting: im Gratisrahmen.
+- Schreiben: ca. 15 Buchungen am Tag, je Batch 3–4 Dokumente (Buchung + Summen). Weit unter dem Gratiskontingent.
+- Lesen: Listener auf Mitglieder, Sorten und Orte. Verlauf und Mitglied-Detail seitenweise. Die `get()`-Aufrufe der Rules zählen als Lesevorgänge, das sind einige pro Batch. Bleibt bei Nutzung von Offline-Cache und kurzen Wiederverbindungen voraussichtlich im Gratiskontingent.
+- Hosting: im Gratisrahmen. Release 1 hat keine Functions.
 
 Diese Schätzung ist zu prüfen, sobald es echte Nutzung gibt.
 
@@ -366,26 +337,26 @@ Diese Schätzung ist zu prüfen, sobald es echte Nutzung gibt.
 
 Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige Teil gebaut wird.
 
-1. ~~**Aggregation**~~ – entschieden: per Trigger ([ADR-0007](decisions/0007-aggregation-per-trigger.md)).
+1. ~~**Aggregation**~~ – entschieden: erst per Trigger (ADR-0007), ersetzt durch Batches mit Rules-Prüfung ([ADR-0009](decisions/0009-release-1-ohne-cloud-functions.md)).
 2. ~~**„Das bin ich (neues Gerät)“ absichern**~~ – entschieden: Bestätigung durch einen anderen aktiven Bierwart ([ADR-0008](decisions/0008-uebernahme-bestaetigung.md)). Daraus folgen die Fragen 21 bis 23.
-3. ~~**Paketname / applicationId**~~ – entschieden: `io.github.markra711.bierwart` ([ADR-0006](decisions/0006-paketname.md)). Offen ist nur noch der Schritt in der Konsole: eine neue Android-App mit diesem Paketnamen registrieren und die neue `google-services.json` einspielen, danach `firebase_options.dart` neu erzeugen.
+3. ~~**Paketname / applicationId**~~ – entschieden: `io.github.markra711.bierwart` ([ADR-0006](decisions/0006-paketname.md)).
 4. ~~**SHA-256-Fingerabdrücke**~~ – entschieden: zunächst nur der Debug-Key (siehe [Einladungslinks](#einladungslinks-hosting--app-links)); Upload-Key und Play App Signing stehen unter [Vor dem Store-Release](#vor-dem-store-release).
-5. ~~**Blaze-Tarif**~~ – entschieden: Spark bis zum ersten Deploy, dann Blaze mit Budget-Alarm (siehe [Vor dem ersten Deploy](#vor-dem-ersten-deploy)).
-6. ~~**Functions-Region**~~ – entschieden: alle Functions in `europe-west10` (siehe [Cloud Functions](#cloud-functions)).
-7. **Sprache der Functions:** TypeScript (Vorschlag) oder Dart/anderes?
+5. ~~**Blaze-Tarif**~~ – entschieden: Release 1 im Spark-Tarif; Blaze mit Budget-Alarm erst mit Release 2 (siehe [Vor dem ersten Functions-Deploy](#vor-dem-ersten-functions-deploy)).
+6. ~~**Functions-Region**~~ – entschieden: `europe-west10`, gilt ab Release 2 (siehe [Cloud Functions](#cloud-functions-ab-release-2)).
+7. **Sprache der Functions:** vertagt auf Release 2. Stand Oktober 2026: TypeScript ist ausgereift; Dart ist experimentell, Firestore-Trigger sind dort nicht deploybar. Für den reinen Scheduler-Job von Release 2 ist neu zu prüfen.
 8. **Storno eines Bar-Strichs (STR-06):** Erscheinen bar bezahlte Striche im Mitglied-Detail und sind sie stornierbar? Wenn ja: Geht das Geld aus dem Portemonnaie dessen zurück, der ihn gebucht hat, oder dessen, der storniert?
 9. **„Rückgängig“ (STR-04):** Gibt es ein Zeitfenster, nach dem die Snackbar-Aktion verschwindet, und darf nur der Buchende rückgängig machen?
 10. **Gäste-Buchungen (KAD-03):** „standardmäßig sofort bar“: Heißt Tippen auf „Gäste“ dann bar und Halten offen, oder immer bar?
-11. **Kassensturz offline:** Darf er offline gebucht werden? Die Differenz berechnet die Function erst beim Anwenden, die App zeigt vorher nur eine vorläufige.
-12. **Wiederherstellungscode:** Format und Länge (Lesbarkeit vs. Sicherheit) und Schutz gegen Durchprobieren (App Check, Rate Limit)? Kann der Admin einen neuen Code erzeugen, wenn der alte verloren ist?
-13. **App Check** (Play Integrity) für Functions und Firestore in Release 1 aktivieren?
-14. **Verwaiste anonyme Nutzer** in Firebase Auth (z. B. nach Neuinstallation): aufräumen, und wenn ja, nach welcher Frist?
+11. **Kassensturz und Bestandskorrektur offline:** Technisch werden sie abgelehnt, wenn sich der Stand zwischen Zählen und Sync geändert hat (siehe Summen, Punkt 7). Soll die App sie deshalb nur mit Netz zulassen?
+12. **Wiederherstellungscode:** Format und Länge (Vorschlag: mindestens 80 Bit, z. B. 16 Zeichen Base32 in Vierergruppen)? Ohne Functions gibt es kein Rate Limit. Kann der Admin einen neuen Code erzeugen, wenn der alte verloren ist?
+13. **App Check** (Play Integrity) für Firestore in Release 1 aktivieren? Ohne Server-Code ist es der einzige Schutz gegen fremde Clients.
+14. **Verwaiste anonyme Nutzer** in Firebase Auth (z. B. nach Neuinstallation): aufräumen, und wenn ja, nach welcher Frist? (Ohne Functions frühestens Release 2.)
 15. **Schriften offline:** `google_fonts` lädt zur Laufzeit. Barlow und Barlow Condensed als Assets bündeln (Vorschlag), damit die App beim ersten Start ohne Netz richtig aussieht?
 16. **Innere Schatten:** eigener Painter oder Paket (z. B. `flutter_inset_shadow`)?
 17. **Routing:** `go_router` (Vorschlag) in Ordnung?
-18. **Datenschutzhinweis (NFA-09):** Wer liefert den Text, und reicht ein Bildschirm in den Einstellungen?
+18. **Datenschutzhinweis (NFA-09):** Wer liefert den Text, und reicht ein Bildschirm in den Einstellungen? Er muss erwähnen, dass verlassene Kassen in Release 1 nicht automatisch gelöscht werden.
 19. **Quelle der Wahrheit für Anforderungen:** Das Online-Dokument oder `docs/requirements.md`? Wie werden Änderungen synchronisiert?
 20. **Mitglied-Namen (KAD-01) und Eindeutigkeit:** Gilt die Eindeutigkeit für alle Mitglieder oder nur für Bierwarte? Zählen entfernte Mitglieder mit?
-21. **Übernahme eines Mitglieds ohne App:** Ist der vergebene Name ein Mitglied, das nie Bierwart war (z. B. ein Spieler wird Bierwart), gibt es weder Portemonnaie noch Rollen zu schützen. Braucht das trotzdem eine Bestätigung, oder verknüpft `beitreten` direkt?
+21. **Übernahme eines Mitglieds ohne App:** Ist der vergebene Name ein Mitglied, das nie Bierwart war (z. B. ein Spieler wird Bierwart), gibt es weder Portemonnaie noch Rollen zu schützen. Braucht das trotzdem eine Bestätigung, oder verknüpft der Beitritt direkt?
 22. **Ablauf einer Übernahme-Anfrage:** Verfällt eine offene Anfrage (z. B. mit dem Einladungslink nach 7 Tagen), und darf das neue Gerät sie zurückziehen?
 23. **Wo sehen Bierwarte offene Anfragen?** Hinweis auf der Strichliste, in den Einstellungen oder beides? Warte-Bildschirm und Anfrage-Ansicht fehlen im Design-Canvas.

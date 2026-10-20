@@ -1,6 +1,6 @@
 # CLAUDE.md – Bierwart
 
-Strichliste mit Kasse für eine Amateurmannschaft. Flutter (Android zuerst) + Firebase (anonyme Auth, Firestore, Cloud Functions, Hosting). Projekt-ID `bier-wart`, Firestore-Region `europe-west10`, Android-Paket `io.github.markra711.bierwart` (ADR-0006).
+Strichliste mit Kasse für eine Amateurmannschaft. Flutter (Android zuerst) + Firebase (anonyme Auth, Firestore, Hosting). Release 1 kommt ohne Cloud Functions aus; alle Rechte stehen in den Security Rules (ADR-0009). Functions erst ab Release 2. Projekt-ID `bier-wart`, Firestore-Region `europe-west10`, Android-Paket `io.github.markra711.bierwart` (ADR-0006).
 
 ## Pflichtlektüre
 
@@ -25,6 +25,10 @@ flutter run --dart-define=USE_EMULATORS=true   # gegen lokale Emulatoren (sobald
 
 # Emulatoren immer mit Demo-Projekt, nie mit echten Daten
 firebase emulators:start --project demo-bierwart
+
+# Rules-Tests (Node, Vitest) gegen den Firestore-Emulator
+npm --prefix rules-tests ci
+firebase emulators:exec --only firestore --project demo-bierwart "npm --prefix rules-tests test"
 ```
 
 **Nie ohne ausdrückliche Freigabe:** `firebase deploy` (egal welches Ziel), Änderungen in der Firebase- oder Play-Konsole, `git push`.
@@ -41,9 +45,10 @@ lib/
     features/<feature>/     domain/ data/ application/ presentation/
 test/                       spiegelt lib/src/
 docs/                       requirements, architecture, styleguide, decisions/, design/
-firestore.rules             Security Rules (Tests gegen Emulator)
+firestore.rules             Security Rules = Geschäftslogik in Release 1 (ADR-0009)
 firestore.indexes.json
-functions/                  Cloud Functions (TypeScript), kommt mit der ersten Function
+rules-tests/                Emulator-Tests für die Rules (Node, Vitest)
+functions/                  Cloud Functions, erst ab Release 2
 hosting/public/             assetlinks.json, Fallback-Seite für Einladungslinks (kommt mit AUTH-04)
 .github/workflows/ci.yml    analyze + test
 ```
@@ -57,7 +62,7 @@ Features: `onboarding`, `strichliste`, `kader`, `lager`, `geld`, `einstellungen`
 - **State:** Riverpod, ohne Code-Generierung (ADR-0001). Widgets lesen nur Provider, nie Firestore direkt.
 - **Schichten:** `domain/` importiert weder Flutter noch Firebase. Collection- und Feldnamen nur in `data/`.
 - **Design:** nur Tokens aus `lib/src/core/theme/` verwenden, keine Hex-Werte oder freien Abstände in Widgets. Ändert sich `tokens.json`, `tokens.dart` nachziehen; `test/core/theme/tokens_test.dart` prüft das.
-- **Firestore:** Buchungen sind unveränderlich, Korrekturen sind Gegenbuchungen (LOG-02). Rechte gehören in Rules oder Functions, nie nur in die UI (NFA-07).
+- **Firestore:** Buchungen sind unveränderlich, Korrekturen sind Gegenbuchungen (LOG-02). Jede Buchung ist ein Batch aus Buchung und Summen (`increment()`, `letzteBuchungId`). Rechte gehören in die Rules, nie nur in die UI (NFA-07). Jede Rules-Änderung braucht Tests in `rules-tests/`.
 - **Lints:** `flutter_lints`. Keine `// ignore` ohne Begründung im selben Kommentar.
 - **Branches:** `feat/…`, `fix/…`, `docs/…`, `chore/…`. Nie direkt auf `main`.
 - **Commits:** Conventional Commits auf Deutsch, z. B. `feat(strichliste): Strich per Tipp buchen (STR-02, STR-04)`. Jeder Commit, der eine Anforderung umsetzt oder ändert, nennt ihre IDs.

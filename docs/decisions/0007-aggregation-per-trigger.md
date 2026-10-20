@@ -1,6 +1,6 @@
 # ADR-0007: Salden, Bestand und Ortsstände per Trigger aggregieren
 
-- **Status:** Angenommen
+- **Status:** Ersetzt durch [ADR-0009](0009-release-1-ohne-cloud-functions.md)
 - **Datum:** 2026-10-20
 - **Anforderungen:** NFA-02, NFA-03, NFA-05, NFA-06, NFA-07, NFA-12, LOG-01, LOG-02, BES-06, GEL-06
 
