@@ -240,6 +240,13 @@ Die Rules werden mit `@firebase/rules-unit-testing` gegen den Firestore-Emulator
 - alle Stammdaten und alle Verwaltungsaktionen aus der Tabelle
 - ob `hashing.sha256()` und die Umwandlung in eine Hex-ID so funktionieren wie geplant
 
+### App Check
+
+App Check sorgt dafür, dass Firestore nur Anfragen der echten App annimmt, nicht von eigenen Programmen mit dem öffentlichen API-Key. Gegen einen Bierwart, der die echte App benutzt, hilft es nicht, dafür sind die Rules da. Ohne Server-Code ist es der einzige Schutz gegen fremde Clients (NFA-07).
+
+- **Release 1 baut App Check ein:** Paket `firebase_app_check`, im Release-Build mit dem Provider Play Integrity, beim Entwickeln mit dem Debug-Provider. Gegen die Emulatoren braucht es kein App Check.
+- **Erzwungen wird erst zum Store-Release:** Play Integrity setzt voraus, dass die App in der Play Console angelegt und mit dem Firebase-Projekt verknüpft ist. Vorher würde ein Erzwingen alle Builds außer Debug-Builds mit eingetragenen Debug-Tokens aussperren. Die Schritte stehen unter [Vor dem Store-Release](#vor-dem-store-release).
+
 ## Cloud Functions (ab Release 2)
 
 Release 1 hat keine Cloud Functions ([ADR-0009](decisions/0009-release-1-ohne-cloud-functions.md)). Mit Release 2 kommt die erste:
@@ -341,6 +348,8 @@ Aufgaben, die erst mit dem Play-Store-Eintrag anfallen. Keine davon blockiert di
 - [ ] SHA-1 des Release-Keys in der Firebase-Konsole bei der Android-App hinterlegen.
 - [ ] Android-API-Key in der Google Cloud Console auf Paketname und SHA-1 (Debug + Release) einschränken. Der Key steht öffentlich in der APK; die Einschränkung verhindert, dass fremde Apps ihn benutzen.
 - [ ] App Links mit dem Release-Build auf einem echten Gerät prüfen (`adb shell pm get-app-links io.github.markra711.bierwart`).
+- [ ] App Check: In der Play Console unter „App-Integrität“ die Play Integrity API mit dem Firebase-Projekt verknüpfen. In der Firebase-Konsole unter App Check die Android-App mit dem SHA-256 des Play-App-Signing-Schlüssels für Play Integrity registrieren (beides Konsole, macht Marvin).
+- [ ] App-Check-Statistik in der Firebase-Konsole prüfen: Haben praktisch alle Firestore-Anfragen ein gültiges Token? Erst dann **Erzwingen für Firestore** einschalten (Konsole, macht Marvin, nur mit Freigabe).
 
 ## Kosten (grobe Schätzung, NFA-12)
 
@@ -368,7 +377,7 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 10. ~~**Gäste-Buchungen**~~ – entschieden: immer bar, Tippen wie Halten; KAD-03 angepasst.
 11. ~~**Kassensturz und Bestandskorrektur offline**~~ – entschieden: nur mit Netz.
 12. ~~**Wiederherstellungscode**~~ – entschieden: 16 Zeichen Crockford-Base32 (80 Bit) in Vierergruppen; der Admin kann einen neuen Code erzeugen (ADM-08, siehe [Verwaltung als Batches](#verwaltung-als-batches)).
-13. **App Check** (Play Integrity) für Firestore in Release 1 aktivieren? Ohne Server-Code ist es der einzige Schutz gegen fremde Clients.
+13. ~~**App Check**~~ – entschieden: in Release 1 eingebaut, erzwungen erst zum Store-Release (siehe [App Check](#app-check)).
 14. **Verwaiste anonyme Nutzer** in Firebase Auth (z. B. nach Neuinstallation): aufräumen, und wenn ja, nach welcher Frist? (Ohne Functions frühestens Release 2.)
 15. **Schriften offline:** `google_fonts` lädt zur Laufzeit. Barlow und Barlow Condensed als Assets bündeln (Vorschlag), damit die App beim ersten Start ohne Netz richtig aussieht?
 16. **Innere Schatten:** eigener Painter oder Paket (z. B. `flutter_inset_shadow`)?
