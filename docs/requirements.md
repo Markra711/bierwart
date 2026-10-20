@@ -5,6 +5,7 @@
 >
 > **Abweichungen vom Online-Dokument** (dort noch nachzutragen):
 > - 2026-10-21: UC-03 und AUTH-07 – Übernahme braucht die Bestätigung eines Bierwarts ([ADR-0008](decisions/0008-uebernahme-bestaetigung.md)).
+> - 2026-10-21: AUTH-10 und AUTH-11 in Release 2, ADM-05 ohne „serverseitig“, Annahme zu Cloud Functions angepasst – Release 1 ohne Cloud Functions ([ADR-0009](decisions/0009-release-1-ohne-cloud-functions.md)).
 
 ## Vision & Abgrenzung
 
@@ -113,8 +114,8 @@ Jede Anforderung hat eine ID und ein Release. Release 1 ist das MVP für Android
 | AUTH-07 | Namen pro Kasse eindeutig halten; bei vergebenem Namen „Das bin ich (neues Gerät)“ anbieten; die alte Mitgliedschaft samt Portemonnaie und Rollen erst übertragen, wenn ein anderer aktiver Bierwart die Anfrage bestätigt; ohne anderen aktiven Bierwart nur per Wiederherstellungscode | 1 |
 | AUTH-08 | abgelaufene oder ersetzte Links mit klarer Meldung ablehnen, serverseitig geprüft | 1 |
 | AUTH-09 | Austreten nur bei Portemonnaie = 0 erlauben; Admin und Kassenwart müssen vorher einen Nachfolger wählen | 1 |
-| AUTH-10 | eine Kasse ohne Bierwarte nach 30 Tagen löschen; bis dahin per Wiederherstellungscode reaktivierbar | 1 |
-| AUTH-11 | eine Kasse ohne Buchung seit 12 Monaten löschen | 1 |
+| AUTH-10 | eine Kasse ohne Bierwarte nach 30 Tagen löschen; bis dahin per Wiederherstellungscode reaktivierbar | 2 |
+| AUTH-11 | eine Kasse ohne Buchung seit 12 Monaten löschen | 2 |
 | AUTH-12 | auf Android den Code nach Neuinstallation aus dem Play-Store-Referrer übernehmen | 1 |
 | AUTH-13 | iOS mit Universal Links unterstützen | 3 |
 | AUTH-14 | Mitgliedschaft in mehreren Kassen mit Kassenauswahl beim Start | 4 |
@@ -127,7 +128,7 @@ Jede Anforderung hat eine ID und ein Release. Release 1 ist das MVP für Android
 | ADM-02 | dem Admin erlauben, Bierwarte zu entfernen; dabei wird der Link automatisch erneuert | 1 |
 | ADM-03 | dem Admin erlauben, den Kassenwart zu bestimmen und die Admin-Rolle zu übergeben | 1 |
 | ADM-04 | dem Admin erlauben, die Kasse umzubenennen | 1 |
-| ADM-05 | dem Admin erlauben, die Kasse aufzulösen: Warnung, Abtippen des Kassennamens, danach serverseitige Löschung aller Daten | 1 |
+| ADM-05 | dem Admin erlauben, die Kasse aufzulösen: Warnung, Abtippen des Kassennamens, danach Löschung aller Daten (durch die App des Admins, braucht Netz) | 1 |
 | ADM-06 | jeden Nutzer mit dem Wiederherstellungscode zum Admin machen; der bisherige Admin wird normaler Bierwart | 1 |
 | ADM-07 | mehrere Admins pro Kasse erlauben | 4 |
 
@@ -284,7 +285,7 @@ Die folgenden Annahmen stecken in den Anforderungen. Sie gelten, bis jemand wide
 - Der Ersteller einer Kasse ist zu Beginn Admin **und** Kassenwart.
 - Wer sich per Wiederherstellungscode zum Admin macht, verdrängt den bisherigen Admin. Es gibt immer genau einen.
 - Die Einladungslinks laufen über Firebase Hosting (`bier-wart.web.app`). Eine eigene Domain ist nicht nötig.
-- Auflösen und automatisches Löschen brauchen Cloud Functions und damit den Firebase-Blaze-Tarif.
+- Release 1 kommt ohne Cloud Functions aus (ADR-0009). Das automatische Löschen (AUTH-10, AUTH-11) braucht Cloud Functions und damit den Blaze-Tarif und kommt deshalb in Release 2.
 - Eine Stornierung löscht den Strich nicht, sondern bucht eine Gegenbuchung (LOG-02).
 - Die Releases haben noch keine Termine. Release 1 wird erst geplant, wenn die Anforderungen abgenommen sind.
 

@@ -53,3 +53,6 @@ app.*.map.json
 firebase-export-*/
 functions/node_modules/
 functions/lib/
+
+# Rules-Tests
+rules-tests/node_modules/
