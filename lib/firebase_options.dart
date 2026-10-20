@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBrgSNFZVusjoGblGYJ3yztuRbRblL9b-8',
-    appId: '1:797384576516:android:92ac51067bd79ec8fa6f51',
+    appId: '1:797384576516:android:ae8d4feb3c1e2ae0fa6f51',
     messagingSenderId: '797384576516',
     projectId: 'bier-wart',
     storageBucket: 'bier-wart.firebasestorage.app',
