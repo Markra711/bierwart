@@ -30,7 +30,7 @@ firebase emulators:start --project demo-bierwart
 
 # Rules-Tests (Node, Vitest) gegen den Firestore-Emulator
 npm --prefix rules-tests ci
-firebase emulators:exec --only firestore --project demo-bierwart "npm --prefix rules-tests test"
+npm --prefix rules-tests run test:emulator
 ```
 
 **Nie ohne ausdrückliche Freigabe:** `firebase deploy` (egal welches Ziel), Änderungen in der Firebase- oder Play-Konsole, `git push`.
@@ -52,7 +52,7 @@ firestore.indexes.json
 rules-tests/                Emulator-Tests für die Rules (Node, Vitest)
 functions/                  Cloud Functions, erst ab Release 2
 hosting/public/             assetlinks.json, Fallback-Seite für Einladungslinks (kommt mit AUTH-04)
-.github/workflows/ci.yml    analyze + test
+.github/workflows/ci.yml    analyze + test (Flutter), Rules-Tests (Emulator)
 ```
 
 Features: `onboarding`, `strichliste`, `kader`, `lager`, `geld`, `einstellungen`.
