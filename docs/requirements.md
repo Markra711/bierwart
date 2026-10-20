@@ -9,6 +9,7 @@
 > - 2026-10-21: AUTH-10 und AUTH-11 in Release 2, ADM-05 ohne „serverseitig“, Annahme zu Cloud Functions angepasst – Release 1 ohne Cloud Functions ([ADR-0009](decisions/0009-release-1-ohne-cloud-functions.md)).
 > - 2026-10-21: KAD-03 – Buchungen auf „Gäste“ sind immer bar, nicht nur standardmäßig (architecture.md, offene Frage 10).
 > - 2026-10-21, nach dem Einfrieren: ADM-08 neu – Admin kann einen neuen Wiederherstellungscode erzeugen (architecture.md, offene Frage 12).
+> - 2026-10-21, nach dem Einfrieren: KAD-08 neu – entfernte Mitglieder behalten ihren Namen und lassen sich wieder aufnehmen (architecture.md, offene Frage 20).
 
 ## Vision & Abgrenzung
 
@@ -147,6 +148,7 @@ Jede Anforderung hat eine ID und ein Release. Release 1 ist das MVP für Android
 | KAD-05 | alle Mitglieder mit offenem Betrag oder Guthaben anzeigen, sortiert nach Höhe der Schulden | 1 |
 | KAD-06 | pro Mitglied die Striche mit Datum, Sorte, Preis und Stempel zeigen | 1 |
 | KAD-07 | die offenen Beträge als Text über das Teilen-Menü ausgeben („Wer schuldet was“) | 1 |
+| KAD-08 | den Namen eines entfernten Mitglieds reserviert halten; wird er neu angelegt, „Name wieder aufnehmen?“ anbieten und das alte Mitglied mit seinem Verlauf zurückholen, mit Log-Eintrag | 1 |
 
 **Getränke & Bestand**
 
