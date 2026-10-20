@@ -79,6 +79,7 @@ Alle Daten einer Kasse liegen unter `kassen/{kasseId}`. So bleiben die Rules ein
 users/{uid}                                  nur Function schreibt; Nutzer liest eigenes Dokument
 kassen/{kasseId}
   bierwarte/{uid}
+  uebernahmen/{anfrageId}                    „Das bin ich“-Anfragen (ADR-0008)
   mitglieder/{mitgliedId}
   namen/{nameKey}                            Eindeutigkeitsindex für Namen
   sorten/{sorteId}
@@ -97,6 +98,7 @@ wiederherstellung/{codeHash}                 nur Functions
 | `kassen/{k}` | `name`, `adminUid`, `kassenwartUid`, `einladungCode`, `einladungGueltigBis`, `anzahlBierwarte`, `leerSeit` (null oder Timestamp, AUTH-10), `letzteBuchungAm` (AUTH-11), `erstelltAm` | Functions |
 | `kassen/{k}/bierwarte/{uid}` | `mitgliedId`, `name` (denormalisiert für Stempel), `beigetretenAm` | Functions |
 | `kassen/{k}/mitglieder/{id}` | `name`, `nameKey`, `istGast` (KAD-03), `bierwartUid` (oder null), `entfernt` (bool), `saldoCents` (offen; negativ = Guthaben), `angelegtAm` | App (Name, Entfernen), Functions (Saldo, Bierwart-Verknüpfung) |
+| `kassen/{k}/uebernahmen/{id}` | `neueUid`, `mitgliedId`, `status` (`offen`/`bestaetigt`/`abgelehnt`), `angefragtAm`, `entschiedenVon` (uid), `entschiedenAm` | Functions |
 | `kassen/{k}/namen/{nameKey}` | `mitgliedId` | App, im selben Batch wie Anlegen/Umbenennen |
 | `kassen/{k}/sorten/{id}` | `name`, `preisCents`, `aktiv` (Ausblenden, BES-01), `bestand` (Flaschen, darf < 0, STR-05), `reihenfolge` | App (Name, Preis, aktiv), Functions (Bestand) |
 | `kassen/{k}/orte/{ortId}` | `art` (`kasse`/`portemonnaie`), `uid`, `name`, `standCents`, `ehemalig` (GEL-08) | Functions |
@@ -132,7 +134,7 @@ Gemeinsame Felder:
 | `einzahlung` / `auszahlung` | `ortId`, `betragCents`, `grund` | Ort ± Betrag | GEL-05 |
 | `kassensturz` | `gezaehltCents` | Kasse = gezählt; die Function rechnet `differenzCents` beim Anwenden aus | GEL-06 |
 | `mitgliedAngelegt`, `mitgliedUmbenannt`, `mitgliedEntfernt`, `sorteGeaendert`, … | jeweils alt/neu | keine Geldwirkung, nur Log | LOG-01, UI-09 |
-| `rolleGeaendert`, `bierwartBeigetreten`, `bierwartEntfernt`, `ausgetreten`, `einladungErneuert`, `kasseUmbenannt` | jeweils alt/neu | nur Log, von Functions geschrieben | LOG-01, ADM-01 bis ADM-06 |
+| `rolleGeaendert`, `bierwartBeigetreten`, `bierwartEntfernt`, `ausgetreten`, `einladungErneuert`, `kasseUmbenannt`, `uebernahmeAngefragt`, `uebernahmeBestaetigt`, `uebernahmeAbgelehnt` | jeweils alt/neu | nur Log, von Functions geschrieben | LOG-01, ADM-01 bis ADM-06 |
 
 „Rückgängig“ in der Snackbar (STR-04) erzeugt eine `storno`-Buchung, löscht also nichts.
 
@@ -187,6 +189,10 @@ match /kassen/{k} {
 
   match /bierwarte/{uid} { allow read: if istBierwart(k); allow write: if false; }
   match /orte/{ortId}    { allow read: if istBierwart(k); allow write: if false; }
+  match /uebernahmen/{id} {                       // ADR-0008
+    allow read: if istBierwart(k) || (signedIn() && resource.data.neueUid == request.auth.uid);
+    allow write: if false;
+  }
   match /intern/{doc}    { allow read, write: if false; }
 
   match /mitglieder/{id} {
@@ -231,7 +237,9 @@ TypeScript, 2nd gen, Admin SDK. Region: Vorschlag dieselbe wie Firestore (`europ
 | --- | --- | --- | --- |
 | `kasseErstellen(name, eigenerName, startCents)` | jeder angemeldete Nutzer ohne Kasse | Legt Kasse, Gäste-Mitglied, eigenes Mitglied, Bierwart, Orte (Kasse mit Startbetrag, eigenes Portemonnaie 0), Einladungscode und Wiederherstellungscode (Hash) an. Gibt den Code **einmal** zurück. | UC-01, AUTH-02, AUTH-03 |
 | `einladungPruefen(code)` | jeder angemeldete Nutzer | Gibt Kassenname und Anzahl Bierwarte zurück oder einen Fehler (abgelaufen, ersetzt) | AUTH-05, AUTH-08 |
-| `beitreten(code, name, \| uebernehmeMitgliedId)` | jeder angemeldete Nutzer | Prüft Code serverseitig. Legt Mitglied + Bierwart + Portemonnaie an, oder übernimmt bei „Das bin ich“ ein bestehendes Mitglied (alte UID verliert den Zugang, Portemonnaie geht auf die neue UID über) | UC-02, UC-03, AUTH-07, AUTH-08 |
+| `beitreten(code, name)` | jeder angemeldete Nutzer | Prüft Code serverseitig. Legt Mitglied + Bierwart + Portemonnaie an. Ist der Name vergeben, kommt ein Fehler mit der `mitgliedId`, damit die App „Das bin ich“ anbieten kann | UC-02, AUTH-07, AUTH-08 |
+| `uebernahmeAnfragen(code, mitgliedId)` | jeder angemeldete Nutzer | Prüft Code serverseitig und legt eine offene Anfrage an. Hat das Mitglied keinen anderen aktiven Bierwart neben sich, lehnt die Function ab und verweist auf den Wiederherstellungscode | UC-03, AUTH-07 |
+| `uebernahmeEntscheiden(anfrageId, bestaetigen)` | aktiver Bierwart der Kasse | Bei Bestätigung: Mitgliedschaft, Portemonnaie und Rollen gehen auf die neue UID über, die alte UID verliert den Zugang, `users/{neueUid}.kasseId` wird gesetzt. Bei Ablehnung: nur Status | UC-03, AUTH-07, ADR-0008 |
 | `einladungErneuern()` | Admin | Neuer Code, alter sofort `ersetzt` | ADM-01, UC-07 |
 | `bierwartEntfernen(uid)` | Admin | Zugang weg, Mitglied bleibt, Portemonnaie `ehemalig`, Link erneuert | ADM-02, UC-08, GEL-08 |
 | `rolleUebertragen(rolle, uid)` | Admin | Kassenwart bestimmen oder Admin übergeben | ADM-03, UC-09 |
@@ -330,7 +338,7 @@ Diese Schätzung ist zu prüfen, sobald es echte Nutzung gibt.
 Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige Teil gebaut wird.
 
 1. ~~**Aggregation**~~ – entschieden: per Trigger ([ADR-0007](decisions/0007-aggregation-per-trigger.md)).
-2. **„Das bin ich (neues Gerät)“ absichern (AUTH-07, UC-03):** Wer den Einladungslink hat, kann jeden vergebenen Namen übernehmen, samt Portemonnaie und Rollen. Reicht das, oder braucht es eine Bestätigung (durch den Admin, durch einen anderen Bierwart, einen persönlichen Code)?
+2. ~~**„Das bin ich (neues Gerät)“ absichern**~~ – entschieden: Bestätigung durch einen anderen aktiven Bierwart ([ADR-0008](decisions/0008-uebernahme-bestaetigung.md)). Daraus folgen die Fragen 21 bis 23.
 3. ~~**Paketname / applicationId**~~ – entschieden: `io.github.markra711.bierwart` ([ADR-0006](decisions/0006-paketname.md)). Offen ist nur noch der Schritt in der Konsole: eine neue Android-App mit diesem Paketnamen registrieren und die neue `google-services.json` einspielen, danach `firebase_options.dart` neu erzeugen.
 4. **SHA-256-Fingerabdrücke** für `assetlinks.json`: Upload-Key und Play App Signing gibt es erst mit einem Play-Console-Eintrag. Gibt es den schon?
 5. **Blaze-Tarif:** Ist er für `bier-wart` aktiv? Ohne ihn keine Functions, also kein Erstellen, Beitreten, Auflösen und kein automatisches Löschen.
@@ -349,3 +357,6 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 18. **Datenschutzhinweis (NFA-09):** Wer liefert den Text, und reicht ein Bildschirm in den Einstellungen?
 19. **Quelle der Wahrheit für Anforderungen:** Das Online-Dokument oder `docs/requirements.md`? Wie werden Änderungen synchronisiert?
 20. **Mitglied-Namen (KAD-01) und Eindeutigkeit:** Gilt die Eindeutigkeit für alle Mitglieder oder nur für Bierwarte? Zählen entfernte Mitglieder mit?
+21. **Übernahme eines Mitglieds ohne App:** Ist der vergebene Name ein Mitglied, das nie Bierwart war (z. B. ein Spieler wird Bierwart), gibt es weder Portemonnaie noch Rollen zu schützen. Braucht das trotzdem eine Bestätigung, oder verknüpft `beitreten` direkt?
+22. **Ablauf einer Übernahme-Anfrage:** Verfällt eine offene Anfrage (z. B. mit dem Einladungslink nach 7 Tagen), und darf das neue Gerät sie zurückziehen?
+23. **Wo sehen Bierwarte offene Anfragen?** Hinweis auf der Strichliste, in den Einstellungen oder beides? Warte-Bildschirm und Anfrage-Ansicht fehlen im Design-Canvas.
