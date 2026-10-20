@@ -142,7 +142,7 @@ Linien-Icons, 22px, Strichstärke 1,8, runde Enden. Inaktiv in `ink-muted`, akti
 
 - Touch-Ziele mindestens 44px.
 - Die Strichliste startet die App (UI-01). Tippen bucht offen, Halten bucht bar (STR-02, STR-03).
-- Bestätigungsdialoge nur bei Unumkehrbarem (UI-04). Buchungen bekommen stattdessen „Rückgängig“ in der Snackbar (STR-04).
+- Bestätigungsdialoge nur bei Unumkehrbarem (UI-04). Buchungen bekommen stattdessen „Rückgängig“ in der Snackbar (STR-04). Sie bleibt bis zur nächsten Buchung, höchstens 8 Sekunden.
 - Kassenwart- und Admin-Funktionen sind für andere unsichtbar, nicht ausgegraut (UI-08).
 
 ## Komponenten
@@ -212,7 +212,7 @@ Kacheln der Strichliste: oben die Getränkesorten, darunter die Mitglieder, beid
 | gerade gebucht | eingedrückt, Verlaufsrahmen, Saldo mit Verlauf und „+1“, bis die Snackbar verschwindet |
 | Gäste | gestrichelter Rahmen in `line-strong`, ohne Schatten, immer letzte Kachel |
 
-Antippen bucht offen, Halten bucht bar. Namen kürzen mit „…“, Beträge im Stil `amount-m` mit Tabellenziffern.
+Antippen bucht offen, Halten bucht bar. Auf „Gäste“ buchen beide Gesten bar (KAD-03). Namen kürzen mit „…“, Beträge im Stil `amount-m` mit Tabellenziffern.
 
 ## Bildschirme im Design-Canvas
 

@@ -141,6 +141,12 @@ Gemeinsame Felder:
 - **Nur einmal:** Die Storno-Buchung hat die feste ID `storno-{bezugId}`. Ein zweites Storno derselben Buchung wäre ein Schreibvorgang auf ein bestehendes Dokument, und den lehnen die Rules ab (Buchungen: kein `update`).
 - Stornos selbst sind nicht stornierbar. Wer sich vertan hat, bucht neu.
 
+**Rückgängig (STR-04):** Die Snackbar erscheint nur auf dem Gerät des Buchenden. Sie bleibt bis zur nächsten Buchung stehen, höchstens 8 Sekunden. Danach geht Storno nur noch über das Mitglied-Detail (STR-06), für jeden Bierwart.
+
+**Gäste (KAD-03):** Auf „Gäste“ wird immer bar gebucht, Tippen und Halten verhalten sich gleich. Die Rules lehnen einen offenen `strich` auf ein Mitglied mit `istGast` ab.
+
+**Kassensturz und Bestandskorrektur** sind nur mit Netz möglich. Die App zeigt beim Zählen den aktuellen Stand vom Server und sperrt die Aktion ohne Verbindung (siehe Summen, Punkt 7).
+
 ### Summen: Salden, Bestand, Ortsstände
 
 Die Bildschirme brauchen Salden, Bestand und Ortsstände sofort, ohne jedes Mal alle Buchungen zu lesen (NFA-12, Kosten). Entschieden in [ADR-0009](decisions/0009-release-1-ohne-cloud-functions.md):
@@ -352,9 +358,9 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 6. ~~**Functions-Region**~~ – entschieden: `europe-west10`, gilt ab Release 2 (siehe [Cloud Functions](#cloud-functions-ab-release-2)).
 7. **Sprache der Functions:** vertagt auf Release 2. Stand Oktober 2026: TypeScript ist ausgereift; Dart ist experimentell, Firestore-Trigger sind dort nicht deploybar. Für den reinen Scheduler-Job von Release 2 ist neu zu prüfen.
 8. ~~**Storno eines Bar-Strichs**~~ – entschieden: wer storniert, zahlt aus dem eigenen Portemonnaie zurück (Kassenwart wahlweise Kasse); jede Buchung nur einmal stornierbar (siehe [Buchungen](#buchungen-das-log)).
-9. **„Rückgängig“ (STR-04):** Gibt es ein Zeitfenster, nach dem die Snackbar-Aktion verschwindet, und darf nur der Buchende rückgängig machen?
-10. **Gäste-Buchungen (KAD-03):** „standardmäßig sofort bar“: Heißt Tippen auf „Gäste“ dann bar und Halten offen, oder immer bar?
-11. **Kassensturz und Bestandskorrektur offline:** Technisch werden sie abgelehnt, wenn sich der Stand zwischen Zählen und Sync geändert hat (siehe Summen, Punkt 7). Soll die App sie deshalb nur mit Netz zulassen?
+9. ~~**„Rückgängig“**~~ – entschieden: Snackbar nur beim Buchenden, bis zur nächsten Buchung, höchstens 8 Sekunden; danach Storno im Mitglied-Detail (siehe [Buchungen](#buchungen-das-log)).
+10. ~~**Gäste-Buchungen**~~ – entschieden: immer bar, Tippen wie Halten; KAD-03 angepasst.
+11. ~~**Kassensturz und Bestandskorrektur offline**~~ – entschieden: nur mit Netz.
 12. **Wiederherstellungscode:** Format und Länge (Vorschlag: mindestens 80 Bit, z. B. 16 Zeichen Base32 in Vierergruppen)? Ohne Functions gibt es kein Rate Limit. Kann der Admin einen neuen Code erzeugen, wenn der alte verloren ist?
 13. **App Check** (Play Integrity) für Firestore in Release 1 aktivieren? Ohne Server-Code ist es der einzige Schutz gegen fremde Clients.
 14. **Verwaiste anonyme Nutzer** in Firebase Auth (z. B. nach Neuinstallation): aufräumen, und wenn ja, nach welcher Frist? (Ohne Functions frühestens Release 2.)
