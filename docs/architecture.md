@@ -93,7 +93,7 @@ wiederherstellung/{hashHex}                  Hash des Wiederherstellungscodes �
 | --- | --- | --- |
 | `users/{uid}` | `kasseId` (Release 4: Liste, AUTH-14) | nur der Nutzer selbst |
 | `kassen/{k}` | `name`, `adminUid`, `kassenwartUid`, `einladungCode`, `anzahlBierwarte`, `wiederherstellungHash` (Bytes), `leerSeit` (null oder Timestamp, für AUTH-10 in Release 2), `aufgeloest` (bool), `erstelltAm` | Bierwarte |
-| `kassen/{k}/bierwarte/{uid}` | `mitgliedId`, `name` (denormalisiert für den Stempel), `beigetretenAm`, `einladungCode` (mit dem beigetreten wurde) | Bierwarte |
+| `kassen/{k}/bierwarte/{uid}` | `mitgliedId`, `name` (denormalisiert für den Stempel), `beigetretenAm`, `einladungCode` (mit dem beigetreten wurde), `letzteBuchungId` | Bierwarte |
 | `kassen/{k}/mitglieder/{id}` | `name`, `nameKey`, `istGast` (KAD-03), `bierwartUid` (oder null), `entfernt` (bool), `saldoCents` (offen; negativ = Guthaben), `letzteBuchungId`, `angelegtAm` | Bierwarte |
 | `kassen/{k}/uebernahmen/{id}` | `neueUid`, `mitgliedId`, `einladungCode`, `status` (`offen`/`bestaetigt`/`abgelehnt`/`zurueckgezogen`), `angefragtAm`, `gueltigBis` (angefragtAm + 7 Tage), `entschiedenVon`, `entschiedenAm` | Bierwarte und die anfragende UID |
 | `kassen/{k}/namen/{nameKey}` | `mitgliedId` | Bierwarte |
@@ -188,7 +188,11 @@ Die Rules sind in Release 1 die Geschäftslogik. Grundsätze (NFA-07):
 - Jede Verwaltungsaktion schreibt ihre Log-Buchung im selben Batch. Die Rules verlangen sie (`existsAfter`).
 - `einladungen` und `wiederherstellung`: nur `get` für Angemeldete, kein `list`.
 
-Die Rules für **alle Buchungsarten** liegen in `firestore.rules` und sind mit 47 Emulator-Tests in `rules-tests/buchungen.test.js` abgedeckt: Strich offen und bar, Storno, Zahlung, Einkauf, Bestandskorrektur, Übergabe, Ein-/Auszahlung, Kassensturz, dazu die Fälle ohne passende Buchung und die Unveränderlichkeit des Logs. Kern des Musters:
+Die Rules für **alle Buchungsarten und die Stammdaten** liegen in `firestore.rules`. Abgedeckt sind sie mit 79 Emulator-Tests in `rules-tests/`:
+- `buchungen.test.js` (47): Strich offen und bar, Storno, Zahlung, Einkauf, Bestandskorrektur, Übergabe, Ein-/Auszahlung, Kassensturz, Fälle ohne passende Buchung, Unveränderlichkeit des Logs.
+- `stammdaten.test.js` (32): Mitglieder anlegen, umbenennen, entfernen, wieder aufnehmen; Namensindex; Sorten anlegen, ändern, ausblenden.
+
+Kern des Musters:
 
 ```
 function buchungDiesesRequests() {
@@ -212,6 +216,16 @@ Zusätzlich zu den Entscheidungen oben prüfen die Rules:
 - Der Name im Stempel ist der Name des buchenden Bierwarts (`bierwarte/{uid}.name`).
 - Auf entfernte Mitglieder wird nicht gebucht, und auf „Gäste“ nicht offen.
 - Storno geht nur für Striche (`strich`, `strichBar`). Die Felder müssen zur Ursprungsbuchung passen (siehe offene Frage 24).
+
+**Stammdaten** folgen demselben Muster: Jede Änderung an Mitglied, Sorte oder Bierwart-Namen verweist über `letzteBuchungId` auf ihre Log-Buchung im selben Batch (LOG-01). Was die Rules dabei prüfen:
+- **Mitglied anlegen** (KAD-01): Saldo 0, kein Gast, kein Bierwart, `nameKey` ist die normalisierte Form des Namens (klein, getrimmt, Leerzeichen zusammengefasst), Eintrag in `namen/` im selben Batch.
+- **Umbenennen** (UI-09): Der neue Name kommt in den Index, der alte wird frei. Ist das Mitglied ein aktiver Bierwart, ändert sich `bierwarte/{uid}.name` im selben Batch mit. Nicht erlaubt für „Gäste“ und für entfernte Mitglieder.
+- **Entfernen** (KAD-04): nur bei Saldo 0, nie „Gäste“, nie ein aktiver Bierwart (KAD-02). Der Name bleibt im Index (KAD-08).
+- **Wieder aufnehmen** (KAD-08): `entfernt` zurück auf `false`.
+- **Sorte anlegen** (BES-01): Bestand 0, Preis in ganzen Cent ≥ 0.
+- **Sorte ändern oder ausblenden** (BES-01): Ändert sich der Preis, muss der alte nach `vorherigerPreisCents` wandern (BES-02). Der Bestand ändert sich nie über Stammdaten. Die Reihenfolge im Raster darf sich ohne Log-Eintrag ändern.
+- **Grenze der Normalisierung:** Unicode-NFC können die Rules nicht prüfen. Die App normalisiert vorher. Schreibweisen, die sich nur in der Unicode-Form unterscheiden, könnte ein manipulierter Client also doppelt anlegen.
+- **Risiko Ausdrucksgrenze:** Rules werten pro Dokument höchstens 1000 Ausdrücke aus. Der aufwendigste Fall (Umbenennen eines Bierwarts) läuft durch. Wie viel Abstand bleibt, zeigt der Emulator nicht. Wird die Kette in `buchungGueltig` länger, kann das zum Problem werden.
 
 ### Verwaltung als Batches
 
@@ -242,7 +256,7 @@ Zusätzlich zu den Entscheidungen oben prüfen die Rules:
 
 Die Rules werden mit `@firebase/rules-unit-testing` gegen den Firestore-Emulator getestet: je Regel ein erlaubter und mindestens ein verbotener Fall. Die Tests liegen in `rules-tests/` (Node, Vitest).
 
-**Noch offen:** Rules und Tests für Stammdaten und alle Verwaltungsaktionen aus der Tabelle. Dazu die Prüfung, ob `hashing.sha256()` und die Umwandlung in eine Hex-ID so funktionieren wie geplant. Bis dahin dürfen Clients dort nichts schreiben.
+**Noch offen:** Rules und Tests für alle Verwaltungsaktionen aus der Tabelle (Kasse erstellen, Beitritt, Übernahme, Rollen, Wiederherstellung, Auflösen, „Gäste“ anlegen). Dazu die Prüfung, ob `hashing.sha256()` und die Umwandlung in eine Hex-ID so funktionieren wie geplant. Bis dahin dürfen Clients dort nichts schreiben.
 
 ### App Check
 

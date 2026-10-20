@@ -6,8 +6,9 @@ rules_version = '2';
 // Muster und Wirkungen: docs/architecture.md, „Summen“ und „Buchungen“.
 // Tests: rules-tests/.
 //
-// Stand: Buchungen. Stammdaten und Verwaltung folgen; bis dahin dürfen
-// Clients dort nichts schreiben.
+// Stand: Buchungen und Stammdaten (Mitglieder, Namen, Sorten). Die Verwaltung
+// (Kasse, Bierwarte, Einladungen, Übernahmen, Wiederherstellung) folgt; bis
+// dahin dürfen Clients dort nichts schreiben.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -87,14 +88,99 @@ service cloud.firestore {
 
       allow read: if istBierwart();
 
+      // ---- Stammdaten ------------------------------------------------------
+      // Jede Änderung verweist über letzteBuchungId auf ihre Log-Buchung im
+      // selben Batch (LOG-01). Der Name im Index ist die normalisierte Form.
+
+      function nameGueltig(name) {
+        return name is string && name.trim().size() > 0 && name.size() <= 60;
+      }
+      function nameKey(name) {
+        return name.lower().trim().replace('\\s+', ' ');
+      }
+      function nameIndexZeigtAuf(key, mitgliedId) {
+        return nachher('namen', key).mitgliedId == mitgliedId;
+      }
+
       match /bierwarte/{uid} {
         allow read: if istBierwart();
+        // Name des Bierwarts folgt der Umbenennung seines Mitglieds (UI-09).
+        allow update: if buchungDiesesRequests() != null
+          && nurFelder(['name', 'letzteBuchungId'])
+          && buchungDiesesRequests().typ == 'mitgliedUmbenannt'
+          && buchungDiesesRequests().mitgliedId == resource.data.mitgliedId
+          && request.resource.data.name == buchungDiesesRequests().nameNeu;
       }
 
       match /mitglieder/{mitgliedId} {
+        function stammdatenBuchung(typ) {
+          let b = buchungDiesesRequests();
+          return b != null && b.typ == typ && b.mitgliedId == mitgliedId;
+        }
+        function bierwartFolgt(neu) {
+          return resource.data.get('bierwartUid', null) == null
+            || !exists(pfad('bierwarte', resource.data.bierwartUid))
+            || nachher('bierwarte', resource.data.bierwartUid).name == neu.name;
+        }
+        function bierwartAktiv() {
+          return resource.data.get('bierwartUid', null) != null
+            && exists(pfad('bierwarte', resource.data.bierwartUid));
+        }
+
         allow read: if istBierwart();
-        allow update: if buchungDiesesRequests() != null
-          && summeGeaendert('saldoCents', saldoWirkung(buchungDiesesRequests(), mitgliedId));
+
+        // Anlegen (KAD-01): Saldo 0, kein Gast, kein Bierwart, Name im Index.
+        allow create: if istBierwart()
+          && request.resource.data.keys().hasOnly(['name', 'nameKey', 'istGast', 'bierwartUid', 'entfernt', 'saldoCents', 'letzteBuchungId', 'angelegtAm'])
+          && nameGueltig(request.resource.data.name)
+          && request.resource.data.nameKey == nameKey(request.resource.data.name)
+          && request.resource.data.istGast == false
+          && request.resource.data.bierwartUid == null
+          && request.resource.data.entfernt == false
+          && request.resource.data.saldoCents == 0
+          && request.resource.data.angelegtAm == request.time
+          && nameIndexZeigtAuf(request.resource.data.nameKey, mitgliedId)
+          && stammdatenBuchung('mitgliedAngelegt');
+
+        allow update: if
+          // Summen aus Buchungen
+          (buchungDiesesRequests() != null
+            && summeGeaendert('saldoCents', saldoWirkung(buchungDiesesRequests(), mitgliedId)))
+          // Umbenennen (KAD-01, UI-09): neuer Name im Index, alter frei
+          || (nurFelder(['name', 'nameKey', 'letzteBuchungId'])
+            && resource.data.get('istGast', false) == false
+            && resource.data.entfernt == false   // sonst würde ein reservierter Name frei (KAD-08)
+            && nameGueltig(request.resource.data.name)
+            && request.resource.data.nameKey == nameKey(request.resource.data.name)
+            && request.resource.data.nameKey != resource.data.nameKey
+            && nameIndexZeigtAuf(request.resource.data.nameKey, mitgliedId)
+            && !existsAfter(pfad('namen', resource.data.nameKey))
+            && bierwartFolgt(request.resource.data)
+            && stammdatenBuchung('mitgliedUmbenannt'))
+          // Entfernen (KAD-04): nur bei Saldo 0, nie Gäste, nie aktive Bierwarte (KAD-02).
+          // Der Name bleibt im Index reserviert (KAD-08).
+          || (nurFelder(['entfernt', 'letzteBuchungId'])
+            && resource.data.entfernt == false && request.resource.data.entfernt == true
+            && resource.data.saldoCents == 0
+            && resource.data.get('istGast', false) == false
+            && !bierwartAktiv()
+            && stammdatenBuchung('mitgliedEntfernt'))
+          // Wieder aufnehmen (KAD-08)
+          || (nurFelder(['entfernt', 'letzteBuchungId'])
+            && resource.data.entfernt == true && request.resource.data.entfernt == false
+            && stammdatenBuchung('mitgliedWiederaufgenommen'));
+      }
+
+      match /namen/{key} {
+        allow read: if istBierwart();
+        // Ein zweites create auf denselben Schlüssel ist ein update und scheitert:
+        // so bleibt jeder Name pro Kasse eindeutig (AUTH-07, UI-09).
+        allow create: if istBierwart()
+          && request.resource.data.keys().hasOnly(['mitgliedId'])
+          && nachher('mitglieder', request.resource.data.mitgliedId).nameKey == key;
+        // Frei wird ein Name nur, wenn sein Mitglied im selben Batch umbenannt wird.
+        allow delete: if istBierwart()
+          && nachher('mitglieder', resource.data.mitgliedId).nameKey != key;
       }
 
       match /sorten/{sorteId} {
@@ -104,10 +190,47 @@ service cloud.firestore {
             // Bestandskorrektur: gezählter Wert gesetzt, Differenz zum Serverstand (BES-06).
             && (b.typ != 'bestandKorrektur' || request.resource.data.bestand == b.gezaehlt);
         }
+        function sorteBuchung(typ) {
+          let b = buchungDiesesRequests();
+          return b != null && b.typ == typ && b.sorteId == sorteId
+            && b.name == request.resource.data.name
+            && b.preisCents == request.resource.data.preisCents
+            && b.aktiv == request.resource.data.aktiv;
+        }
+        function preisNeu(betrag) {
+          return betrag is int && betrag >= 0;
+        }
+
         allow read: if istBierwart();
-        allow update: if buchungDiesesRequests() != null
-          && summeGeaendert('bestand', bestandWirkung(buchungDiesesRequests(), sorteId))
-          && bestandGueltig(buchungDiesesRequests());
+
+        // Anlegen (BES-01): Bestand startet bei 0, Einkauf oder Korrektur füllen ihn.
+        allow create: if istBierwart()
+          && request.resource.data.keys().hasOnly(['name', 'preisCents', 'vorherigerPreisCents', 'aktiv', 'bestand', 'letzteBuchungId', 'reihenfolge'])
+          && nameGueltig(request.resource.data.name)
+          && preisNeu(request.resource.data.preisCents)
+          && request.resource.data.vorherigerPreisCents == null
+          && request.resource.data.aktiv == true
+          && request.resource.data.bestand == 0
+          && request.resource.data.reihenfolge is int
+          && sorteBuchung('sorteAngelegt');
+
+        allow update: if
+          // Summen aus Buchungen
+          (buchungDiesesRequests() != null
+            && summeGeaendert('bestand', bestandWirkung(buchungDiesesRequests(), sorteId))
+            && bestandGueltig(buchungDiesesRequests()))
+          // Ändern und Ausblenden (BES-01). Bei Preisänderung wandert der alte
+          // Preis nach vorherigerPreisCents (BES-02).
+          || (nurFelder(['name', 'preisCents', 'vorherigerPreisCents', 'aktiv', 'letzteBuchungId'])
+            && nameGueltig(request.resource.data.name)
+            && preisNeu(request.resource.data.preisCents)
+            && request.resource.data.aktiv is bool
+            && (request.resource.data.preisCents == resource.data.preisCents
+                ? request.resource.data.get('vorherigerPreisCents', null) == resource.data.get('vorherigerPreisCents', null)
+                : request.resource.data.vorherigerPreisCents == resource.data.preisCents)
+            && sorteBuchung('sorteGeaendert'))
+          // Reihenfolge im Raster, ohne Log-Eintrag
+          || (istBierwart() && nurFelder(['reihenfolge']) && request.resource.data.reihenfolge is int);
       }
 
       match /orte/{ortId} {
@@ -221,6 +344,23 @@ service cloud.firestore {
             && d.grund is string && d.grund.size() > 0 && d.grund.size() <= 200
             && ortErlaubt(d.ortId)
             && verweistAuf('orte', d.ortId, buchungId))
+          // Stammdaten: Die Rules der Mitglieder und Sorten prüfen die Werte,
+          // hier nur Form und Verweis (LOG-01).
+          || (d.typ == 'mitgliedAngelegt'                                   // KAD-01
+            && felder(d, ['mitgliedId', 'name'])
+            && nachher('mitglieder', d.mitgliedId).name == d.name
+            && verweistAuf('mitglieder', d.mitgliedId, buchungId))
+          || (d.typ == 'mitgliedUmbenannt'                                  // KAD-01, UI-09
+            && felder(d, ['mitgliedId', 'nameAlt', 'nameNeu'])
+            && get(pfad('mitglieder', d.mitgliedId)).data.name == d.nameAlt
+            && nachher('mitglieder', d.mitgliedId).name == d.nameNeu
+            && verweistAuf('mitglieder', d.mitgliedId, buchungId))
+          || ((d.typ == 'mitgliedEntfernt' || d.typ == 'mitgliedWiederaufgenommen')   // KAD-04, KAD-08
+            && felder(d, ['mitgliedId'])
+            && verweistAuf('mitglieder', d.mitgliedId, buchungId))
+          || ((d.typ == 'sorteAngelegt' || d.typ == 'sorteGeaendert')       // BES-01
+            && felder(d, ['sorteId', 'name', 'preisCents', 'aktiv'])
+            && verweistAuf('sorten', d.sorteId, buchungId))
           || (d.typ == 'kassensturz'                                        // GEL-06
             && felder(d, ['gezaehltCents', 'differenzCents'])
             && istKassenwart()
