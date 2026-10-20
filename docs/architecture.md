@@ -299,7 +299,15 @@ sequenceDiagram
 Bausteine:
 
 - **Hosting** (`hosting/public/`):
-  - `/.well-known/assetlinks.json` mit Paketname (`io.github.markra711.bierwart`) und SHA-256-Fingerabdrücken (Debug-Key, Upload-Key, Play App Signing). Header `Content-Type: application/json`.
+  - `/.well-known/assetlinks.json` mit Paketname (`io.github.markra711.bierwart`) und SHA-256-Fingerabdrücken. Header `Content-Type: application/json`.
+
+    | Schlüssel | SHA-256 | Stand |
+    | --- | --- | --- |
+    | Debug (`~/.android/debug.keystore` auf Marvins Rechner) | `99:AC:29:B1:25:49:3C:32:40:8A:D0:82:41:0F:A2:93:C8:71:E8:48:61:D2:32:00:00:AE:EB:5B:E8:F9:19:29` | aktiv, für Tests auf eigenen Geräten |
+    | Upload-Key | – | kommt mit dem Store-Release |
+    | Play App Signing | – | kommt mit dem Store-Release |
+
+    Jeder Rechner hat einen eigenen Debug-Key. Wer auf einem anderen Rechner baut, muss dessen Fingerabdruck ergänzen, sonst öffnen sich Links dort im Browser statt in der App.
   - `firebase.json`-Rewrite `/j/**` → `/j.html`: eine statische Seite, die den Code aus der URL zeigt, einen Play-Store-Link mit `&referrer=code%3D{code}` anbietet und den Code zum Kopieren bereitstellt (für „Link einfügen“).
 - **Android**: `intent-filter` mit `android:autoVerify="true"` für `https://bier-wart.web.app/j/*` in `AndroidManifest.xml`.
 - **App**: Paket `app_links` empfängt eingehende Links. Paket für den Play Install Referrer (z. B. `play_install_referrer`) liest den Code nach der Erstinstallation (AUTH-12). Ein offener Code wird in `shared_preferences` gemerkt, bis die Namenswahl fertig ist (AUTH-06).
@@ -323,6 +331,17 @@ Bausteine:
   - Gemeinsame Fixtures für die Buchungswirkung (Dart und TypeScript).
 - CI (GitHub Actions): `flutter analyze`, `flutter test`. Rules- und Functions-Tests kommen dazu, sobald es `functions/` gibt.
 
+## Vor dem Store-Release
+
+Aufgaben, die erst mit dem Play-Store-Eintrag anfallen. Keine davon blockiert die Entwicklung.
+
+- [ ] Entwicklerkonto in der Play Console und App `io.github.markra711.bierwart` anlegen (Konsole, macht Marvin).
+- [ ] Upload-Key erzeugen, sicher verwahren (nicht im Repo), Signierung in `android/app/build.gradle.kts` über `key.properties` einrichten.
+- [ ] SHA-256 von Upload-Key und Play App Signing in `assetlinks.json` eintragen (AUTH-04).
+- [ ] SHA-1 des Release-Keys in der Firebase-Konsole bei der Android-App hinterlegen.
+- [ ] Android-API-Key in der Google Cloud Console auf Paketname und SHA-1 (Debug + Release) einschränken. Der Key steht öffentlich in der APK; die Einschränkung verhindert, dass fremde Apps ihn benutzen.
+- [ ] App Links mit dem Release-Build auf einem echten Gerät prüfen (`adb shell pm get-app-links io.github.markra711.bierwart`).
+
 ## Kosten (grobe Schätzung, NFA-12)
 
 Annahme: eine Mannschaft, 5 Bierwarte, 30 Mitglieder, ca. 5.000 Buchungen pro Jahr.
@@ -340,7 +359,7 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 1. ~~**Aggregation**~~ – entschieden: per Trigger ([ADR-0007](decisions/0007-aggregation-per-trigger.md)).
 2. ~~**„Das bin ich (neues Gerät)“ absichern**~~ – entschieden: Bestätigung durch einen anderen aktiven Bierwart ([ADR-0008](decisions/0008-uebernahme-bestaetigung.md)). Daraus folgen die Fragen 21 bis 23.
 3. ~~**Paketname / applicationId**~~ – entschieden: `io.github.markra711.bierwart` ([ADR-0006](decisions/0006-paketname.md)). Offen ist nur noch der Schritt in der Konsole: eine neue Android-App mit diesem Paketnamen registrieren und die neue `google-services.json` einspielen, danach `firebase_options.dart` neu erzeugen.
-4. **SHA-256-Fingerabdrücke** für `assetlinks.json`: Upload-Key und Play App Signing gibt es erst mit einem Play-Console-Eintrag. Gibt es den schon?
+4. ~~**SHA-256-Fingerabdrücke**~~ – entschieden: zunächst nur der Debug-Key (siehe [Einladungslinks](#einladungslinks-hosting--app-links)); Upload-Key und Play App Signing stehen unter [Vor dem Store-Release](#vor-dem-store-release).
 5. **Blaze-Tarif:** Ist er für `bier-wart` aktiv? Ohne ihn keine Functions, also kein Erstellen, Beitreten, Auflösen und kein automatisches Löschen.
 6. **Functions-Region:** `europe-west10` passend zur Firestore-Region (bitte bestätigen, dass alle benötigten Trigger dort verfügbar sind) oder `europe-west3`?
 7. **Sprache der Functions:** TypeScript (Vorschlag) oder Dart/anderes?
