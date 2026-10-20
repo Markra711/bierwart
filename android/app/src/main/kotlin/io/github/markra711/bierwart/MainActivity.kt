@@ -1,4 +1,4 @@
-package com.example.bier_wart
+package io.github.markra711.bierwart
 
 import io.flutter.embedding.android.FlutterActivity
 
