@@ -331,6 +331,15 @@ Bausteine:
   - Gemeinsame Fixtures für die Buchungswirkung (Dart und TypeScript).
 - CI (GitHub Actions): `flutter analyze`, `flutter test`. Rules- und Functions-Tests kommen dazu, sobald es `functions/` gibt.
 
+## Vor dem ersten Deploy
+
+Bis dahin läuft alles lokal gegen die Emulatoren. Das Projekt bleibt im Spark-Tarif.
+
+- [ ] Projekt `bier-wart` auf den Blaze-Tarif umstellen (Konsole, macht Marvin). Nötig für Cloud Functions und Cloud Scheduler (ADR-0003, ADR-0007, ADR-0008, AUTH-10, AUTH-11).
+- [ ] Budget-Alarm von 1 € im Monat einrichten (NFA-12). Der Alarm warnt nur, er begrenzt die Kosten nicht.
+- [ ] Security Rules mit Emulator-Tests fertig, bevor irgendetwas deployt wird (NFA-07).
+- [ ] Deploy nur mit ausdrücklicher Freigabe (siehe `CLAUDE.md`).
+
 ## Vor dem Store-Release
 
 Aufgaben, die erst mit dem Play-Store-Eintrag anfallen. Keine davon blockiert die Entwicklung.
@@ -360,7 +369,7 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 2. ~~**„Das bin ich (neues Gerät)“ absichern**~~ – entschieden: Bestätigung durch einen anderen aktiven Bierwart ([ADR-0008](decisions/0008-uebernahme-bestaetigung.md)). Daraus folgen die Fragen 21 bis 23.
 3. ~~**Paketname / applicationId**~~ – entschieden: `io.github.markra711.bierwart` ([ADR-0006](decisions/0006-paketname.md)). Offen ist nur noch der Schritt in der Konsole: eine neue Android-App mit diesem Paketnamen registrieren und die neue `google-services.json` einspielen, danach `firebase_options.dart` neu erzeugen.
 4. ~~**SHA-256-Fingerabdrücke**~~ – entschieden: zunächst nur der Debug-Key (siehe [Einladungslinks](#einladungslinks-hosting--app-links)); Upload-Key und Play App Signing stehen unter [Vor dem Store-Release](#vor-dem-store-release).
-5. **Blaze-Tarif:** Ist er für `bier-wart` aktiv? Ohne ihn keine Functions, also kein Erstellen, Beitreten, Auflösen und kein automatisches Löschen.
+5. ~~**Blaze-Tarif**~~ – entschieden: Spark bis zum ersten Deploy, dann Blaze mit Budget-Alarm (siehe [Vor dem ersten Deploy](#vor-dem-ersten-deploy)).
 6. **Functions-Region:** `europe-west10` passend zur Firestore-Region (bitte bestätigen, dass alle benötigten Trigger dort verfügbar sind) oder `europe-west3`?
 7. **Sprache der Functions:** TypeScript (Vorschlag) oder Dart/anderes?
 8. **Storno eines Bar-Strichs (STR-06):** Erscheinen bar bezahlte Striche im Mitglied-Detail und sind sie stornierbar? Wenn ja: Geht das Geld aus dem Portemonnaie dessen zurück, der ihn gebucht hat, oder dessen, der storniert?
