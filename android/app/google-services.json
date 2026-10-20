@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "797384576516",
+    "project_id": "bier-wart",
+    "storage_bucket": "bier-wart.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:797384576516:android:92ac51067bd79ec8fa6f51",
+        "android_client_info": {
+          "package_name": "com.example.bier_wart"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrgSNFZVusjoGblGYJ3yztuRbRblL9b-8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
