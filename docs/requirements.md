@@ -8,6 +8,7 @@
 > - 2026-10-21: UC-03 und AUTH-07 – Übernahme braucht die Bestätigung eines Bierwarts ([ADR-0008](decisions/0008-uebernahme-bestaetigung.md)).
 > - 2026-10-21: AUTH-10 und AUTH-11 in Release 2, ADM-05 ohne „serverseitig“, Annahme zu Cloud Functions angepasst – Release 1 ohne Cloud Functions ([ADR-0009](decisions/0009-release-1-ohne-cloud-functions.md)).
 > - 2026-10-21: KAD-03 – Buchungen auf „Gäste“ sind immer bar, nicht nur standardmäßig (architecture.md, offene Frage 10).
+> - 2026-10-21, nach dem Einfrieren: ADM-08 neu – Admin kann einen neuen Wiederherstellungscode erzeugen (architecture.md, offene Frage 12).
 
 ## Vision & Abgrenzung
 
@@ -133,6 +134,7 @@ Jede Anforderung hat eine ID und ein Release. Release 1 ist das MVP für Android
 | ADM-05 | dem Admin erlauben, die Kasse aufzulösen: Warnung, Abtippen des Kassennamens, danach Löschung aller Daten (durch die App des Admins, braucht Netz) | 1 |
 | ADM-06 | jeden Nutzer mit dem Wiederherstellungscode zum Admin machen; der bisherige Admin wird normaler Bierwart | 1 |
 | ADM-07 | mehrere Admins pro Kasse erlauben | 4 |
+| ADM-08 | dem Admin erlauben, einen neuen Wiederherstellungscode zu erzeugen; der alte wird sofort ungültig, der neue genau einmal angezeigt | 1 |
 
 **Kader**
 

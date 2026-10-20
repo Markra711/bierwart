@@ -130,7 +130,7 @@ Gemeinsame Felder:
 | `einzahlung` / `auszahlung` | `ortId`, `betragCents`, `grund` | Ort ± Betrag | GEL-05 |
 | `kassensturz` | `gezaehltCents`, `differenzCents` | Kasse = gezählt | GEL-06 |
 | `mitgliedAngelegt`, `mitgliedUmbenannt`, `mitgliedEntfernt`, `sorteGeaendert`, … | jeweils alt/neu | keine Geldwirkung, nur Log | LOG-01, UI-09 |
-| `kasseErstellt`, `rolleGeaendert`, `bierwartBeigetreten`, `bierwartEntfernt`, `ausgetreten`, `einladungErneuert`, `kasseUmbenannt`, `adminWiederhergestellt`, `uebernahmeAngefragt`, `uebernahmeBestaetigt`, `uebernahmeAbgelehnt` | jeweils alt/neu | nur Log | LOG-01, ADM-01 bis ADM-06 |
+| `kasseErstellt`, `rolleGeaendert`, `bierwartBeigetreten`, `bierwartEntfernt`, `ausgetreten`, `einladungErneuert`, `kasseUmbenannt`, `adminWiederhergestellt`, `wiederherstellungscodeErneuert`, `uebernahmeAngefragt`, `uebernahmeBestaetigt`, `uebernahmeAbgelehnt` | jeweils alt/neu | nur Log | LOG-01, ADM-01 bis ADM-06 |
 
 „Rückgängig“ in der Snackbar (STR-04) erzeugt eine `storno`-Buchung, löscht also nichts.
 
@@ -221,9 +221,15 @@ match /buchungen/{buchungId} {
 | Kasse umbenennen | Admin | `kassen.name`, `einladungen/{code}.kassenName`, Log | Admin | ADM-04 |
 | Austreten | Bierwart | eigenen `bierwarte`-Eintrag löschen, `anzahlBierwarte − 1`, ggf. `leerSeit = request.time`, Log | eigenes Portemonnaie `standCents == 0`; nicht Admin oder Kassenwart (vorher übertragen) | AUTH-09, UC-05, KAD-02 |
 | Admin wiederherstellen | Angemeldeter | `kassen.adminUid = uid`, neuer `wiederherstellungHash` + neues `wiederherstellung/{hashHex}`, altes löschen, Feld `wiederherstellungNachweis` mit dem alten Code, ggf. eigener `bierwarte`-Eintrag, `leerSeit = null`, Log | `hashing.sha256(nachweis) == wiederherstellungHash` | ADM-06, UC-04 |
+| Wiederherstellungscode erneuern | Admin | neuer `wiederherstellungHash`, neues `wiederherstellung/{hashHex}`, altes löschen, Log | Admin; neues Dokument passt zum neuen Hash | ADM-08 |
 | Auflösen | Admin | 1. `kassen.aufgeloest = true` mit `aufloesenBestaetigung == name`; 2. alle Dokumente seitenweise löschen; 3. Kasse, Einladung, Wiederherstellung, `users/{uid}` löschen | Admin; Bestätigung entspricht dem Kassennamen (ADM-05); Löschen nur bei `aufgeloest` | ADM-05, UC-10 |
 
 - **Wiederherstellung:** Der gesendete alte Code steht danach im Dokument. Er ist aber wertlos, weil im selben Batch ein neuer Code gesetzt wird. Die App zeigt den neuen Code einmal an.
+- **Format des Wiederherstellungscodes** (AUTH-03, ADM-06, ADM-08):
+  - 16 Zeichen Crockford-Base32 (Ziffern und Großbuchstaben ohne I, L, O, U), also 80 Bit Zufall, angezeigt in Vierergruppen: `K7QM-3XRA-9DWF-T2HC`.
+  - Die App erzeugt ihn mit `Random.secure()`.
+  - Gehasht wird die normalisierte Form: Großbuchstaben, ohne Bindestriche und Leerzeichen, O → 0, I und L → 1. Die App normalisiert vor dem Senden, die Rules hashen genau diese Zeichenkette.
+  - Angezeigt wird der Code nur beim Erstellen, nach einer Wiederherstellung und nach dem Erneuern, jeweils genau einmal, mit Hinweis zum Abfotografieren oder Aufschreiben.
 - **Auflösen:** Bricht das Löschen ab (App geschlossen, kein Netz), bleibt die Kasse `aufgeloest`. Sie ist dann für niemanden mehr sichtbar, und die App des Admins setzt das Löschen beim nächsten Start fort.
 
 Die Rules werden mit `@firebase/rules-unit-testing` gegen den Firestore-Emulator getestet: je Regel ein erlaubter und mindestens ein verbotener Fall. Die Tests liegen in `rules-tests/` (Node, Vitest).
@@ -361,7 +367,7 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 9. ~~**„Rückgängig“**~~ – entschieden: Snackbar nur beim Buchenden, bis zur nächsten Buchung, höchstens 8 Sekunden; danach Storno im Mitglied-Detail (siehe [Buchungen](#buchungen-das-log)).
 10. ~~**Gäste-Buchungen**~~ – entschieden: immer bar, Tippen wie Halten; KAD-03 angepasst.
 11. ~~**Kassensturz und Bestandskorrektur offline**~~ – entschieden: nur mit Netz.
-12. **Wiederherstellungscode:** Format und Länge (Vorschlag: mindestens 80 Bit, z. B. 16 Zeichen Base32 in Vierergruppen)? Ohne Functions gibt es kein Rate Limit. Kann der Admin einen neuen Code erzeugen, wenn der alte verloren ist?
+12. ~~**Wiederherstellungscode**~~ – entschieden: 16 Zeichen Crockford-Base32 (80 Bit) in Vierergruppen; der Admin kann einen neuen Code erzeugen (ADM-08, siehe [Verwaltung als Batches](#verwaltung-als-batches)).
 13. **App Check** (Play Integrity) für Firestore in Release 1 aktivieren? Ohne Server-Code ist es der einzige Schutz gegen fremde Clients.
 14. **Verwaiste anonyme Nutzer** in Firebase Auth (z. B. nach Neuinstallation): aufräumen, und wenn ja, nach welcher Frist? (Ohne Functions frühestens Release 2.)
 15. **Schriften offline:** `google_fonts` lädt zur Laufzeit. Barlow und Barlow Condensed als Assets bündeln (Vorschlag), damit die App beim ersten Start ohne Netz richtig aussieht?
