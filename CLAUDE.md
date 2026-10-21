@@ -33,6 +33,9 @@ firebase emulators:start --project demo-bierwart
 # Rules-Tests (Node, Vitest) gegen den Firestore-Emulator
 npm --prefix rules-tests ci
 npm --prefix rules-tests run test:emulator
+
+# Batches der App als Vertrag mit den Rules (rules-tests/fixtures/) neu schreiben
+FIXTURES_AKTUALISIEREN=1 flutter test test/features/onboarding/data
 ```
 
 **Nie ohne ausdrückliche Freigabe:** `firebase deploy` (egal welches Ziel), Änderungen in der Firebase- oder Play-Konsole, `git push`.

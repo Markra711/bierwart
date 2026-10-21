@@ -2,28 +2,92 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/onboarding/application/onboarding.dart';
+import '../../features/onboarding/domain/erstellte_kasse.dart';
+import '../../features/onboarding/presentation/einladen_screen.dart';
+import '../../features/onboarding/presentation/kasse_erstellen_screen.dart';
+import '../../features/onboarding/presentation/laden_screen.dart';
+import '../../features/onboarding/presentation/wiederherstellungscode_screen.dart';
+import '../../features/onboarding/presentation/willkommen_screen.dart';
 import '../../features/strichliste/presentation/strichliste_screen.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 
 /// Pfade der App. Einladungslinks (`/j/{code}`, AUTH-04) kommen mit dem
-/// Onboarding.
+/// Beitreten.
 abstract final class Routen {
   static const strichliste = '/';
+  static const laden = '/laden';
+  static const willkommen = '/willkommen';
+  static const kasseErstellen = '/kasse-erstellen';
+  static const wiederherstellungscode = '/wiederherstellungscode';
+  static const einladen = '/einladen';
+}
+
+const _onboarding = {
+  Routen.laden,
+  Routen.willkommen,
+  Routen.kasseErstellen,
+  Routen.wiederherstellungscode,
+  Routen.einladen,
+};
+
+/// Wohin die App den Nutzer schickt; `null` = bleiben. Ohne Kasse ins
+/// Onboarding, mit Kasse auf die Strichliste (UI-01). Wer gerade eine Kasse
+/// erstellt, bleibt im Ablauf, bis der Server sie angenommen hat und Code und
+/// Einladung gezeigt wurden (AUTH-03).
+String? weiterleitung(Startzustand zustand, ErstellteKasse? neu, String ort) {
+  if (neu != null) {
+    if (!neu.gespeichert) {
+      return ort == Routen.kasseErstellen ? null : Routen.kasseErstellen;
+    }
+    return ort == Routen.wiederherstellungscode || ort == Routen.einladen
+        ? null
+        : Routen.wiederherstellungscode;
+  }
+  return switch (zustand) {
+    StartLaedt() || StartFehler() => ort == Routen.laden ? null : Routen.laden,
+    OhneKasse() =>
+      ort == Routen.willkommen || ort == Routen.kasseErstellen
+          ? null
+          : Routen.willkommen,
+    InKasse() => _onboarding.contains(ort) ? Routen.strichliste : null,
+  };
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
+  final aenderung = ValueNotifier(0);
+  ref.listen(startzustandProvider, (_, _) => aenderung.value++);
+  ref.listen(ersteKasseProvider, (_, _) => aenderung.value++);
+
+  GoRoute seite(String pfad, Widget Function() bauen) =>
+      GoRoute(path: pfad, builder: (context, state) => bauen());
+
   final router = GoRouter(
     initialLocation: Routen.strichliste,
+    refreshListenable: aenderung,
+    redirect: (context, state) => weiterleitung(
+      ref.read(startzustandProvider),
+      ref.read(ersteKasseProvider),
+      state.uri.path,
+    ),
     routes: [
-      GoRoute(
-        path: Routen.strichliste,
-        builder: (context, state) => const StrichlisteScreen(),
+      seite(Routen.strichliste, () => const StrichlisteScreen()),
+      seite(Routen.laden, () => const LadenScreen()),
+      seite(Routen.willkommen, () => const WillkommenScreen()),
+      seite(Routen.kasseErstellen, () => const KasseErstellenScreen()),
+      seite(
+        Routen.wiederherstellungscode,
+        () => const WiederherstellungscodeScreen(),
       ),
+      seite(Routen.einladen, () => const EinladenScreen()),
     ],
     errorBuilder: (context, state) => const _UnbekannteSeite(),
   );
-  ref.onDispose(router.dispose);
+  ref.onDispose(() {
+    router.dispose();
+    aenderung.dispose();
+  });
   return router;
 });
 

@@ -29,4 +29,31 @@ void main() {
     expect(summe, 150000);
     expect(formatEuro(summe), '1.500,00 €');
   });
+
+  group('parseEuro (ADR-0002)', () {
+    test('ganze Euro und Komma', () {
+      expect(parseEuro('50'), 5000);
+      expect(parseEuro('50,5'), 5050);
+      expect(parseEuro('50,05'), 5005);
+      expect(parseEuro('0'), 0);
+    });
+
+    test('Tausenderpunkt, Eurozeichen und Leerzeichen', () {
+      expect(parseEuro('1.234,56'), 123456);
+      expect(parseEuro('1.234'), 123400);
+      expect(parseEuro('12,00\u00a0€'), 1200);
+      expect(parseEuro(' 7 € '), 700);
+    });
+
+    test('Punkt als Dezimaltrenner nur vor ein oder zwei Ziffern', () {
+      expect(parseEuro('12.5'), 1250);
+      expect(parseEuro('12.50'), 1250);
+    });
+
+    test('unlesbar oder negativ', () {
+      for (final s in ['', 'abc', '-5', '1,234', '1.2.3', '12,']) {
+        expect(parseEuro(s), isNull, reason: s);
+      }
+    });
+  });
 }

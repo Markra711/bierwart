@@ -198,11 +198,12 @@ Die Rules sind in Release 1 die Geschäftslogik. Grundsätze (NFA-07):
 - Jede Verwaltungsaktion schreibt ihre Log-Buchung im selben Batch. Die Rules verlangen sie (`existsAfter`).
 - `einladungen` und `wiederherstellung`: nur `get` für Angemeldete, kein `list`.
 
-Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 178 Emulator-Tests in `rules-tests/`:
+Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 181 Emulator-Tests in `rules-tests/`:
 - `buchungen.test.js` (47): Strich offen und bar, Storno, Zahlung, Einkauf, Bestandskorrektur, Übergabe, Ein-/Auszahlung, Kassensturz, Fälle ohne passende Buchung, Unveränderlichkeit des Logs.
 - `stammdaten.test.js` (32): Mitglieder anlegen, umbenennen, entfernen, wieder aufnehmen; Namensindex; Sorten anlegen, ändern, ausblenden.
 - `verwaltung.test.js` (56): Kasse erstellen, Beitreten, Übernahme anfragen, zurückziehen und entscheiden, Austreten, `users/`, Lesen von Einladungen und Namensindex.
 - `admin.test.js` (43): Link erneuern, Bierwart entfernen, Rollen, Umbenennen, Wiederherstellungscode erneuern, Admin wiederherstellen mit und ohne Bierwart-Eintrag, Auflösen und Löschen.
+- `vertrag.test.js` (3): Batches, wie die App sie baut. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
 
 Kern des Musters:
 
@@ -301,7 +302,7 @@ Festgelegt für dann:
 
 ## Einladungslinks: Hosting + App Links
 
-Format: `https://bier-wart.web.app/j/{code}`. `code` ist zufällig und URL-sicher, mit mindestens 96 Bit Zufall. Ohne Server-Code gibt es keine Bremse gegen Durchprobieren, also muss der Code selbst sicher genug sein. Der Link ist 7 Tage gültig. Geprüft wird in den Rules beim Beitreten (AUTH-08).
+Format: `https://bier-wart.web.app/j/{code}`. `code` sind 20 Zeichen Crockford-Base32 (100 Bit), erzeugt mit `Random.secure()`. Ohne Server-Code gibt es keine Bremse gegen Durchprobieren, also muss der Code selbst sicher genug sein (mindestens 96 Bit). Angezeigt wird er in Vierergruppen (`K7Q2-MXA9-3DWF-T2HC-8RNP`), meist wird aber der Link geteilt. Eingefügte Links oder Codes normalisiert die App wie den Wiederherstellungscode. Der Link ist 7 Tage gültig. Geprüft wird in den Rules beim Beitreten (AUTH-08).
 
 ```mermaid
 sequenceDiagram
@@ -349,7 +350,8 @@ Bausteine:
 - Firestore-Offline-Persistenz ist auf Android standardmäßig an. Buchungen und Stammdaten werden lokal geschrieben und später synchronisiert (NFA-02).
 - Jede Buchung ist ein neues Dokument mit Client-ID. Summen ändern sich nur per `increment()`. Damit gibt es keine verlorenen Updates (NFA-03). Ausnahme sind die absoluten Buchungen (siehe Summen, Punkt 7).
 - Lehnen die Rules eine Offline-Schreibung beim Sync ab (z. B. Name inzwischen vergeben, Stand beim Kassensturz geändert), nimmt Firestore den lokalen Batch zurück, und die App meldet das sichtbar (NFA-10). Dafür müssen die Write-Futures beobachtet werden, auch nach dem Verlassen des Bildschirms (globaler Fehlerkanal, Snackbar).
-- Verwaltungsaktionen prüft die App vorab auf Netz. Ohne Netz zeigt sie sofort „Dafür brauchst du Netz“, statt endlos zu warten.
+- Verwaltungsaktionen prüft die App vorab auf Netz: eine Abfrage direkt beim Server (`Source.server`). Ohne Netz zeigt sie sofort „Dafür brauchst du Netz“, statt endlos zu warten. Antwortet der Server nicht binnen 20 Sekunden, meldet sie das ebenfalls.
+- **Kasse erstellen:** Codes und IDs stehen fest, bevor geschrieben wird. Die Weiterleitung hält den Nutzer im Ablauf, bis der Server den Batch angenommen und die App Wiederherstellungscode und Einladung gezeigt hat (AUTH-03). Lehnt der Server ab, bleibt er im Formular und sieht die Meldung (NFA-10).
 
 ## Lokale Entwicklung und Tests
 
@@ -418,7 +420,7 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 13. ~~**App Check**~~ – entschieden: in Release 1 eingebaut, erzwungen erst zum Store-Release (siehe [App Check](#app-check)).
 14. **Verwaiste anonyme Nutzer** in Firebase Auth (z. B. nach Neuinstallation): aufräumen, und wenn ja, nach welcher Frist? (Ohne Functions frühestens Release 2.)
 15. ~~**Schriften offline**~~ – entschieden: Barlow und Barlow Condensed liegen als Assets in der App, `google_fonts` entfällt (siehe `docs/styleguide.md`, Typografie).
-16. **Innere Schatten:** eigener Painter oder Paket (z. B. `flutter_inset_shadow`)?
+16. ~~**Innere Schatten**~~ – entschieden: eigener Painter (`InnenschattenPainter`, `BwEingedrueckt` in `lib/src/core/widgets/flaechen.dart`), direkt aus den `inset`-Tokens.
 17. ~~**Routing**~~ – entschieden: `go_router`.
 18. **Datenschutzhinweis (NFA-09):** Wer liefert den Text, und reicht ein Bildschirm in den Einstellungen? Er muss erwähnen, dass verlassene Kassen in Release 1 nicht automatisch gelöscht werden.
 19. ~~**Quelle der Wahrheit für Anforderungen**~~ – entschieden: `docs/requirements.md`; das Online-Dokument ist seit 2026-10-21 eingefroren (alle Änderungen bis dahin übertragen).
