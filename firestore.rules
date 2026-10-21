@@ -6,13 +6,17 @@ rules_version = '2';
 // Muster und Wirkungen: docs/architecture.md, „Summen“ und „Buchungen“.
 // Tests: rules-tests/.
 //
-// Stand: Buchungen und Stammdaten (Mitglieder, Namen, Sorten). Die Verwaltung
-// (Kasse, Bierwarte, Einladungen, Übernahmen, Wiederherstellung) folgt; bis
-// dahin dürfen Clients dort nichts schreiben.
+// Stand: Buchungen, Stammdaten (Mitglieder, Namen, Sorten) und Mitgliedschaft
+// (Kasse erstellen, Beitreten, Übernahme, Austreten). Die Admin-Funktionen
+// (Link erneuern, Rollen, Wiederherstellung, Auflösen) folgen; bis dahin dürfen
+// Clients dort nichts schreiben.
 service cloud.firestore {
   match /databases/{database}/documents {
 
     match /kassen/{k} {
+      function kassePfad() {
+        return /databases/$(database)/documents/kassen/$(k);
+      }
       function pfad(sammlung, id) {
         return /databases/$(database)/documents/kassen/$(k)/$(sammlung)/$(id);
       }
@@ -21,6 +25,10 @@ service cloud.firestore {
       }
       function istBierwart() {
         return request.auth != null && exists(pfad('bierwarte', request.auth.uid));
+      }
+      // Auch wer im selben Batch Bierwart wird (Kasse erstellen, Beitreten).
+      function istOderWirdBierwart() {
+        return request.auth != null && existsAfter(pfad('bierwarte', request.auth.uid));
       }
       function istKassenwart() {
         return get(/databases/$(database)/documents/kassen/$(k)).data.kassenwartUid == request.auth.uid;
@@ -76,6 +84,7 @@ service cloud.firestore {
         return b.typ == 'uebergabe' ?
             (b.vonOrtId == ortId ? -b.betragCents : b.nachOrtId == ortId ? b.betragCents : 0)
           : b.typ == 'kassensturz' ? (ortId == 'kasse' ? b.differenzCents : 0)
+          : b.typ == 'uebernahmeBestaetigt' ? (ortId == b.alteUid ? -b.standCents : 0)
           : b.get('ortId', '') != ortId ? 0
           : b.typ == 'strichBar' ? b.preisCents
           : b.typ == 'storno' && b.bezugTyp == 'strichBar' ? -b.preisCents
@@ -87,6 +96,69 @@ service cloud.firestore {
       }
 
       allow read: if istBierwart();
+
+      // ---- Kasse und Mitgliedschaft ----------------------------------------
+      // Einladungen und Übernahme-Anfragen gelten 7 Tage ab dem Serverzeitpunkt
+      // (AUTH-08, ADR-0008). Ein Client kann request.time + 7 Tage nicht
+      // schreiben, deshalb rechnen die Rules.
+
+      function siebenTage() {
+        return duration.value(7, 'd');
+      }
+      // Aktueller, nicht ersetzter und nicht abgelaufener Link (AUTH-08).
+      function einladungGueltig(code) {
+        let kasse = get(kassePfad()).data;
+        let e = get(/databases/$(database)/documents/einladungen/$(code)).data;
+        return kasse.einladungCode == code
+          && kasse.get('aufgeloest', false) == false
+          && e.kasseId == k
+          && e.ersetzt == false
+          && request.time < e.erstelltAm + siebenTage();
+      }
+
+      // Kasse erstellen (UC-01, AUTH-02, AUTH-03): Ersteller ist Admin und
+      // Kassenwart. Einladung und Wiederherstellung entstehen im selben Batch.
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['name', 'adminUid', 'kassenwartUid', 'einladungCode', 'anzahlBierwarte', 'wiederherstellungHash', 'leerSeit', 'aufgeloest', 'erstelltAm', 'letzteBuchungId'])
+        && request.resource.data.keys().hasAll(['name', 'adminUid', 'kassenwartUid', 'einladungCode', 'anzahlBierwarte', 'wiederherstellungHash', 'leerSeit', 'aufgeloest', 'erstelltAm', 'letzteBuchungId'])
+        && nameGueltig(request.resource.data.name)
+        && request.resource.data.adminUid == request.auth.uid
+        && request.resource.data.kassenwartUid == request.auth.uid
+        && request.resource.data.anzahlBierwarte == 1
+        && request.resource.data.leerSeit == null
+        && request.resource.data.aufgeloest == false
+        && request.resource.data.erstelltAm == request.time
+        // URL-sicher, mindestens 96 Bit Zufall (siehe Einladungslinks)
+        && request.resource.data.einladungCode is string
+        && request.resource.data.einladungCode.matches('[A-Za-z0-9_-]{16,64}')
+        && getAfter(/databases/$(database)/documents/einladungen/$(request.resource.data.einladungCode)).data.kasseId == k
+        // SHA-256 des normalisierten Codes; Dokument-ID ist das Hex klein geschrieben
+        && request.resource.data.wiederherstellungHash is bytes
+        && request.resource.data.wiederherstellungHash.size() == 32
+        && getAfter(/databases/$(database)/documents/wiederherstellung/$(request.resource.data.wiederherstellungHash.toHexString().lower())).data.kasseId == k
+        && buchungDiesesRequests() != null
+        && buchungDiesesRequests().typ == 'kasseErstellt';
+
+      // Anzahl der Bierwarte und Rollen ändern sich nur mit ihrer Log-Buchung.
+      // Die Anzahl in der Einladung zieht mit (AUTH-05).
+      function kasseGeaendert(b) {
+        let d = request.resource.data;
+        return (b.typ == 'bierwartBeigetreten'                              // UC-02
+            && nurFelder(['anzahlBierwarte', 'leerSeit', 'letzteBuchungId'])
+            && delta('anzahlBierwarte') == 1
+            && d.leerSeit == null)
+          || (b.typ == 'ausgetreten'                                        // UC-05
+            && nurFelder(['anzahlBierwarte', 'leerSeit', 'letzteBuchungId'])
+            && delta('anzahlBierwarte') == -1
+            && d.leerSeit == (d.anzahlBierwarte == 0 ? request.time : resource.data.leerSeit))
+          // Übernahme (UC-03): Rollen und Anzahl prüft die Buchung
+          || (b.typ == 'uebernahmeBestaetigt'
+            && nurFelder(['anzahlBierwarte', 'adminUid', 'kassenwartUid', 'leerSeit', 'letzteBuchungId'])
+            && d.leerSeit == null);
+      }
+      allow update: if buchungDiesesRequests() != null
+        && kasseGeaendert(buchungDiesesRequests())
+        && getAfter(/databases/$(database)/documents/einladungen/$(resource.data.einladungCode)).data.anzahlBierwarte == request.resource.data.anzahlBierwarte;
 
       // ---- Stammdaten ------------------------------------------------------
       // Jede Änderung verweist über letzteBuchungId auf ihre Log-Buchung im
@@ -103,7 +175,42 @@ service cloud.firestore {
       }
 
       match /bierwarte/{uid} {
+        function neuerBierwart() {
+          let d = request.resource.data;
+          let b = buchungDiesesRequests();
+          return b != null
+            && d.keys().hasOnly(['mitgliedId', 'name', 'beigetretenAm', 'einladungCode', 'letzteBuchungId'])
+            && d.keys().hasAll(['mitgliedId', 'name', 'beigetretenAm', 'einladungCode', 'letzteBuchungId'])
+            && d.beigetretenAm == request.time
+            && nachher('mitglieder', d.mitgliedId).bierwartUid == uid
+            && nachher('mitglieder', d.mitgliedId).name == d.name
+            && (
+              // Kasse erstellen (UC-01) und Beitreten (UC-02, AUTH-08)
+              ((b.typ == 'kasseErstellt' ? d.einladungCode == null : (b.typ == 'bierwartBeigetreten' && einladungGueltig(d.einladungCode)))
+                && uid == request.auth.uid
+                // Release 1: eine Kasse je Nutzer
+                && getAfter(/databases/$(database)/documents/users/$(uid)).data.kasseId == k)
+              // Übernahme bestätigt (UC-03, ADR-0008): angelegt vom Entscheider
+              || (b.typ == 'uebernahmeBestaetigt' && b.neueUid == uid
+                && d.einladungCode == get(pfad('uebernahmen', b.uebernahmeId)).data.einladungCode));
+        }
+        function buchungUeber(buchungId) {
+          let b = nachher('buchungen', buchungId);
+          return b.stempel.am == request.time ? b : null;
+        }
+        function ausgetreten() {
+          let b = buchungUeber(getAfter(kassePfad()).data.letzteBuchungId);
+          return b != null && b.typ == 'ausgetreten' && b.stempel.uid == uid;
+        }
+        function alteUidUebernommen() {
+          let b = buchungUeber(nachher('mitglieder', resource.data.mitgliedId).letzteBuchungId);
+          return b != null && b.typ == 'uebernahmeBestaetigt' && b.alteUid == uid;
+        }
+
         allow read: if istBierwart();
+        allow create: if neuerBierwart();
+        // Austreten (UC-05) oder alte UID nach einer Übernahme (ADR-0008)
+        allow delete: if request.auth != null && (ausgetreten() || alteUidUebernommen());
         // Name des Bierwarts folgt der Umbenennung seines Mitglieds (UI-09).
         allow update: if buchungDiesesRequests() != null
           && nurFelder(['name', 'letzteBuchungId'])
@@ -129,18 +236,33 @@ service cloud.firestore {
 
         allow read: if istBierwart();
 
-        // Anlegen (KAD-01): Saldo 0, kein Gast, kein Bierwart, Name im Index.
-        allow create: if istBierwart()
+        // Neues Mitglied: Saldo 0, Name im Index.
+        allow create: if request.auth != null
           && request.resource.data.keys().hasOnly(['name', 'nameKey', 'istGast', 'bierwartUid', 'entfernt', 'saldoCents', 'letzteBuchungId', 'angelegtAm'])
           && nameGueltig(request.resource.data.name)
           && request.resource.data.nameKey == nameKey(request.resource.data.name)
-          && request.resource.data.istGast == false
-          && request.resource.data.bierwartUid == null
           && request.resource.data.entfernt == false
           && request.resource.data.saldoCents == 0
           && request.resource.data.angelegtAm == request.time
           && nameIndexZeigtAuf(request.resource.data.nameKey, mitgliedId)
-          && stammdatenBuchung('mitgliedAngelegt');
+          && (
+            // Anlegen (KAD-01): kein Gast, kein Bierwart
+            (istBierwart()
+              && request.resource.data.istGast == false
+              && request.resource.data.bierwartUid == null
+              && stammdatenBuchung('mitgliedAngelegt'))
+            // Eigenes Mitglied beim Erstellen und Beitreten (KAD-02)
+            || (request.resource.data.istGast == false
+              && request.resource.data.bierwartUid == request.auth.uid
+              && nachher('bierwarte', request.auth.uid).mitgliedId == mitgliedId
+              && (stammdatenBuchung('kasseErstellt') || stammdatenBuchung('bierwartBeigetreten')))
+            // „Gäste“ entsteht mit der Kasse (KAD-03)
+            || (mitgliedId == 'gaeste'
+              && request.resource.data.name == 'Gäste'
+              && request.resource.data.istGast == true
+              && request.resource.data.bierwartUid == null
+              && buchungDiesesRequests() != null
+              && buchungDiesesRequests().typ == 'kasseErstellt'));
 
         allow update: if
           // Summen aus Buchungen
@@ -168,14 +290,24 @@ service cloud.firestore {
           // Wieder aufnehmen (KAD-08)
           || (nurFelder(['entfernt', 'letzteBuchungId'])
             && resource.data.entfernt == true && request.resource.data.entfernt == false
-            && stammdatenBuchung('mitgliedWiederaufgenommen'));
+            && stammdatenBuchung('mitgliedWiederaufgenommen'))
+          // Übernahme (UC-03): geht auf die neue UID über; ein entferntes
+          // Mitglied wird dabei wieder aktiv (KAD-02, KAD-08)
+          || (nurFelder(['bierwartUid', 'entfernt', 'letzteBuchungId'])
+            && request.resource.data.entfernt == false
+            && stammdatenBuchung('uebernahmeBestaetigt')
+            && request.resource.data.bierwartUid == buchungDiesesRequests().neueUid);
       }
 
       match /namen/{key} {
-        allow read: if istBierwart();
+        // Wer beitreten will, muss vorher sehen, ob sein Name vergeben ist, und
+        // für „Das bin ich“ die mitgliedId kennen (AUTH-07). Nur per get, so
+        // lassen sich die Namen einer Kasse nicht auflisten.
+        allow get: if request.auth != null;
+        allow list: if istBierwart();
         // Ein zweites create auf denselben Schlüssel ist ein update und scheitert:
         // so bleibt jeder Name pro Kasse eindeutig (AUTH-07, UI-09).
-        allow create: if istBierwart()
+        allow create: if istOderWirdBierwart()
           && request.resource.data.keys().hasOnly(['mitgliedId'])
           && nachher('mitglieder', request.resource.data.mitgliedId).nameKey == key;
         // Frei wird ein Name nur, wenn sein Mitglied im selben Batch umbenannt wird.
@@ -238,10 +370,70 @@ service cloud.firestore {
           // Kassensturz: gezählter Betrag gesetzt, Differenz zum Serverstand (GEL-06).
           return b.typ != 'kassensturz' || request.resource.data.standCents == b.gezaehltCents;
         }
+        // Kasse mit Startbetrag (UC-01), Portemonnaie mit 0 (UC-02) oder mit
+        // dem Stand des alten Portemonnaies (UC-03).
+        function ortNeu(d, b) {
+          return ortId == 'kasse'
+            ? d.art == 'kasse' && d.uid == null && d.name == 'Kasse'
+              && b.typ == 'kasseErstellt' && d.standCents == b.startCents
+            : d.art == 'portemonnaie' && d.uid == ortId
+              && d.name == nachher('bierwarte', ortId).name
+              && (((b.typ == 'kasseErstellt' || b.typ == 'bierwartBeigetreten')
+                  && b.stempel.uid == ortId && d.standCents == 0)
+                || (b.typ == 'uebernahmeBestaetigt'
+                  && b.neueUid == ortId && d.standCents == b.standCents));
+        }
         allow read: if istBierwart();
+        allow create: if buchungDiesesRequests() != null
+          && request.resource.data.keys().hasOnly(['art', 'uid', 'name', 'standCents', 'ehemalig', 'letzteBuchungId'])
+          && request.resource.data.keys().hasAll(['art', 'uid', 'name', 'standCents', 'ehemalig', 'letzteBuchungId'])
+          && request.resource.data.ehemalig == false
+          && ortNeu(request.resource.data, buchungDiesesRequests());
         allow update: if buchungDiesesRequests() != null
           && summeGeaendert('standCents', standWirkung(buchungDiesesRequests(), ortId))
           && standGueltig(buchungDiesesRequests());
+      }
+
+      match /uebernahmen/{anfrageId} {
+        function anfrageBuchung(typ) {
+          let b = buchungDiesesRequests();
+          return b != null && b.typ == typ && b.uebernahmeId == anfrageId;
+        }
+        function entschieden(status) {
+          return nurFelder(['status', 'entschiedenVon', 'entschiedenAm', 'letzteBuchungId'])
+            && request.resource.data.status == status
+            && request.resource.data.entschiedenVon == request.auth.uid
+            && request.resource.data.entschiedenAm == request.time;
+        }
+
+        allow read: if istBierwart()
+          || (request.auth != null && resource.data.neueUid == request.auth.uid);
+
+        // Anfragen (UC-03, AUTH-07): gültiger Link wie beim Beitreten, für jeden
+        // vergebenen Namen außer „Gäste“. Bis zur Entscheidung kein Bierwart.
+        allow create: if request.auth != null && !istBierwart()
+          && request.resource.data.keys().hasOnly(['neueUid', 'mitgliedId', 'einladungCode', 'status', 'angefragtAm', 'entschiedenVon', 'entschiedenAm', 'letzteBuchungId'])
+          && request.resource.data.keys().hasAll(['neueUid', 'mitgliedId', 'einladungCode', 'status', 'angefragtAm', 'entschiedenVon', 'entschiedenAm', 'letzteBuchungId'])
+          && request.resource.data.neueUid == request.auth.uid
+          && request.resource.data.status == 'offen'
+          && request.resource.data.angefragtAm == request.time
+          && request.resource.data.entschiedenVon == null
+          && request.resource.data.entschiedenAm == null
+          && einladungGueltig(request.resource.data.einladungCode)
+          && get(pfad('mitglieder', request.resource.data.mitgliedId)).data.get('istGast', false) == false
+          && anfrageBuchung('uebernahmeAngefragt');
+
+        allow update: if request.auth != null && resource.data.status == 'offen'
+          && (
+            // Zurückziehen durch das neue Gerät
+            (resource.data.neueUid == request.auth.uid
+              && entschieden('zurueckgezogen')
+              && anfrageBuchung('uebernahmeZurueckgezogen'))
+            // Entscheiden durch einen aktiven Bierwart, solange die Anfrage gilt
+            || (istBierwart()
+              && request.time < resource.data.angefragtAm + siebenTage()
+              && ((entschieden('abgelehnt') && anfrageBuchung('uebernahmeAbgelehnt'))
+                || (entschieden('bestaetigt') && anfrageBuchung('uebernahmeBestaetigt')))));
       }
 
       // ---- Buchungen --------------------------------------------------------
@@ -368,20 +560,165 @@ service cloud.firestore {
             && verweistAuf('orte', 'kasse', buchungId));
       }
 
-      function stempelGueltig(s) {
+      // Übernahme bestätigt (UC-03, AUTH-07, ADR-0008): Mitgliedschaft,
+      // Portemonnaie und Rollen gehen 1:1 auf die neue UID über.
+      function uebernahmeGueltig(d, buchungId) {
+        let anfrage = get(pfad('uebernahmen', d.uebernahmeId)).data;
+        let vorher = get(kassePfad()).data;
+        let danach = getAfter(kassePfad()).data;
+        let alteAktiv = d.alteUid != null && exists(pfad('bierwarte', d.alteUid));
+        let umzug = d.alteUid != null && d.alteUid != d.neueUid && exists(pfad('orte', d.alteUid));
+        return anfrage.mitgliedId == d.mitgliedId
+          && anfrage.neueUid == d.neueUid
+          && get(pfad('mitglieder', d.mitgliedId)).data.get('bierwartUid', null) == d.alteUid
+          && verweistAuf('uebernahmen', d.uebernahmeId, buchungId)
+          && verweistAuf('mitglieder', d.mitgliedId, buchungId)
+          && verweistAuf('bierwarte', d.neueUid, buchungId)
+          && (!alteAktiv || !existsAfter(pfad('bierwarte', d.alteUid)))
+          && d.standCents == (umzug ? get(pfad('orte', d.alteUid)).data.standCents : 0)
+          && (!umzug || d.standCents == 0 || verweistAuf('orte', d.alteUid, buchungId))
+          && (d.alteUid == d.neueUid || verweistAuf('orte', d.neueUid, buchungId))
+          && danach.adminUid == (vorher.adminUid == d.alteUid ? d.neueUid : vorher.adminUid)
+          && danach.kassenwartUid == (vorher.kassenwartUid == d.alteUid ? d.neueUid : vorher.kassenwartUid)
+          && danach.anzahlBierwarte == vorher.anzahlBierwarte + (alteAktiv ? 0 : 1);
+      }
+
+      // Verwaltung durch einen Bierwart. Die Rules der betroffenen Dokumente
+      // prüfen die Werte, hier Form, Verweise und Vorbedingungen (LOG-01).
+      function verwaltungGueltig(d, buchungId) {
+        return (d.typ == 'uebernahmeAbgelehnt'                              // UC-03
+            && felder(d, ['uebernahmeId', 'mitgliedId'])
+            && nachher('uebernahmen', d.uebernahmeId).mitgliedId == d.mitgliedId
+            && verweistAuf('uebernahmen', d.uebernahmeId, buchungId))
+          || (d.typ == 'uebernahmeBestaetigt'                               // UC-03, AUTH-07
+            && felder(d, ['uebernahmeId', 'mitgliedId', 'alteUid', 'neueUid', 'standCents'])
+            && uebernahmeGueltig(d, buchungId))
+          // Austreten (UC-05, AUTH-09): Portemonnaie leer; Admin und Kassenwart
+          // übergeben vorher, außer sie sind der letzte Bierwart.
+          || (d.typ == 'ausgetreten'
+            && felder(d, ['mitgliedId'])
+            && d.mitgliedId == get(pfad('bierwarte', request.auth.uid)).data.mitgliedId
+            && !existsAfter(pfad('bierwarte', request.auth.uid))
+            && get(pfad('orte', request.auth.uid)).data.standCents == 0
+            && (get(kassePfad()).data.anzahlBierwarte == 1
+              || (get(kassePfad()).data.adminUid != request.auth.uid
+                && get(kassePfad()).data.kassenwartUid != request.auth.uid))
+            && getAfter(kassePfad()).data.letzteBuchungId == buchungId);
+      }
+
+      // Buchungen von Nutzern, die (noch) kein Bierwart sind.
+      function ohneMitgliedschaftGueltig(d, buchungId) {
+        return (d.typ == 'kasseErstellt'                                    // UC-01, AUTH-02
+            && felder(d, ['kassenName', 'startCents', 'mitgliedId', 'name'])
+            && !exists(kassePfad())
+            && d.startCents is int && d.startCents >= 0
+            && getAfter(kassePfad()).data.name == d.kassenName
+            && getAfter(kassePfad()).data.letzteBuchungId == buchungId
+            && nachher('bierwarte', request.auth.uid).mitgliedId == d.mitgliedId
+            && nachher('mitglieder', d.mitgliedId).name == d.name
+            && verweistAuf('bierwarte', request.auth.uid, buchungId)
+            && verweistAuf('mitglieder', d.mitgliedId, buchungId)
+            && verweistAuf('mitglieder', 'gaeste', buchungId)
+            && verweistAuf('orte', 'kasse', buchungId)
+            && verweistAuf('orte', request.auth.uid, buchungId))
+          || (d.typ == 'bierwartBeigetreten'                                // UC-02
+            && felder(d, ['mitgliedId', 'name'])
+            && nachher('bierwarte', request.auth.uid).mitgliedId == d.mitgliedId
+            && nachher('mitglieder', d.mitgliedId).name == d.name
+            && getAfter(kassePfad()).data.letzteBuchungId == buchungId
+            && verweistAuf('bierwarte', request.auth.uid, buchungId)
+            && verweistAuf('mitglieder', d.mitgliedId, buchungId)
+            && verweistAuf('orte', request.auth.uid, buchungId))
+          || ((d.typ == 'uebernahmeAngefragt' || d.typ == 'uebernahmeZurueckgezogen')   // UC-03
+            && felder(d, ['uebernahmeId', 'mitgliedId'])
+            && nachher('uebernahmen', d.uebernahmeId).mitgliedId == d.mitgliedId
+            && nachher('uebernahmen', d.uebernahmeId).neueUid == request.auth.uid
+            && verweistAuf('uebernahmen', d.uebernahmeId, buchungId));
+      }
+
+      // Name im Stempel: der des Bierwarts. Wer gerade Bierwart wird, steht
+      // erst nach dem Batch fest. Eine Übernahme-Anfrage trägt den Namen, um
+      // den es geht.
+      function stempelName(d) {
+        return istBierwart() ? get(pfad('bierwarte', request.auth.uid)).data.name
+          : istOderWirdBierwart() ? nachher('bierwarte', request.auth.uid).name
+          : get(pfad('mitglieder', d.mitgliedId)).data.name;
+      }
+      function stempelGueltig(s, name) {
         return s.keys().hasOnly(['uid', 'name', 'am', 'geraetAm'])
           && s.uid == request.auth.uid
           && s.am == request.time
-          && s.name == get(pfad('bierwarte', request.auth.uid)).data.name;
+          && s.name == name;
       }
 
       match /buchungen/{buchungId} {
         allow read: if istBierwart();
-        allow create: if istBierwart()
-          && stempelGueltig(request.resource.data.stempel)
-          && buchungGueltig(request.resource.data, buchungId);
+        allow create: if request.auth != null
+          && stempelGueltig(request.resource.data.stempel, stempelName(request.resource.data))
+          && (istBierwart()
+            ? buchungGueltig(request.resource.data, buchungId) || verwaltungGueltig(request.resource.data, buchungId)
+            : ohneMitgliedschaftGueltig(request.resource.data, buchungId));
         allow update, delete: if false;   // LOG-02
       }
+    }
+
+    // ---- Außerhalb der Kassen ----------------------------------------------
+    // Einladungen und Wiederherstellung: Wer den Code kennt, darf das Dokument
+    // lesen, aber niemand darf auflisten (AUTH-05).
+
+    match /einladungen/{code} {
+      function kasseDanach() {
+        return getAfter(/databases/$(database)/documents/kassen/$(request.resource.data.kasseId)).data;
+      }
+      allow get: if request.auth != null;
+      // Erste Einladung beim Erstellen der Kasse (UC-01)
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['kasseId', 'kassenName', 'anzahlBierwarte', 'erstelltAm', 'ersetzt'])
+        && request.resource.data.keys().hasAll(['kasseId', 'kassenName', 'anzahlBierwarte', 'erstelltAm', 'ersetzt'])
+        && !exists(/databases/$(database)/documents/kassen/$(request.resource.data.kasseId))
+        && kasseDanach().erstelltAm == request.time
+        && kasseDanach().einladungCode == code
+        && request.resource.data.kassenName == kasseDanach().name
+        && request.resource.data.anzahlBierwarte == 1
+        && request.resource.data.erstelltAm == request.time
+        && request.resource.data.ersetzt == false;
+      // Die Anzahl folgt der Kasse (Beitreten, Austreten, Übernahme).
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['anzahlBierwarte'])
+        && request.resource.data.anzahlBierwarte
+          == getAfter(/databases/$(database)/documents/kassen/$(resource.data.kasseId)).data.anzahlBierwarte;
+    }
+
+    match /wiederherstellung/{hashHex} {
+      function kasseDanach() {
+        return getAfter(/databases/$(database)/documents/kassen/$(request.resource.data.kasseId)).data;
+      }
+      allow get: if request.auth != null;
+      // Beim Erstellen der Kasse (UC-01, AUTH-03). toHexString() liefert
+      // Großbuchstaben, die Dokument-ID ist klein geschrieben.
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['kasseId'])
+        && !exists(/databases/$(database)/documents/kassen/$(request.resource.data.kasseId))
+        && kasseDanach().erstelltAm == request.time
+        && kasseDanach().wiederherstellungHash.toHexString().lower() == hashHex;
+    }
+
+    // Zeigt auf die Kasse des Nutzers. Release 1: eine Kasse je Nutzer (AUTH-14
+    // erst Release 4). Gültig nur, solange er dort Bierwart ist.
+    match /users/{uid} {
+      function bierwartIn(kasseId) {
+        return existsAfter(/databases/$(database)/documents/kassen/$(kasseId)/bierwarte/$(uid));
+      }
+      function eintragGueltig() {
+        return request.auth != null && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['kasseId'])
+          && request.resource.data.kasseId is string
+          && bierwartIn(request.resource.data.kasseId);
+      }
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if eintragGueltig();
+      allow update: if eintragGueltig() && !bierwartIn(resource.data.kasseId);
+      allow delete: if request.auth != null && request.auth.uid == uid && !bierwartIn(resource.data.kasseId);
     }
 
     match /{document=**} {
