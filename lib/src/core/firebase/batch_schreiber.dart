@@ -37,6 +37,8 @@ class BatchSchreiber implements Schreiber {
           batch.set(ref, daten);
         case Art.update:
           batch.update(ref, daten);
+        case Art.delete:
+          batch.delete(ref);
       }
     }
     return batch.commit();

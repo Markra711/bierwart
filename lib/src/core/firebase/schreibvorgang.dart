@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-enum Art { set, update }
+enum Art { set, update, delete }
 
 /// Ein Dokument eines Batches als reine Daten, ohne Firebase-Typen. So lässt
 /// sich ein Batch mit `rules-tests/fixtures/` vergleichen, die dieselben
@@ -9,6 +9,8 @@ class Schreibvorgang {
   const Schreibvorgang(this.pfad, this.daten, {this.art = Art.set});
 
   const Schreibvorgang.update(this.pfad, this.daten) : art = Art.update;
+
+  const Schreibvorgang.loeschen(this.pfad) : daten = const {}, art = Art.delete;
 
   final String pfad;
   final Map<String, Object?> daten;

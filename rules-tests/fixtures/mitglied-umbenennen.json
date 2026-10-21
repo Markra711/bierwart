@@ -1,0 +1,46 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "update",
+      "pfad": "kassen/k2/mitglieder/m3",
+      "daten": {
+        "name": "Tim Richter-Berg",
+        "nameKey": "tim richter-berg",
+        "letzteBuchungId": "l7"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/namen/tim richter-berg",
+      "daten": {
+        "mitgliedId": "m3"
+      }
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/namen/tim richter",
+      "daten": {}
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/l7",
+      "daten": {
+        "typ": "mitgliedUmbenannt",
+        "mitgliedId": "m3",
+        "nameAlt": "Tim Richter",
+        "nameNeu": "Tim Richter-Berg",
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

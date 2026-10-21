@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/einstellungen/presentation/einstellungen_screen.dart';
 import '../../features/geld/presentation/geld_screen.dart';
 import '../../features/kader/presentation/kader_screen.dart';
+import '../../features/kader/presentation/mitglied_detail_screen.dart';
 import '../../features/lager/presentation/lager_screen.dart';
 import '../../features/onboarding/application/onboarding.dart';
 import '../../features/onboarding/domain/erstellte_kasse.dart';
@@ -40,6 +41,10 @@ abstract final class Routen {
   static const lager = '/lager';
   static const geld = '/geld';
   static const einstellungen = '/einstellungen';
+  static const mitglied = '/mitglied';
+
+  /// Mitglied-Detail, eine Unterseite ohne Tab-Leiste (styleguide.md, TabBar).
+  static String mitgliedDetail(String id) => '$mitglied/$id';
 
   static String mitCode(String pfad, String code) =>
       Uri(path: pfad, queryParameters: {'code': code}).toString();
@@ -129,6 +134,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       seite(Routen.einstellungen, () => const EinstellungenScreen()),
+      GoRoute(
+        path: '${Routen.mitglied}/:id',
+        builder: (context, state) =>
+            MitgliedDetailScreen(mitgliedId: state.pathParameters['id']!),
+      ),
       seite(Routen.laden, () => const LadenScreen()),
       seite(Routen.willkommen, () => const WillkommenScreen()),
       seite(Routen.kasseErstellen, () => const KasseErstellenScreen()),

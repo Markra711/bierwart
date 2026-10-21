@@ -12,7 +12,6 @@ import '../../../core/widgets/knoepfe.dart';
 import '../../../core/widgets/seite.dart';
 import '../../../core/widgets/tab_seite.dart';
 import '../../kader/domain/mitglied.dart';
-import '../../kader/presentation/mitglied_anlegen_sheet.dart';
 import '../../lager/domain/sorte.dart';
 import '../../lager/presentation/sorte_anlegen_sheet.dart';
 import '../application/kasse_daten.dart';
@@ -77,25 +76,11 @@ class StrichlisteScreen extends ConsumerWidget {
           ),
           _ => const _Laden(),
         },
-        // Bis Lager und Kader ausgebaut sind, wird hier angelegt.
-        Row(
-          children: [
-            Expanded(
-              child: BwKnopf(
-                text: '+ Sorte',
-                art: BwKnopfArt.outline,
-                onPressed: () => zeigeSorteAnlegen(context),
-              ),
-            ),
-            const SizedBox(width: BwSpacing.space4),
-            Expanded(
-              child: BwKnopf(
-                text: '+ Mitglied',
-                art: BwKnopfArt.outline,
-                onPressed: () => zeigeMitgliedAnlegen(context),
-              ),
-            ),
-          ],
+        // Bis das Lager ausgebaut ist, werden Sorten hier angelegt.
+        BwKnopf(
+          text: '+ Sorte',
+          art: BwKnopfArt.outline,
+          onPressed: () => zeigeSorteAnlegen(context),
         ),
       ],
       unten: letzter == null ? null : _Rueckgaengig(strich: letzter),

@@ -11,15 +11,25 @@ Mitglied mitgliedAus(String id, Map<String, Object?> d) => Mitglied(
   name: d['name'] as String,
   saldoCents: d['saldoCents'] as int,
   istGast: d['istGast'] as bool? ?? false,
+  bierwartUid: d['bierwartUid'] as String?,
 );
 
 abstract interface class MitgliederRepository {
   /// Alle nicht entfernten Mitglieder, live und auch offline.
   Stream<List<Mitglied>> aktive(String kasseId);
 
-  /// Ob der Name vergeben ist, auch an ein entferntes Mitglied (KAD-08).
-  /// Ohne Netz zählt, was das Gerät kennt; den Rest prüfen die Rules.
-  Future<bool> nameVergeben(String kasseId, String name);
+  /// Wem der Name gehört, auch einem entfernten Mitglied (KAD-08); `null`,
+  /// wenn er frei ist. Ohne Netz zählt, was das Gerät kennt; den Rest prüfen
+  /// die Rules.
+  Future<NamensBesitzer?> nameBelegt(String kasseId, String name);
+}
+
+/// Das Mitglied, dem ein Name im Index gehört.
+class NamensBesitzer {
+  const NamensBesitzer({required this.mitgliedId, required this.entfernt});
+
+  final String mitgliedId;
+  final bool entfernt;
 }
 
 class FirestoreMitgliederRepository implements MitgliederRepository {
@@ -35,12 +45,20 @@ class FirestoreMitgliederRepository implements MitgliederRepository {
       .map((q) => [for (final d in q.docs) mitgliedAus(d.id, d.data())]);
 
   @override
-  Future<bool> nameVergeben(String kasseId, String name) async {
+  Future<NamensBesitzer?> nameBelegt(String kasseId, String name) async {
     try {
-      final d = await _db.doc('kassen/$kasseId/namen/${nameKey(name)}').get();
-      return d.exists;
+      final index = await _db
+          .doc('kassen/$kasseId/namen/${nameKey(name)}')
+          .get();
+      final id = index.data()?['mitgliedId'] as String?;
+      if (id == null) return null;
+      final m = await _db.doc('kassen/$kasseId/mitglieder/$id').get();
+      return NamensBesitzer(
+        mitgliedId: id,
+        entfernt: m.data()?['entfernt'] == true,
+      );
     } on FirebaseException {
-      return false;
+      return null;
     }
   }
 }

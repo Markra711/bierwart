@@ -4,6 +4,7 @@ import 'package:bier_wart/src/core/firebase/batch_schreiber.dart';
 import 'package:bier_wart/src/core/firebase/schreibvorgang.dart';
 import 'package:bier_wart/src/core/speicher/lokaler_speicher.dart';
 import 'package:bier_wart/src/features/kader/data/mitglieder_repository.dart';
+import 'package:bier_wart/src/features/kader/data/verlauf_repository.dart';
 import 'package:bier_wart/src/features/kader/domain/mitglied.dart';
 import 'package:bier_wart/src/features/kader/domain/name.dart';
 import 'package:bier_wart/src/features/lager/data/sorten_repository.dart';
@@ -15,7 +16,11 @@ import 'package:bier_wart/src/features/strichliste/data/kassenkopf_repository.da
 /// Widget-Tests sehen, was eine Buchung bewirkt. Mitglieder liefert
 /// [FakeMitglieder], weil `aktive` schon für Sorten vergeben ist.
 class FakeDatenbank
-    implements Schreiber, SortenRepository, KassenkopfRepository {
+    implements
+        Schreiber,
+        SortenRepository,
+        KassenkopfRepository,
+        VerlaufRepository {
   final docs = <String, Map<String, Object?>>{};
   final batches = <List<Schreibvorgang>>[];
   final _aenderung = StreamController<void>.broadcast();
@@ -26,14 +31,24 @@ class FakeDatenbank
 
   Future<void> schliessen() => _aenderung.close();
 
-  void kasse(String k, {required String name}) {
-    docs['kassen/$k'] = {'name': name};
+  /// Kasse mit Rollen; ohne Angabe ist `uid` Admin und Kassenwart.
+  void neueKasse(
+    String k, {
+    required String name,
+    String admin = 'uid',
+    String kassenwart = 'uid',
+  }) {
+    docs['kassen/$k'] = {
+      'name': name,
+      'adminUid': admin,
+      'kassenwartUid': kassenwart,
+    };
     _aenderung.add(null);
   }
 
   void bierwart(String k, String uid, String name) {
     docs['kassen/$k/bierwarte/$uid'] = {'name': name, 'mitgliedId': uid};
-    mitglied(k, uid, name);
+    mitglied(k, uid, name, bierwartUid: uid);
   }
 
   void mitglied(
@@ -42,13 +57,17 @@ class FakeDatenbank
     String name, {
     int saldo = 0,
     bool gast = false,
+    bool entfernt = false,
+    String? bierwartUid,
   }) {
     docs['kassen/$k/mitglieder/$id'] = {
       'name': name,
       'saldoCents': saldo,
       'istGast': gast,
-      'entfernt': false,
+      'entfernt': entfernt,
+      'bierwartUid': bierwartUid,
     };
+    docs['kassen/$k/namen/${nameKey(name)}'] = {'mitgliedId': id};
     _aenderung.add(null);
   }
 
@@ -77,6 +96,10 @@ class FakeDatenbank
   Future<void> schreiben(List<Schreibvorgang> vorgaenge) async {
     batches.add(vorgaenge);
     for (final s in vorgaenge) {
+      if (s.art == Art.delete) {
+        docs.remove(s.pfad);
+        continue;
+      }
       final alt = docs[s.pfad] ?? <String, Object?>{};
       final neu = s.art == Art.set ? <String, Object?>{} : {...alt};
       for (final e in s.daten.entries) {
@@ -122,9 +145,59 @@ class FakeDatenbank
     ],
   );
 
-  Future<bool> nameVergeben(String kasseId, String name) async =>
-      _unter('kassen/$kasseId/mitglieder')
-          .any((e) => nameKey(e.value['name']! as String) == nameKey(name));
+  Future<NamensBesitzer?> nameBelegt(String kasseId, String name) async {
+    final id = docs['kassen/$kasseId/namen/${nameKey(name)}']?['mitgliedId'];
+    if (id == null) return null;
+    return NamensBesitzer(
+      mitgliedId: id as String,
+      entfernt: docs['kassen/$kasseId/mitglieder/$id']?['entfernt'] == true,
+    );
+  }
+
+  @override
+  Stream<Map<String, String>> namen(String kasseId) => _beobachten(
+    () => {
+      for (final e in _unter('kassen/$kasseId/sorten'))
+        _letzte(e.key): e.value['name']! as String,
+    },
+  );
+
+  @override
+  Stream<KasseInfo?> kasse(String kasseId) => _beobachten(() {
+    final d = docs['kassen/$kasseId'];
+    return d == null
+        ? null
+        : KasseInfo(
+            name: d['name']! as String,
+            adminUid: d['adminUid']! as String,
+            kassenwartUid: d['kassenwartUid']! as String,
+          );
+  });
+
+  @override
+  Stream<Set<String>> aktiveBierwarte(String kasseId) => _beobachten(
+    () => {for (final e in _unter('kassen/$kasseId/bierwarte')) _letzte(e.key)},
+  );
+
+  /// Wie die Firestore-Abfrage: Buchungen des Mitglieds, neueste zuerst,
+  /// höchstens [anzahl], dann als Einträge.
+  @override
+  Stream<Verlauf> verlauf(
+    String kasseId,
+    String mitgliedId, {
+    required int anzahl,
+  }) => _beobachten(() {
+    DateTime zeit(Map<String, Object?> d) =>
+        (d['stempel']! as Map)['geraetAm']! as DateTime;
+    final buchungen = [
+      for (final e in _unter('kassen/$kasseId/buchungen'))
+        if (e.value['mitgliedId'] == mitgliedId) (_letzte(e.key), e.value),
+    ]..sort((a, b) => zeit(b.$2).compareTo(zeit(a.$2)));
+    return Verlauf(
+      eintraegeAus(buchungen.take(anzahl)),
+      mehr: buchungen.length > anzahl,
+    );
+  });
 
   @override
   Stream<String?> kassenName(String kasseId) =>
@@ -146,8 +219,8 @@ class FakeMitglieder implements MitgliederRepository {
   Stream<List<Mitglied>> aktive(String kasseId) => db.mitgliederAktiv(kasseId);
 
   @override
-  Future<bool> nameVergeben(String kasseId, String name) =>
-      db.nameVergeben(kasseId, name);
+  Future<NamensBesitzer?> nameBelegt(String kasseId, String name) =>
+      db.nameBelegt(kasseId, name);
 }
 
 /// Einstellungen im Arbeitsspeicher statt shared_preferences.

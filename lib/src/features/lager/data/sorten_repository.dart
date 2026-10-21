@@ -16,6 +16,9 @@ Sorte sorteAus(String id, Map<String, Object?> d) => Sorte(
 abstract interface class SortenRepository {
   /// Die sichtbaren Sorten (`aktiv`, BES-01), live und auch offline.
   Stream<List<Sorte>> aktive(String kasseId);
+
+  /// Namen aller Sorten, auch ausgeblendeter, für den Verlauf (KAD-06).
+  Stream<Map<String, String>> namen(String kasseId);
 }
 
 class FirestoreSortenRepository implements SortenRepository {
@@ -29,6 +32,12 @@ class FirestoreSortenRepository implements SortenRepository {
       .where('aktiv', isEqualTo: true)
       .snapshots()
       .map((q) => [for (final d in q.docs) sorteAus(d.id, d.data())]);
+
+  @override
+  Stream<Map<String, String>> namen(String kasseId) => _db
+      .collection('kassen/$kasseId/sorten')
+      .snapshots()
+      .map((q) => {for (final d in q.docs) d.id: d.data()['name'] as String});
 }
 
 final sortenRepositoryProvider = Provider<SortenRepository>(

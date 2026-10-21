@@ -207,4 +207,12 @@ abstract final class BwSheet {
     NeuShadow(4, 4, 9, BwColors.shadowDark, inset: true),
     NeuShadow(-4, -4, 9, schattenHell, inset: true),
   ];
+  static const insetSm = [
+    NeuShadow(3, 3, 7, BwColors.shadowDark, inset: true),
+    NeuShadow(-3, -3, 7, schattenHell, inset: true),
+  ];
+  static const raisedSm = [
+    NeuShadow(4, 4, 10, BwColors.shadowDark),
+    NeuShadow(-3, -3, 8, schattenHell),
+  ];
 }

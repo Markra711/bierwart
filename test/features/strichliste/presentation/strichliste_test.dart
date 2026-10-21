@@ -183,29 +183,6 @@ void main() {
     expect(find.textContaining('Noch keine Sorte'), findsNothing);
   });
 
-  testWidgets('Mitglied anlegen im Sheet, Name nur einmal (KAD-01, AUTH-07)', (
-    tester,
-  ) async {
-    final db = await starten(tester);
-    await tester.ensureVisible(find.text('+ MITGLIED'));
-    await tester.tap(find.text('+ MITGLIED'));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byType(TextField), 'jonas weber');
-    await tester.tap(find.text('MITGLIED ANLEGEN').last);
-    await tester.pumpAndSettle();
-    expect(
-      find.text('„jonas weber“ gibt es in der Kasse schon.'),
-      findsOneWidget,
-    );
-
-    await tester.enterText(find.byType(TextField), 'Tim Richter');
-    await tester.tap(find.text('MITGLIED ANLEGEN').last);
-    await tester.pumpAndSettle();
-    expect(letzteBuchung(db)['typ'], 'mitgliedAngelegt');
-    expect(find.text('Tim Richter'), findsOneWidget);
-  });
-
   testWidgets('abgelehnte Buchung erscheint als Meldung (NFA-10)', (
     tester,
   ) async {
@@ -231,7 +208,7 @@ void main() {
     await starten(tester);
     await tester.tap(find.text('KADER'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Hier entstehen Kader'), findsOneWidget);
+    expect(find.text('OFFEN GESAMT'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.tune_rounded).hitTestable());
     await tester.pumpAndSettle();
@@ -239,7 +216,7 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel('Zurück'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Hier entstehen Kader'), findsOneWidget);
+    expect(find.text('OFFEN GESAMT'), findsOneWidget);
 
     await tester.tap(find.text('STRICHE'));
     await tester.pumpAndSettle();
