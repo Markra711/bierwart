@@ -1,0 +1,144 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "pfad": "kassen/k2",
+      "daten": {
+        "name": "SV Neu",
+        "adminUid": "gruender",
+        "kassenwartUid": "gruender",
+        "einladungCode": "K7Q2MXA93DWFT2HC8RNP",
+        "anzahlBierwarte": 1,
+        "wiederherstellungHash": {
+          "$bytes": "be105af532593b07b857dbbb0012fc12a939efb515656aa111fc0120993c0609"
+        },
+        "leerSeit": null,
+        "aufgeloest": false,
+        "erstelltAm": {
+          "$serverzeit": true
+        },
+        "letzteBuchungId": "l1"
+      }
+    },
+    {
+      "pfad": "kassen/k2/bierwarte/gruender",
+      "daten": {
+        "mitgliedId": "m1",
+        "name": "Lena Koch",
+        "beigetretenAm": {
+          "$serverzeit": true
+        },
+        "einladungCode": null,
+        "letzteBuchungId": "l1"
+      }
+    },
+    {
+      "pfad": "kassen/k2/mitglieder/m1",
+      "daten": {
+        "name": "Lena Koch",
+        "nameKey": "lena koch",
+        "istGast": false,
+        "bierwartUid": "gruender",
+        "entfernt": false,
+        "saldoCents": 0,
+        "letzteBuchungId": "l1",
+        "angelegtAm": {
+          "$serverzeit": true
+        }
+      }
+    },
+    {
+      "pfad": "kassen/k2/namen/lena koch",
+      "daten": {
+        "mitgliedId": "m1"
+      }
+    },
+    {
+      "pfad": "kassen/k2/mitglieder/gaeste",
+      "daten": {
+        "name": "Gäste",
+        "nameKey": "gäste",
+        "istGast": true,
+        "bierwartUid": null,
+        "entfernt": false,
+        "saldoCents": 0,
+        "letzteBuchungId": "l1",
+        "angelegtAm": {
+          "$serverzeit": true
+        }
+      }
+    },
+    {
+      "pfad": "kassen/k2/namen/gäste",
+      "daten": {
+        "mitgliedId": "gaeste"
+      }
+    },
+    {
+      "pfad": "kassen/k2/orte/kasse",
+      "daten": {
+        "art": "kasse",
+        "uid": null,
+        "name": "Kasse",
+        "standCents": 5000,
+        "ehemalig": false,
+        "letzteBuchungId": "l1"
+      }
+    },
+    {
+      "pfad": "kassen/k2/orte/gruender",
+      "daten": {
+        "art": "portemonnaie",
+        "uid": "gruender",
+        "name": "Lena Koch",
+        "standCents": 0,
+        "ehemalig": false,
+        "letzteBuchungId": "l1"
+      }
+    },
+    {
+      "pfad": "einladungen/K7Q2MXA93DWFT2HC8RNP",
+      "daten": {
+        "kasseId": "k2",
+        "kassenName": "SV Neu",
+        "anzahlBierwarte": 1,
+        "erstelltAm": {
+          "$serverzeit": true
+        },
+        "ersetzt": false
+      }
+    },
+    {
+      "pfad": "wiederherstellung/be105af532593b07b857dbbb0012fc12a939efb515656aa111fc0120993c0609",
+      "daten": {
+        "kasseId": "k2"
+      }
+    },
+    {
+      "pfad": "users/gruender",
+      "daten": {
+        "kasseId": "k2"
+      }
+    },
+    {
+      "pfad": "kassen/k2/buchungen/l1",
+      "daten": {
+        "typ": "kasseErstellt",
+        "kassenName": "SV Neu",
+        "startCents": 5000,
+        "mitgliedId": "m1",
+        "name": "Lena Koch",
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

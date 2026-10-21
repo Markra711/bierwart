@@ -38,8 +38,8 @@ abstract final class BwRadius {
   static const pill = 999.0;
 }
 
-/// Ein Schatten aus tokens.json. Flutter kann `inset` nicht nativ zeichnen,
-/// deshalb bleiben eingedrückte Schatten Daten, bis es einen Painter gibt.
+/// Ein Schatten aus tokens.json. Flutter kann `inset` nicht nativ zeichnen;
+/// eingedrückte Schatten zeichnet `BwEingedrueckt` (core/widgets/flaechen.dart).
 class NeuShadow {
   const NeuShadow(
     this.dx,

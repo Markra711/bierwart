@@ -120,7 +120,7 @@ Jedes Element hat genau eine Lage:
 
 Zwischen erhabenen Elementen mindestens `space-4` Abstand, sonst verkleben die Schatten. Radien: Kacheln `radius-lg`, Sorten und Tabs `radius-md`, große Karten `radius-xl`, Buttons `radius-pill`.
 
-**Flutter-Hinweis:** `BoxShadow` kennt kein `inset`. Erhabene Schatten werden direkt als `BoxShadow`-Liste umgesetzt. Eingedrückte Schatten brauchen einen eigenen Painter oder ein Paket (offene Frage in [architecture.md](architecture.md#offene-fragen)). Im Theme stehen sie bereits als Daten (`NeuShadow` mit `inset: true`).
+**Flutter-Hinweis:** `BoxShadow` kennt kein `inset`. Erhabene Schatten werden direkt als `BoxShadow`-Liste umgesetzt. Eingedrückte Schatten zeichnet ein eigener Painter aus den Tokens (`BwEingedrueckt` in `lib/src/core/widgets/flaechen.dart`); die CSS-Unschärfe `blur` entspricht dort einem Sigma von `blur / 2`.
 
 ## Wireframe-Details
 
@@ -158,7 +158,8 @@ Pillen-Buttons in vier Varianten; pro Bildschirm höchstens ein primärer Button
 | Outline | 1,5px Rahmen in `ink` | Ruhige Aktionen neben einem Primärbutton: „Liste teilen“ |
 | Icon | runder Button 46px, `raised-sm` | Zahnrad, Schließen, Zurück; braucht ein Semantics-Label |
 
-- Höhe 48px (Icon 46px), Radius `radius-pill`, Text im Stil `button` (Großbuchstaben).
+- Höhe 48px (Icon 46px), Radius `radius-pill`, Text im Stil `button` (Großbuchstaben). Die Hauptaktionen der Onboarding-Seiten sind im Canvas 56px hoch (`BwKnopf(gross: true)`).
+- Deaktiviert: ohne Fläche, gestrichelter Rahmen in `line-strong`, Text `ink-muted`.
 - Destruktive Aktionen („Austreten“, „Kasse auflösen“) als Outline in `negative`, mit Bestätigung.
 - Fokusring 2px in `grad-end`, 3px Abstand.
 
@@ -234,6 +235,7 @@ Die Artboards sind 390×844 (Phone). Bei Abweichungen zwischen Canvas und diesem
 | `docs/design/tokens.json` | Kopie der Tokens aus dem Design System |
 | `lib/src/core/theme/tokens.dart` | Tokens als Dart-Konstanten (`BwColors`, `BwSpacing`, `BwRadius`, `BwShadows`, `BwGradients`) |
 | `lib/src/core/theme/app_theme.dart` | `ThemeData` (dunkel) + `ThemeExtension` `BwTextStyles` für die Token-Stile |
+| `lib/src/core/widgets/` | Bausteine: Flächen (`BwErhaben`, `BwEingedrueckt`, Schraffur, Verlaufstext), Knöpfe (`BwKnopf`, `BwIconKnopf`), Eingaben (`BwFeld`, `BwLabel`), Seitengerüst (`BwSeite`, `BwTitel`) |
 | `test/core/theme/tokens_test.dart` | Prüft, dass `tokens.dart` und `tokens.json` übereinstimmen |
 
 Widgets nutzen Token-Namen, keine Hex-Werte oder freien Zahlen.
