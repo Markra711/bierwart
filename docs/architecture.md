@@ -91,18 +91,19 @@ wiederherstellung/{hashHex}                  Hash des Wiederherstellungscodes �
 
 | Pfad | Felder | Lesen |
 | --- | --- | --- |
-| `users/{uid}` | `kasseId` (Release 4: Liste, AUTH-14) | nur der Nutzer selbst |
-| `kassen/{k}` | `name`, `adminUid`, `kassenwartUid`, `einladungCode`, `anzahlBierwarte`, `wiederherstellungHash` (Bytes), `leerSeit` (null oder Timestamp, für AUTH-10 in Release 2), `aufgeloest` (bool), `erstelltAm` | Bierwarte |
+| `users/{uid}` | `kasseId` (Release 4: Liste, AUTH-14); gültig nur, solange der Nutzer dort Bierwart ist | nur der Nutzer selbst |
+| `kassen/{k}` | `name`, `adminUid`, `kassenwartUid`, `einladungCode`, `anzahlBierwarte`, `wiederherstellungHash` (Bytes), `leerSeit` (null oder Timestamp, für AUTH-10 in Release 2), `aufgeloest` (bool), `erstelltAm`, `letzteBuchungId` | Bierwarte |
 | `kassen/{k}/bierwarte/{uid}` | `mitgliedId`, `name` (denormalisiert für den Stempel), `beigetretenAm`, `einladungCode` (mit dem beigetreten wurde), `letzteBuchungId` | Bierwarte |
 | `kassen/{k}/mitglieder/{id}` | `name`, `nameKey`, `istGast` (KAD-03), `bierwartUid` (oder null), `entfernt` (bool), `saldoCents` (offen; negativ = Guthaben), `letzteBuchungId`, `angelegtAm` | Bierwarte |
-| `kassen/{k}/uebernahmen/{id}` | `neueUid`, `mitgliedId`, `einladungCode`, `status` (`offen`/`bestaetigt`/`abgelehnt`/`zurueckgezogen`), `angefragtAm`, `gueltigBis` (angefragtAm + 7 Tage), `entschiedenVon`, `entschiedenAm` | Bierwarte und die anfragende UID |
-| `kassen/{k}/namen/{nameKey}` | `mitgliedId` | Bierwarte |
+| `kassen/{k}/uebernahmen/{id}` | `neueUid`, `mitgliedId`, `einladungCode`, `status` (`offen`/`bestaetigt`/`abgelehnt`/`zurueckgezogen`), `angefragtAm` (gültig bis angefragtAm + 7 Tage), `entschiedenVon`, `entschiedenAm`, `letzteBuchungId` | Bierwarte und die anfragende UID |
+| `kassen/{k}/namen/{nameKey}` | `mitgliedId` | jeder Angemeldete per `get` (Namensprüfung beim Beitreten, AUTH-07), Abfragen nur Bierwarte |
 | `kassen/{k}/sorten/{id}` | `name`, `preisCents`, `vorherigerPreisCents` (oder null, BES-02), `aktiv` (BES-01), `bestand` (Flaschen, darf < 0, STR-05), `letzteBuchungId`, `reihenfolge` | Bierwarte |
 | `kassen/{k}/orte/{ortId}` | `art` (`kasse`/`portemonnaie`), `uid`, `name`, `standCents`, `ehemalig` (GEL-08), `letzteBuchungId` | Bierwarte |
 | `kassen/{k}/buchungen/{id}` | siehe unten | Bierwarte |
-| `einladungen/{code}` | `kasseId`, `kassenName`, `anzahlBierwarte`, `gueltigBis`, `ersetzt` (bool) | jeder Angemeldete per `get`, nie per Abfrage |
-| `wiederherstellung/{hashHex}` | `kasseId` | jeder Angemeldete per `get`, nie per Abfrage |
+| `einladungen/{code}` | `kasseId`, `kassenName`, `anzahlBierwarte`, `erstelltAm` (gültig bis erstelltAm + 7 Tage), `ersetzt` (bool) | jeder Angemeldete per `get`, nie per Abfrage |
+| `wiederherstellung/{hashHex}` | `kasseId`; ID ist der SHA-256 als Hex in Kleinbuchstaben | jeder Angemeldete per `get`, nie per Abfrage |
 
+- **Ablaufzeiten:** Ein Client kann nur `serverTimestamp()` schreiben, nicht „Serverzeit + 7 Tage“. Einladungen und Übernahme-Anfragen speichern deshalb ihren Serverzeitpunkt (`erstelltAm`, `angefragtAm`). Die Rules rechnen `+ 7 Tage` selbst, die App zeigt „gültig bis“ daraus an.
 - **Einladungen und Wiederherstellung:** Wer einen Code kennt, darf das zugehörige Dokument lesen. Der Code selbst ist der Nachweis. Abfragen über diese Sammlungen erlauben die Rules nicht, man kann also nicht nach Codes suchen. `kassenName` und `anzahlBierwarte` stehen in der Einladung, damit „Kasse X beitreten?“ (AUTH-05) vor dem Beitritt angezeigt werden kann. Die App pflegt beide Felder in denselben Batches wie die Kasse.
 - **Namen:** `nameKey` ist der normalisierte Name (klein, Leerzeichen zusammengefasst, Unicode NFC). Das Dokument `namen/{nameKey}` sorgt dafür, dass ein Name pro Kasse nur einmal vorkommt (AUTH-07, UI-09). Ein zweites `create` auf denselben Schlüssel scheitert an den Rules.
   - Die Eindeutigkeit gilt für **alle Mitglieder** (AUTH-07, UI-09), auch für Bierwarte und „Gäste“.
@@ -134,7 +135,12 @@ Gemeinsame Felder:
 | `einzahlung` / `auszahlung` | `ortId`, `betragCents`, `grund` | Ort ± Betrag | GEL-05 |
 | `kassensturz` | `gezaehltCents`, `differenzCents` | Kasse = gezählt | GEL-06 |
 | `mitgliedAngelegt`, `mitgliedUmbenannt`, `mitgliedEntfernt`, `mitgliedWiederaufgenommen`, `sorteGeaendert`, … | jeweils alt/neu | keine Geldwirkung, nur Log | LOG-01, UI-09 |
-| `kasseErstellt`, `rolleGeaendert`, `bierwartBeigetreten`, `bierwartEntfernt`, `ausgetreten`, `einladungErneuert`, `kasseUmbenannt`, `adminWiederhergestellt`, `wiederherstellungscodeErneuert`, `uebernahmeAngefragt`, `uebernahmeBestaetigt`, `uebernahmeAbgelehnt`, `uebernahmeZurueckgezogen` | jeweils alt/neu | nur Log | LOG-01, ADM-01 bis ADM-06 |
+| `kasseErstellt` | `kassenName`, `startCents`, `mitgliedId`, `name` | Kasse startet mit `startCents` | UC-01, AUTH-02 |
+| `bierwartBeigetreten` | `mitgliedId`, `name` | nur Log | UC-02 |
+| `uebernahmeAngefragt`, `uebernahmeZurueckgezogen`, `uebernahmeAbgelehnt` | `uebernahmeId`, `mitgliedId` | nur Log | UC-03, AUTH-07 |
+| `uebernahmeBestaetigt` | `uebernahmeId`, `mitgliedId`, `alteUid` (oder null), `neueUid`, `standCents` | altes Portemonnaie − Stand, neues startet mit Stand | UC-03, AUTH-07, ADR-0008 |
+| `ausgetreten` | `mitgliedId` | nur Log | UC-05, AUTH-09 |
+| `rolleGeaendert`, `bierwartEntfernt`, `einladungErneuert`, `kasseUmbenannt`, `adminWiederhergestellt`, `wiederherstellungscodeErneuert` | jeweils alt/neu | nur Log | LOG-01, ADM-01 bis ADM-08 |
 
 „Rückgängig“ in der Snackbar (STR-04) erzeugt eine `storno`-Buchung, löscht also nichts.
 
@@ -188,9 +194,10 @@ Die Rules sind in Release 1 die Geschäftslogik. Grundsätze (NFA-07):
 - Jede Verwaltungsaktion schreibt ihre Log-Buchung im selben Batch. Die Rules verlangen sie (`existsAfter`).
 - `einladungen` und `wiederherstellung`: nur `get` für Angemeldete, kein `list`.
 
-Die Rules für **alle Buchungsarten und die Stammdaten** liegen in `firestore.rules`. Abgedeckt sind sie mit 79 Emulator-Tests in `rules-tests/`:
+Die Rules für **alle Buchungsarten, die Stammdaten und die Mitgliedschaft** liegen in `firestore.rules`. Abgedeckt sind sie mit 135 Emulator-Tests in `rules-tests/`:
 - `buchungen.test.js` (47): Strich offen und bar, Storno, Zahlung, Einkauf, Bestandskorrektur, Übergabe, Ein-/Auszahlung, Kassensturz, Fälle ohne passende Buchung, Unveränderlichkeit des Logs.
 - `stammdaten.test.js` (32): Mitglieder anlegen, umbenennen, entfernen, wieder aufnehmen; Namensindex; Sorten anlegen, ändern, ausblenden.
+- `verwaltung.test.js` (56): Kasse erstellen, Beitreten, Übernahme anfragen, zurückziehen und entscheiden, Austreten, `users/`, Lesen von Einladungen und Namensindex.
 
 Kern des Musters:
 
@@ -231,17 +238,17 @@ Zusätzlich zu den Entscheidungen oben prüfen die Rules:
 
 | Aktion | Wer | Batch | Die Rules prüfen | Anforderungen |
 | --- | --- | --- | --- | --- |
-| Kasse erstellen | Angemeldeter ohne Kasse | `kassen/{k}`, eigener `bierwarte`-Eintrag, eigenes Mitglied + Gäste-Mitglied + `namen`, Orte (Kasse mit Startbetrag, eigenes Portemonnaie 0), `einladungen/{code}`, `wiederherstellung/{hashHex}`, `users/{uid}`, Log | Ersteller ist `adminUid` und `kassenwartUid`, `anzahlBierwarte == 1`, `wiederherstellungHash` passt zur Dokument-ID unter `wiederherstellung/`, Startbetrag ist `int` | UC-01, AUTH-02, AUTH-03 |
+| Kasse erstellen | Angemeldeter ohne Kasse | `kassen/{k}`, eigener `bierwarte`-Eintrag, eigenes Mitglied + Gäste-Mitglied (ID `gaeste`) + `namen`, Orte (Kasse mit Startbetrag, eigenes Portemonnaie 0), `einladungen/{code}`, `wiederherstellung/{hashHex}`, `users/{uid}`, Log | Ersteller ist `adminUid` und `kassenwartUid`, `anzahlBierwarte == 1`, `wiederherstellungHash` passt zur Dokument-ID unter `wiederherstellung/`, Startbetrag ist `int` | UC-01, AUTH-02, AUTH-03 |
 | Einladung prüfen | Angemeldeter | – (nur `get einladungen/{code}`) | nichts zu schreiben | AUTH-05 |
-| Beitreten | Angemeldeter | eigener `bierwarte`-Eintrag (mit `einladungCode`), Mitglied + `namen`, Portemonnaie, `anzahlBierwarte + 1` in Kasse und Einladung, `users/{uid}`, Log | Code ist `kassen.einladungCode`, Einladung nicht `ersetzt`, `request.time < gueltigBis` (AUTH-08), Name frei | UC-02, AUTH-07, AUTH-08 |
-| Übernahme anfragen | Angemeldeter | `uebernahmen/{id}` mit `einladungCode` und `gueltigBis = request.time + 7 Tage`, Log | gültiger Code wie beim Beitreten, `status == "offen"`, `neueUid` ist der Anfragende. Gilt für **jeden vergebenen Namen**: Bierwart, ehemaliger Bierwart, Mitglied ohne App, entferntes Mitglied | UC-03, AUTH-07, KAD-08 |
-| Übernahme entscheiden | Bierwart | Status setzen; bei Bestätigung zusätzlich: `bierwarte/{neueUid}` anlegen, `bierwarte/{alteUid}` löschen, `mitglieder.bierwartUid`, Portemonnaie umziehen (`orte/{alteUid}` → `orte/{neueUid}`, gleicher Stand), Rollen in `kassen/{k}` umschreiben, Log | Anfrage war `offen` und `request.time < gueltigBis`, Entscheider ist aktiver Bierwart, Stand und Rollen werden 1:1 übertragen | UC-03, AUTH-07, ADR-0008 |
+| Beitreten | Angemeldeter | eigener `bierwarte`-Eintrag (mit `einladungCode`), Mitglied + `namen`, Portemonnaie, `anzahlBierwarte + 1` in Kasse und Einladung, `users/{uid}`, Log | Code ist `kassen.einladungCode`, Einladung nicht `ersetzt`, `request.time < erstelltAm + 7 Tage` (AUTH-08), Name frei, Nutzer ist in keiner anderen Kasse Bierwart | UC-02, AUTH-07, AUTH-08 |
+| Übernahme anfragen | Angemeldeter | `uebernahmen/{id}` mit `einladungCode` und `angefragtAm = request.time`, Log (Stempel mit dem angefragten Namen) | gültiger Code wie beim Beitreten, `status == "offen"`, `neueUid` ist der Anfragende, der noch kein Bierwart der Kasse ist. Gilt für **jeden vergebenen Namen** außer „Gäste“: Bierwart, ehemaliger Bierwart, Mitglied ohne App, entferntes Mitglied (wird dabei wieder aktiv) | UC-03, AUTH-07, KAD-08 |
+| Übernahme entscheiden | Bierwart | Status setzen; bei Bestätigung zusätzlich: `bierwarte/{neueUid}` anlegen, `bierwarte/{alteUid}` löschen, `mitglieder.bierwartUid`, Portemonnaie umziehen (`orte/{alteUid}` → `orte/{neueUid}`, gleicher Stand), Rollen in `kassen/{k}` umschreiben, Log | Anfrage war `offen` und `request.time < angefragtAm + 7 Tage`, Entscheider ist aktiver Bierwart (auch das alte Gerät), Stand und Rollen werden 1:1 übertragen; war das Mitglied kein aktiver Bierwart, `anzahlBierwarte + 1` | UC-03, AUTH-07, ADR-0008 |
 | Übernahme zurückziehen | anfragende UID | `status = "zurueckgezogen"`, Log | Anfrage war `offen`, Anfragender ist `neueUid` | UC-03, AUTH-07 |
 | Link erneuern | Admin | neues `einladungen/{code}`, altes `ersetzt: true`, `kassen.einladungCode`, Log | Admin | ADM-01, UC-07 |
 | Bierwart entfernen | Admin | `bierwarte/{uid}` löschen, `orte/{uid}.ehemalig = true`, Link erneuern (wie oben), `anzahlBierwarte − 1`, Log | Admin; Entfernter ist nicht selbst Admin oder Kassenwart | ADM-02, UC-08, GEL-08 |
 | Rolle übertragen | Admin | `kassen.kassenwartUid` oder `adminUid`, Log | Admin; Ziel ist aktiver Bierwart | ADM-03, UC-09 |
 | Kasse umbenennen | Admin | `kassen.name`, `einladungen/{code}.kassenName`, Log | Admin | ADM-04 |
-| Austreten | Bierwart | eigenen `bierwarte`-Eintrag löschen, `anzahlBierwarte − 1`, ggf. `leerSeit = request.time`, Log | eigenes Portemonnaie `standCents == 0`; nicht Admin oder Kassenwart (vorher übertragen) | AUTH-09, UC-05, KAD-02 |
+| Austreten | Bierwart | eigenen `bierwarte`-Eintrag und `users/{uid}` löschen, `anzahlBierwarte − 1` in Kasse und Einladung, bei 0 `leerSeit = request.time`, Log | eigenes Portemonnaie `standCents == 0`; nicht Admin oder Kassenwart (vorher übertragen), außer als letzter Bierwart | AUTH-09, UC-05, KAD-02 |
 | Admin wiederherstellen | Angemeldeter | `kassen.adminUid = uid`, neuer `wiederherstellungHash` + neues `wiederherstellung/{hashHex}`, altes löschen, Feld `wiederherstellungNachweis` mit dem alten Code, ggf. eigener `bierwarte`-Eintrag, `leerSeit = null`, Log | `hashing.sha256(nachweis) == wiederherstellungHash` | ADM-06, UC-04 |
 | Wiederherstellungscode erneuern | Admin | neuer `wiederherstellungHash`, neues `wiederherstellung/{hashHex}`, altes löschen, Log | Admin; neues Dokument passt zum neuen Hash | ADM-08 |
 | Auflösen | Admin | 1. `kassen.aufgeloest = true` mit `aufloesenBestaetigung == name`; 2. alle Dokumente seitenweise löschen; 3. Kasse, Einladung, Wiederherstellung, `users/{uid}` löschen | Admin; Bestätigung entspricht dem Kassennamen (ADM-05); Löschen nur bei `aufgeloest` | ADM-05, UC-10 |
@@ -256,7 +263,13 @@ Zusätzlich zu den Entscheidungen oben prüfen die Rules:
 
 Die Rules werden mit `@firebase/rules-unit-testing` gegen den Firestore-Emulator getestet: je Regel ein erlaubter und mindestens ein verbotener Fall. Die Tests liegen in `rules-tests/` (Node, Vitest).
 
-**Noch offen:** Rules und Tests für alle Verwaltungsaktionen aus der Tabelle (Kasse erstellen, Beitritt, Übernahme, Rollen, Wiederherstellung, Auflösen, „Gäste“ anlegen). Dazu die Prüfung, ob `hashing.sha256()` und die Umwandlung in eine Hex-ID so funktionieren wie geplant. Bis dahin dürfen Clients dort nichts schreiben.
+**Umgesetzt** sind Kasse erstellen samt „Gäste“, Beitreten, Übernahme (anfragen, zurückziehen, entscheiden) und Austreten. Was die Rules dabei zusätzlich festlegen:
+- **Wer noch kein Bierwart ist**, darf nur die Log-Buchungen `kasseErstellt`, `bierwartBeigetreten`, `uebernahmeAngefragt` und `uebernahmeZurueckgezogen` schreiben. Der Name im Stempel ist beim Erstellen und Beitreten der neue Bierwart-Name, bei einer Anfrage der angefragte Name.
+- **Übernahme:** Das alte Portemonnaie behält seine Buchungen und geht per Log-Buchung `uebernahmeBestaetigt` (Feld `standCents`) auf 0, das neue startet mit diesem Stand. Gelöscht wird es nicht, damit der Verlauf lesbar bleibt. `users/{neueUid}` schreibt das neue Gerät selbst, sobald es die Bestätigung sieht.
+- **Letzter Bierwart:** Er darf mit seinen Rollen austreten, sonst könnte keine Kasse je leer werden (AUTH-10). Die Rollen zeigen danach auf eine UID ohne Bierwart-Eintrag. Wiederherstellung (ADM-06) muss das in Teil 2 auffangen, auch für den Kassenwart (siehe offene Frage 25).
+- **`hashing.sha256()`** ist im Emulator geprüft: Es rechnet über UTF-8 wie Node und Dart. `toHexString()` liefert Großbuchstaben, die Dokument-ID unter `wiederherstellung/` ist das Hex in Kleinbuchstaben, verglichen wird mit `.lower()`.
+
+**Noch offen:** Rules und Tests für die Admin-Funktionen (Link erneuern, Bierwart entfernen, Rolle übertragen, Kasse umbenennen, Admin wiederherstellen, Wiederherstellungscode erneuern, Auflösen) und die Prüfung auf `aufgeloest` beim Lesen. Bis dahin dürfen Clients dort nichts schreiben.
 
 ### App Check
 
@@ -407,3 +420,4 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 22. ~~**Ablauf einer Übernahme-Anfrage**~~ – entschieden: 7 Tage gültig, vorher vom neuen Gerät zurückziehbar.
 23. **Wo sehen Bierwarte offene Anfragen?** Hinweis auf der Strichliste, in den Einstellungen oder beides? Warte-Bildschirm und Anfrage-Ansicht fehlen im Design-Canvas.
 24. **Fehlerhafte Zahlung korrigieren:** STR-06 erlaubt nur, Striche zu stornieren, und die Rules lassen nur das zu. Wie wird eine versehentlich gebuchte Zahlung zurückgenommen: per Storno auch für Zahlungen (STR-06 erweitern) oder über eine Auszahlung mit Grund?
+25. **Kassenwart einer leeren Kasse:** Tritt der letzte Bierwart aus, bleiben Admin- und Kassenwart-Rolle bei seiner alten UID. ADM-06 macht per Wiederherstellungscode nur zum Admin. Soll die Wiederherstellung auch den Kassenwart übernehmen, wenn dessen UID kein aktiver Bierwart mehr ist (Vorschlag), oder muss der Admin die Rolle danach selbst übertragen?
