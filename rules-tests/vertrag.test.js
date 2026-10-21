@@ -195,3 +195,50 @@ describe('Kader aus der App (KAD-01, KAD-04, KAD-08, GEL-02, GEL-03, UI-09)', ()
   });
 });
 
+describe('Lager aus der App (BES-01 bis BES-06)', () => {
+  const kette = ['kasse-erstellen.json', 'sorte-anlegen.json'].map(fixture);
+  async function lesen(pfad) {
+    let daten;
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      daten = (await getDoc(doc(ctx.firestore(), pfad))).data();
+    });
+    return daten;
+  }
+
+  beforeEach(async () => {
+    for (const batch of kette) await assertSucceeds(abspielen(batch));
+  });
+
+  test('Einkauf aus dem Portemonnaie: Bestand hoch, Portemonnaie runter', async () => {
+    await assertSucceeds(abspielen(fixture('einkauf.json')));
+    expect((await lesen('kassen/k2/sorten/s1')).bestand).toBe(24);
+    expect((await lesen('kassen/k2/orte/gruender')).standCents).toBe(-1890);
+  });
+
+  test('Einkauf aus der Kasse als Kassenwart', async () => {
+    await assertSucceeds(abspielen(fixture('einkauf-kasse.json')));
+    expect((await lesen('kassen/k2/orte/kasse')).standCents).toBe(5000 - 1890);
+  });
+
+  test('Preis ändern behält den alten als vorherigen (BES-02)', async () => {
+    await assertSucceeds(abspielen(fixture('sorte-aendern.json')));
+    const sorte = await lesen('kassen/k2/sorten/s1');
+    expect([sorte.preisCents, sorte.vorherigerPreisCents]).toEqual([170, 150]);
+  });
+
+  test('Sorte ausblenden', async () => {
+    await assertSucceeds(abspielen(fixture('sorte-ausblenden.json')));
+    expect((await lesen('kassen/k2/sorten/s1')).aktiv).toBe(false);
+  });
+
+  test('Korrektur auf den gezählten Wert (BES-06)', async () => {
+    await assertSucceeds(abspielen(fixture('bestand-korrektur.json')));
+    expect((await lesen('kassen/k2/sorten/s1')).bestand).toBe(24);
+  });
+
+  test('Korrektur mit veralteter Differenz abgelehnt', async () => {
+    await assertSucceeds(abspielen(fixture('einkauf.json')));
+    await assertFails(abspielen(fixture('bestand-korrektur.json')));
+  });
+});
+

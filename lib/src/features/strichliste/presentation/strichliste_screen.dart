@@ -76,12 +76,6 @@ class StrichlisteScreen extends ConsumerWidget {
           ),
           _ => const _Laden(),
         },
-        // Bis das Lager ausgebaut ist, werden Sorten hier angelegt.
-        BwKnopf(
-          text: '+ Sorte',
-          art: BwKnopfArt.outline,
-          onPressed: () => zeigeSorteAnlegen(context),
-        ),
       ],
       unten: letzter == null ? null : _Rueckgaengig(strich: letzter),
     );
@@ -521,6 +515,7 @@ class _Rueckgaengig extends ConsumerWidget {
             const SizedBox(width: BwSpacing.space2),
             BwKnopf(
               text: 'Rückgängig',
+              schmal: true,
               onPressed: () =>
                   ref.read(strichlisteProvider.notifier).rueckgaengig(),
             ),

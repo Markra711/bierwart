@@ -78,13 +78,15 @@ class FakeDatenbank
     int preis, {
     int bestand = 10,
     int reihenfolge = 0,
+    bool aktiv = true,
   }) {
     docs['kassen/$k/sorten/$id'] = {
       'name': name,
       'preisCents': preis,
       'bestand': bestand,
       'reihenfolge': reihenfolge,
-      'aktiv': true,
+      'aktiv': aktiv,
+      'vorherigerPreisCents': null,
     };
     _aenderung.add(null);
   }
@@ -152,6 +154,23 @@ class FakeDatenbank
       mitgliedId: id as String,
       entfernt: docs['kassen/$kasseId/mitglieder/$id']?['entfernt'] == true,
     );
+  }
+
+  @override
+  Stream<List<Sorte>> alle(String kasseId) => _beobachten(
+    () => [
+      for (final e in _unter('kassen/$kasseId/sorten'))
+        sorteAus(_letzte(e.key), e.value),
+    ],
+  );
+
+  /// Lässt [bestandVomServer] scheitern, z. B. ohne Netz.
+  Object? serverFehler;
+
+  @override
+  Future<int> bestandVomServer(String kasseId, String sorteId) async {
+    if (serverFehler != null) throw serverFehler!;
+    return docs['kassen/$kasseId/sorten/$sorteId']!['bestand']! as int;
   }
 
   @override

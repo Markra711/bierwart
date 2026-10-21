@@ -148,7 +148,7 @@ Gemeinsame Felder:
 
 „Rückgängig“ in der Snackbar (STR-04) erzeugt eine `storno`-Buchung, löscht also nichts.
 
-**Strichliste (STR-01 bis STR-05):** Die gewählte Sorte steht lokal in `shared_preferences` je Kasse (UI-07), ohne Wahl gilt die erste. Ein Tipp baut den Batch und schreibt ihn sofort, ohne auf den Server zu warten. Lokal ist der Strich gleich sichtbar (NFA-06), offline wird er nachgereicht (NFA-02). Gebucht wird erst, wenn Kasse, UID und der eigene Name für den Stempel geladen sind. Bis Lager und Kader ausgebaut sind, bietet die Strichliste „+ Sorte“ und „+ Mitglied“ als Sheets an.
+**Strichliste (STR-01 bis STR-05):** Die gewählte Sorte steht lokal in `shared_preferences` je Kasse (UI-07), ohne Wahl gilt die erste. Ein Tipp baut den Batch und schreibt ihn sofort, ohne auf den Server zu warten. Lokal ist der Strich gleich sichtbar (NFA-06), offline wird er nachgereicht (NFA-02). Gebucht wird erst, wenn Kasse, UID und der eigene Name für den Stempel geladen sind. Sorten legt das Lager an, Mitglieder der Kader; ohne Sorte zeigt die Strichliste „Sorte anlegen“.
 
 **Kader und Mitglied-Detail (KAD-01 bis KAD-08, GEL-02, GEL-03, STR-06):**
 - Der Kader sortiert nach Saldo absteigend: Schulden zuerst, Guthaben zuletzt, „Gäste“ nicht (KAD-05). Die Rollen-Badges kommen aus `kassen/{k}` (Admin, Kassenwart) und `bierwarte/` (aktiv).
@@ -157,6 +157,12 @@ Gemeinsame Felder:
 - Eine Zahlung geht ins eigene Portemonnaie, der Kassenwart kann die Kasse wählen; die Wahl sehen andere nicht (UI-08). Überzahlung wird Guthaben.
 - Umbenennen nur, wenn sich der Schlüssel im Namensindex ändert. Eine reine Änderung der Groß- und Kleinschreibung lehnen die Rules ab; die App sagt das (offene Frage 26).
 - Entfernen nur bei Saldo 0, nie „Gäste“ und nie aktive Bierwarte (KAD-04, KAD-02), mit Bestätigung (UI-04). Wird ein entfernter Name neu angelegt, bietet das Sheet „Wieder aufnehmen“ an (KAD-08).
+
+**Lager (BES-01 bis BES-06):**
+- Der Tab zeigt sichtbare Sorten mit Flaschenzahl und Bestandsbalken, gemessen an der Sorte mit dem größten Bestand; leere Sorten gestrichelt in `negative` (BES-03). Ausgeblendete stehen am Ende und lassen sich wieder einblenden.
+- Sorte bearbeiten schreibt `sorteGeaendert`. Ändert sich der Preis, wandert der alte nach `vorherigerPreisCents`, damit offline gebuchte Striche zum alten Preis gültig bleiben (BES-02). Ohne Änderung schreibt Speichern nichts. Ausblenden fragt vorher nach (UI-04).
+- Die Bestandskorrektur geht nur mit Netz (siehe Summen, Punkt 7): Die App liest den Bestand mit `Source.server`, schreibt den gezählten Wert und die Differenz und wartet auf den Server. Lehnt er ab, weil sich der Bestand inzwischen geändert hat, bittet sie, neu zu zählen.
+- Der Einkauf ist eine eigene Seite mit Zeilen aus Sorte und Anzahl (+1, +6, +20, +24), höchstens 10 Sorten, doppelte Sorten werden zusammengezählt (BES-04). Bezahlt wird aus dem eigenen Portemonnaie; nur der Kassenwart sieht und wählt die Kasse (BES-05, UI-08). Er geht offline und wartet nicht.
 
 **Storno (STR-04, STR-06):**
 - Das Mitglied-Detail zeigt alle Striche, auch bar bezahlte, mit dem Vermerk „bar“ (KAD-06).
@@ -208,12 +214,12 @@ Die Rules sind in Release 1 die Geschäftslogik. Grundsätze (NFA-07):
 - Jede Verwaltungsaktion schreibt ihre Log-Buchung im selben Batch. Die Rules verlangen sie (`existsAfter`).
 - `einladungen` und `wiederherstellung`: nur `get` für Angemeldete, kein `list`.
 
-Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 194 Emulator-Tests in `rules-tests/`:
+Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 200 Emulator-Tests in `rules-tests/`:
 - `buchungen.test.js` (47): Strich offen und bar, Storno, Zahlung, Einkauf, Bestandskorrektur, Übergabe, Ein-/Auszahlung, Kassensturz, Fälle ohne passende Buchung, Unveränderlichkeit des Logs.
 - `stammdaten.test.js` (32): Mitglieder anlegen, umbenennen, entfernen, wieder aufnehmen; Namensindex; Sorten anlegen, ändern, ausblenden.
 - `verwaltung.test.js` (56): Kasse erstellen, Beitreten, Übernahme anfragen, zurückziehen und entscheiden, Austreten, `users/`, Lesen von Einladungen und Namensindex.
 - `admin.test.js` (43): Link erneuern, Bierwart entfernen, Rollen, Umbenennen, Wiederherstellungscode erneuern, Admin wiederherstellen mit und ohne Bierwart-Eintrag, Auflösen und Löschen.
-- `vertrag.test.js` (16): Batches, wie die App sie baut: Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
+- `vertrag.test.js` (22): Batches, wie die App sie baut: Einkauf aus Portemonnaie und Kasse, Preis ändern, Ausblenden, Bestandskorrektur samt Ablehnung bei veralteter Differenz; Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
 
 Kern des Musters:
 
