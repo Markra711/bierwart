@@ -67,7 +67,7 @@ Regeln:
 - **Data** kapselt Firestore. Nur hier werden Collections, Feldnamen und Batches verwendet.
 - **Application** verbindet beides über Riverpod (ADR-0001).
 - **Presentation** liest nur Provider, keine Firestore-Typen.
-- Routing: Vorschlag `go_router` mit Redirect je nach Zustand (nicht angemeldet → Onboarding, in Kasse → Strichliste, UI-01).
+- Routing: `go_router` (`lib/src/core/routing/router.dart`), später mit Redirect je nach Zustand (nicht angemeldet → Onboarding, in Kasse → Strichliste, UI-01). Unbekannte Pfade zeigen eine Meldung statt einer leeren Seite.
 
 ## Datenmodell in Firestore
 
@@ -354,7 +354,7 @@ Bausteine:
 ## Lokale Entwicklung und Tests
 
 - Emulatoren: Auth, Firestore (und Hosting für die Fallback-Seite). Lokal mit Demo-Projekt `demo-bierwart`, damit nie echte Daten berührt werden.
-- Die App verbindet sich im Debug-Build mit den Emulatoren, wenn sie mit `--dart-define=USE_EMULATORS=true` gestartet wird.
+- Die App verbindet sich mit den Emulatoren, wenn sie mit `--dart-define=USE_EMULATORS=true` gestartet wird; in Release-Builds ist der Schalter immer aus. Sie nutzt dann die Projekt-ID `demo-bierwart`, damit nie echte Daten berührt werden. Host ist `10.0.2.2` (Android-Emulator), für ein echtes Gerät `--dart-define=EMULATOR_HOST=<IP des Rechners>`. Das Debug-Manifest erlaubt dafür unverschlüsseltes HTTP (`lib/src/core/firebase/emulatoren.dart`).
 - Tests:
   - Dart: Unit-Tests für Domain (Geld, Buchungswirkung, Batch-Aufbau), Widget-Tests für Bildschirme.
   - Rules: `rules-tests/` mit `@firebase/rules-unit-testing` gegen den Emulator (NFA-07): `npm --prefix rules-tests run test:emulator`. Die Firebase CLI ist dort als feste Version eingetragen, damit lokal und in der CI dasselbe läuft.
@@ -417,9 +417,9 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 12. ~~**Wiederherstellungscode**~~ – entschieden: 16 Zeichen Crockford-Base32 (80 Bit) in Vierergruppen; der Admin kann einen neuen Code erzeugen (ADM-08, siehe [Verwaltung als Batches](#verwaltung-als-batches)).
 13. ~~**App Check**~~ – entschieden: in Release 1 eingebaut, erzwungen erst zum Store-Release (siehe [App Check](#app-check)).
 14. **Verwaiste anonyme Nutzer** in Firebase Auth (z. B. nach Neuinstallation): aufräumen, und wenn ja, nach welcher Frist? (Ohne Functions frühestens Release 2.)
-15. **Schriften offline:** `google_fonts` lädt zur Laufzeit. Barlow und Barlow Condensed als Assets bündeln (Vorschlag), damit die App beim ersten Start ohne Netz richtig aussieht?
+15. ~~**Schriften offline**~~ – entschieden: Barlow und Barlow Condensed liegen als Assets in der App, `google_fonts` entfällt (siehe `docs/styleguide.md`, Typografie).
 16. **Innere Schatten:** eigener Painter oder Paket (z. B. `flutter_inset_shadow`)?
-17. **Routing:** `go_router` (Vorschlag) in Ordnung?
+17. ~~**Routing**~~ – entschieden: `go_router`.
 18. **Datenschutzhinweis (NFA-09):** Wer liefert den Text, und reicht ein Bildschirm in den Einstellungen? Er muss erwähnen, dass verlassene Kassen in Release 1 nicht automatisch gelöscht werden.
 19. ~~**Quelle der Wahrheit für Anforderungen**~~ – entschieden: `docs/requirements.md`; das Online-Dokument ist seit 2026-10-21 eingefroren (alle Änderungen bis dahin übertragen).
 20. ~~**Mitglied-Namen und Eindeutigkeit**~~ – entschieden: eindeutig für alle Mitglieder; entfernte behalten ihren Namen und lassen sich wieder aufnehmen (KAD-08, siehe [Dokumente](#dokumente)).

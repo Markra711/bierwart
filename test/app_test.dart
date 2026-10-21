@@ -2,11 +2,14 @@ import 'package:bier_wart/src/app.dart';
 import 'package:bier_wart/src/core/theme/app_theme.dart';
 import 'package:bier_wart/src/core/theme/tokens.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('App startet im dunklen Bierwart-Theme', (tester) async {
-    await tester.pumpWidget(const BierwartApp(fonts: BwFonts.plain));
+    await tester.pumpWidget(
+      const ProviderScope(child: BierwartApp(fonts: BwFonts.plain)),
+    );
 
     expect(find.text('BIERWART'), findsOneWidget);
     final context = tester.element(find.byType(Scaffold));

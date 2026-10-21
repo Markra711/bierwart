@@ -26,5 +26,5 @@ Gebucht wird in der Kabine, oft abends, mit einer Hand und bei wenig Licht. Die 
 
 - Neumorphism hat schwache Kontraste an Kanten. Lesbarkeit muss über Textkontrast kommen (Tokens sind auf ≥ 4,5:1 geprüft, `ink-faint` nur für Deko).
 - Flutter kann innere Schatten (`inset`) nicht nativ. Wir brauchen einen eigenen Painter oder ein Paket (offene Frage in `architecture.md`).
-- `google_fonts` lädt Schriften zur Laufzeit. Weil offline gebucht wird (NFA-02), sollten die Schriften als Assets mitgeliefert werden (offene Frage in `architecture.md`).
+- `google_fonts` lädt Schriften zur Laufzeit. Weil offline gebucht wird (NFA-02), sollten die Schriften als Assets mitgeliefert werden (offene Frage in `architecture.md`). Nachtrag 2026-10-21: entschieden, die Schriften liegen als Assets in der App.
 - Viele Schatten pro Bildschirm kosten Renderzeit. Die Strichliste muss trotzdem flüssig bleiben (NFA-06).
