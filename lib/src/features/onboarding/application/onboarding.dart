@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/anmeldung_repository.dart';
+import '../data/einladungslinks.dart';
 import '../data/kasse_repository.dart';
+import '../domain/codes.dart';
 import '../domain/einladung.dart';
 import '../domain/erstellte_kasse.dart';
 
@@ -113,6 +117,7 @@ class BeitrittNotifier extends Notifier<bool> {
     state = true;
     try {
       await repo.beitreten(uid, einladung, eigenerName);
+      ref.read(offenerCodeProvider.notifier).verwerfen();
       return Beitritt.erfolgreich;
     } finally {
       state = false;
@@ -122,4 +127,55 @@ class BeitrittNotifier extends Notifier<bool> {
 
 final beitrittProvider = NotifierProvider<BeitrittNotifier, bool>(
   BeitrittNotifier.new,
+);
+
+/// Ein Einladungscode aus einem Link oder dem Play-Store-Referrer, der noch
+/// nicht erledigt ist (AUTH-04, AUTH-06, AUTH-12). Er überlebt einen
+/// Neustart, bis der Nutzer beitritt oder ablehnt.
+class OffenerCodeNotifier extends Notifier<String?> {
+  @override
+  String? build() {
+    final quelle = ref.watch(linkQuelleProvider);
+    final abo = quelle.links.listen((link) {
+      final code = einladungscodeAusLink(link);
+      if (code != null) _setzen(code);
+    });
+    ref.onDispose(abo.cancel);
+    unawaited(_beimStart(quelle));
+    return null;
+  }
+
+  CodeSpeicher get _speicher => ref.read(codeSpeicherProvider);
+
+  Future<void> _beimStart(LinkQuelle quelle) async {
+    try {
+      final gemerkt = await _speicher.offenerCode();
+      if (state == null && gemerkt != null) state = gemerkt;
+      if (await _speicher.referrerGelesen()) return;
+      await _speicher.referrerAlsGelesenMerken();
+      final code = einladungscodeAusReferrer(await quelle.installReferrer());
+      if (state == null && code != null) _setzen(code);
+    } catch (_) {
+      // Ohne Speicher geht nur der gemerkte Code verloren; der Link selbst
+      // funktioniert weiter.
+    }
+  }
+
+  /// Erst merken, dann setzen: Wer auf den Zustand hört, darf den Code
+  /// sofort verwerfen, und das Löschen muss danach kommen.
+  void _setzen(String code) {
+    unawaited(_speicher.merken(code).catchError((_) {}));
+    state = code;
+  }
+
+  /// Nach dem Beitritt, nach „Nein“ oder „Anderer Link“.
+  void verwerfen() {
+    if (state == null) return;
+    state = null;
+    unawaited(_speicher.merken(null).catchError((_) {}));
+  }
+}
+
+final offenerCodeProvider = NotifierProvider<OffenerCodeNotifier, String?>(
+  OffenerCodeNotifier.new,
 );

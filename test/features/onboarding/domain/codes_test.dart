@@ -67,4 +67,46 @@ void main() {
       expect(einladungslink(code), 'https://bier-wart.web.app/j/$code');
     });
   });
+
+  group('App-Link und Referrer (AUTH-04, AUTH-12)', () {
+    const code = 'K7Q2MXA93DWFT2HC8RNP';
+
+    test('App-Link von bier-wart.web.app', () {
+      expect(
+        einladungscodeAusLink(Uri.parse('https://bier-wart.web.app/j/$code')),
+        code,
+      );
+      expect(
+        einladungscodeAusLink(
+          Uri.parse('https://bier-wart.web.app/j/$code?x=1'),
+        ),
+        code,
+      );
+    });
+
+    test('fremde oder kaputte Links', () {
+      expect(
+        einladungscodeAusLink(Uri.parse('https://example.org/j/$code')),
+        isNull,
+      );
+      expect(
+        einladungscodeAusLink(Uri.parse('https://bier-wart.web.app/x/$code')),
+        isNull,
+      );
+      expect(
+        einladungscodeAusLink(Uri.parse('https://bier-wart.web.app/j/K7Q2')),
+        isNull,
+      );
+    });
+
+    test('Referrer aus Google Play', () {
+      expect(einladungscodeAusReferrer('code=$code'), code);
+      expect(
+        einladungscodeAusReferrer('utm_source=google-play&code=$code'),
+        code,
+      );
+      expect(einladungscodeAusReferrer('utm_source=google-play'), isNull);
+      expect(einladungscodeAusReferrer(null), isNull);
+    });
+  });
 }

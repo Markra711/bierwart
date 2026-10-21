@@ -65,3 +65,25 @@ String? einladungscodeAus(String eingabe) {
   final code = normalisiereCode(roh);
   return istCode(code, einladungscodeLaenge) ? code : null;
 }
+
+/// Host der Einladungslinks (Firebase Hosting, AUTH-04).
+const einladungslinkHost = 'bier-wart.web.app';
+
+/// Code aus einem App-Link `https://bier-wart.web.app/j/{code}`; `null` für
+/// fremde Links.
+String? einladungscodeAusLink(Uri link) {
+  if (link.host != einladungslinkHost) return null;
+  if (link.pathSegments.length < 2 || link.pathSegments.first != 'j') {
+    return null;
+  }
+  return einladungscodeAus(link.pathSegments[1]);
+}
+
+/// Code aus dem Play-Store-Referrer nach der Installation (AUTH-12). Die
+/// Fallback-Seite setzt `referrer=code%3D{code}`, Google Play liefert
+/// `code={code}`.
+String? einladungscodeAusReferrer(String? referrer) {
+  if (referrer == null || referrer.isEmpty) return null;
+  final code = Uri.splitQueryString(referrer)['code'];
+  return code == null ? null : einladungscodeAus(code);
+}

@@ -35,6 +35,9 @@ firebase emulators:start --project demo-bierwart
 #   2. flutter run --dart-define=USE_EMULATORS=true
 # Ohne den Schalter spricht die App mit dem echten Projekt. Dort sind die
 # Rules noch nicht deployt, also wird alles außer der Anmeldung abgelehnt.
+#   Einladungslink auf dem Android-Emulator öffnen (vor dem Hosting-Deploy
+#   nur so, weil der App-Link noch nicht verifiziert ist):
+adb shell am start -W -a android.intent.action.VIEW -d "https://bier-wart.web.app/j/<CODE>" io.github.markra711.bierwart
 
 # Rules-Tests (Node, Vitest) gegen den Firestore-Emulator
 npm --prefix rules-tests ci
@@ -62,7 +65,7 @@ firestore.rules             Security Rules = Geschäftslogik in Release 1 (ADR-0
 firestore.indexes.json
 rules-tests/                Emulator-Tests für die Rules (Node, Vitest)
 functions/                  Cloud Functions, erst ab Release 2
-hosting/public/             assetlinks.json, Fallback-Seite für Einladungslinks (kommt mit AUTH-04)
+hosting/public/             .well-known/assetlinks.json, j.html (Fallback-Seite für Einladungslinks, AUTH-04)
 .github/workflows/ci.yml    analyze + test (Flutter), Rules-Tests (Emulator)
 ```
 

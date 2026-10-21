@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bier_wart/src/app.dart';
 import 'package:bier_wart/src/core/theme/app_theme.dart';
 import 'package:bier_wart/src/features/onboarding/data/anmeldung_repository.dart';
+import 'package:bier_wart/src/features/onboarding/data/einladungslinks.dart';
 import 'package:bier_wart/src/features/onboarding/data/kasse_repository.dart';
 import 'package:bier_wart/src/features/kader/domain/name.dart';
 import 'package:bier_wart/src/features/onboarding/domain/einladung.dart';
@@ -10,6 +11,8 @@ import 'package:bier_wart/src/features/onboarding/domain/erstellte_kasse.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'links.dart';
 
 /// Ersetzt Firestore beim Erstellen und Beitreten. Nach Erfolg meldet es die
 /// Kasse über [kasseIds], wie es `users/{uid}` täte.
@@ -71,12 +74,17 @@ class FakeKasseRepository implements KasseRepository {
 }
 
 /// Startet die App mit angemeldetem Nutzer `uid` und [kasseId] (oder ohne
-/// Kasse). Liefert das Fake-Repository für Erstellen.
+/// Kasse). Liefert das Fake-Repository für Erstellen und Beitreten; Links
+/// kommen über [links], ein gemerkter Code über [speicher].
 Future<FakeKasseRepository> appStarten(
   WidgetTester tester, {
   String? kasseId,
   Object? anmeldeFehler,
+  FakeLinkQuelle? links,
+  FakeCodeSpeicher? speicher,
 }) async {
+  final quelle = links ?? FakeLinkQuelle();
+  addTearDown(quelle.schliessen);
   final kasseIds = StreamController<String?>.broadcast();
   addTearDown(kasseIds.close);
   final repo = FakeKasseRepository(kasseIds);
@@ -91,6 +99,8 @@ Future<FakeKasseRepository> appStarten(
         yield* kasseIds.stream;
       }),
       kasseRepositoryProvider.overrideWithValue(repo),
+      linkQuelleProvider.overrideWithValue(quelle),
+      codeSpeicherProvider.overrideWithValue(speicher ?? FakeCodeSpeicher()),
     ],
   );
   addTearDown(container.dispose);

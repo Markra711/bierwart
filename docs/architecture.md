@@ -340,9 +340,9 @@ Bausteine:
     | Play App Signing | – | kommt mit dem Store-Release |
 
     Jeder Rechner hat einen eigenen Debug-Key. Wer auf einem anderen Rechner baut, muss dessen Fingerabdruck ergänzen, sonst öffnen sich Links dort im Browser statt in der App.
-  - `firebase.json`-Rewrite `/j/**` → `/j.html`: eine statische Seite, die den Code aus der URL zeigt, einen Play-Store-Link mit `&referrer=code%3D{code}` anbietet und den Code zum Kopieren bereitstellt (für „Link einfügen“).
-- **Android**: `intent-filter` mit `android:autoVerify="true"` für `https://bier-wart.web.app/j/*` in `AndroidManifest.xml`.
-- **App**: Paket `app_links` empfängt eingehende Links. Paket für den Play Install Referrer (z. B. `play_install_referrer`) liest den Code nach der Erstinstallation (AUTH-12). Ein offener Code wird in `shared_preferences` gemerkt, bis die Namenswahl fertig ist (AUTH-06).
+  - `firebase.json`-Rewrite `/j/**` → `/j.html`: eine statische Seite, die den Code aus der URL zeigt, einen Play-Store-Link mit `&referrer=code%3D{code}` anbietet und den Code zum Kopieren bereitstellt (für „Link einfügen“). Sie prüft den Code nach denselben Regeln wie die App (`codes.dart`) und meldet unvollständige Links. Ein Header liefert `assetlinks.json` als `application/json`.
+- **Android**: `intent-filter` mit `android:autoVerify="true"` für `https://bier-wart.web.app/j/*` in `AndroidManifest.xml`. Flutters eigenes Deep Linking ist dort ausgeschaltet (`flutter_deeplinking_enabled = false`); sonst bekäme auch `go_router` den Pfad `/j/…`. Verifiziert ist der Link erst, wenn `assetlinks.json` auf `bier-wart.web.app` liegt, also nach dem ersten Hosting-Deploy. Bis dahin öffnet Android den Link im Browser, außer man startet ihn gezielt für die App (siehe `CLAUDE.md`).
+- **App**: Paket `app_links` empfängt eingehende Links. Paket für den Play Install Referrer (z. B. `play_install_referrer`) liest den Code nach der Erstinstallation (AUTH-12). Ein offener Code wird in `shared_preferences` gemerkt, bis die Namenswahl fertig ist (AUTH-06). Umgesetzt im `OffenerCodeNotifier` (`onboarding/application`): Ohne Kasse führt die Weiterleitung mit offenem Code vom Start direkt zu „Kasse beitreten?“, ein Link bei offener App springt sofort dorthin. Verworfen wird der Code nach dem Beitritt, bei „Nein“, bei „Anderer Link“ und wenn der Nutzer schon in einer Kasse ist. Den Referrer liest die App nur beim ersten Start.
 - **iOS** (Release 3, AUTH-13): Universal Links über `apple-app-site-association` auf derselben Domain.
 
 ## Offline, Gleichzeitigkeit, Fehler
@@ -356,7 +356,7 @@ Bausteine:
 
 ## Lokale Entwicklung und Tests
 
-- Emulatoren: Auth, Firestore (und Hosting für die Fallback-Seite). Lokal mit Demo-Projekt `demo-bierwart`, damit nie echte Daten berührt werden.
+- Emulatoren: Auth, Firestore und Hosting (Fallback-Seite unter http://localhost:5000/j/{code}). Lokal mit Demo-Projekt `demo-bierwart`, damit nie echte Daten berührt werden.
 - Die App verbindet sich mit den Emulatoren, wenn sie mit `--dart-define=USE_EMULATORS=true` gestartet wird; in Release-Builds ist der Schalter immer aus. Sie nutzt dann eine eigene Firebase-App mit `demoProjectId: demo-bierwart`, damit nie echte Daten berührt werden. Eine eigene App ist nötig, weil das native Android-SDK aus `google-services.json` schon die Standard-App für `bier-wart` anlegt und FlutterFire abweichende Optionen dafür still ignoriert. Deshalb holen alle Dienste ihre Instanz über `firebaseAppProvider` (`instanceFor(app: …)`), nie über `.instance`. Host ist `10.0.2.2` (Android-Emulator), für ein echtes Gerät `--dart-define=EMULATOR_HOST=<IP des Rechners>`. Das Debug-Manifest erlaubt dafür unverschlüsseltes HTTP (`lib/src/core/firebase/emulatoren.dart`).
 - Tests:
   - Dart: Unit-Tests für Domain (Geld, Buchungswirkung, Batch-Aufbau), Widget-Tests für Bildschirme.

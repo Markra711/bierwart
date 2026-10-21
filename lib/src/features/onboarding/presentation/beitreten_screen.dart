@@ -33,7 +33,10 @@ class BeitretenScreen extends ConsumerWidget {
       text: 'Anderer Link',
       art: art,
       gross: true,
-      onPressed: () => context.go(Routen.linkEinfuegen),
+      onPressed: () {
+        ref.read(offenerCodeProvider.notifier).verwerfen();
+        context.go(Routen.linkEinfuegen);
+      },
     );
 
     final kopf = [
@@ -64,7 +67,10 @@ class BeitretenScreen extends ConsumerWidget {
               text: 'Nein',
               art: BwKnopfArt.outline,
               gross: true,
-              onPressed: () => context.go(Routen.willkommen),
+              onPressed: () {
+                ref.read(offenerCodeProvider.notifier).verwerfen();
+                context.go(Routen.willkommen);
+              },
             ),
           ],
         ),
