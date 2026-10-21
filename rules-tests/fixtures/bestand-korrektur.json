@@ -1,0 +1,33 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/k1",
+      "daten": {
+        "typ": "bestandKorrektur",
+        "sorteId": "s1",
+        "gezaehlt": 24,
+        "differenz": 24,
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/sorten/s1",
+      "daten": {
+        "bestand": 24,
+        "letzteBuchungId": "k1"
+      }
+    }
+  ]
+}

@@ -30,6 +30,7 @@ class BwKnopf extends StatelessWidget {
     this.icon,
     this.gross = false,
     this.laedt = false,
+    this.schmal = false,
   });
 
   final String text;
@@ -40,6 +41,10 @@ class BwKnopf extends StatelessWidget {
   /// 56px statt 48px: Hauptaktion der Onboarding-Bildschirme im Canvas.
   final bool gross;
   final bool laedt;
+
+  /// So breit wie der Text, z. B. neben anderem Inhalt in einer Row. Ohne
+  /// feste Breite würde der kürzbare Text dort scheitern.
+  final bool schmal;
 
   static const hoehe = 48.0;
   static const hoeheGross = 56.0;
@@ -75,14 +80,17 @@ class BwKnopf extends StatelessWidget {
             ),
             const SizedBox(width: BwSpacing.space2),
           ],
-          Flexible(
-            child: Text(
-              text.toUpperCase(),
-              style: stil.copyWith(color: textFarbe),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
+          if (schmal)
+            Text(text.toUpperCase(), style: stil.copyWith(color: textFarbe))
+          else
+            Flexible(
+              child: Text(
+                text.toUpperCase(),
+                style: stil.copyWith(color: textFarbe),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
             ),
-          ),
         ],
       ],
     );
@@ -131,13 +139,7 @@ class BwKnopf extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                     horizontal: BwSpacing.space5,
                   ),
-                  // Ohne feste Breite (z. B. in einer Row) so breit wie
-                  // der Inhalt, sonst würde Flexible scheitern.
-                  child: LayoutBuilder(
-                    builder: (context, raum) => raum.hasBoundedWidth
-                        ? inhalt
-                        : IntrinsicWidth(child: inhalt),
-                  ),
+                  child: inhalt,
                 ),
               ),
             ),

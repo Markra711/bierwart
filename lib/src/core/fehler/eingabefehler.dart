@@ -5,6 +5,7 @@ class Eingabefehler {
     this.preis,
     this.allgemein,
     this.entferntesMitgliedId,
+    this.anzahl,
   });
 
   final String? name;
@@ -13,9 +14,13 @@ class Eingabefehler {
   final String? preis;
   final String? allgemein;
 
+  /// Eine Anzahl, z. B. gezählte Flaschen.
+  final String? anzahl;
+
   /// Der Name gehört einem entfernten Mitglied; das Sheet bietet „wieder
   /// aufnehmen“ an (KAD-08).
   final String? entferntesMitgliedId;
 
-  bool get keine => name == null && preis == null && allgemein == null;
+  bool get keine =>
+      name == null && preis == null && allgemein == null && anzahl == null;
 }

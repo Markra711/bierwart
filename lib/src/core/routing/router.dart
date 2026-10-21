@@ -6,7 +6,9 @@ import '../../features/einstellungen/presentation/einstellungen_screen.dart';
 import '../../features/geld/presentation/geld_screen.dart';
 import '../../features/kader/presentation/kader_screen.dart';
 import '../../features/kader/presentation/mitglied_detail_screen.dart';
+import '../../features/lager/presentation/einkauf_screen.dart';
 import '../../features/lager/presentation/lager_screen.dart';
+import '../../features/lager/presentation/sorte_bearbeiten_screen.dart';
 import '../../features/onboarding/application/onboarding.dart';
 import '../../features/onboarding/domain/erstellte_kasse.dart';
 import '../../features/onboarding/presentation/beitreten_screen.dart';
@@ -42,6 +44,11 @@ abstract final class Routen {
   static const geld = '/geld';
   static const einstellungen = '/einstellungen';
   static const mitglied = '/mitglied';
+  static const einkauf = '/einkauf';
+  static const sorte = '/sorte';
+
+  /// Sorte bearbeiten, eine Unterseite ohne Tab-Leiste.
+  static String sorteBearbeiten(String id) => '$sorte/$id';
 
   /// Mitglied-Detail, eine Unterseite ohne Tab-Leiste (styleguide.md, TabBar).
   static String mitgliedDetail(String id) => '$mitglied/$id';
@@ -134,6 +141,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       seite(Routen.einstellungen, () => const EinstellungenScreen()),
+      seite(Routen.einkauf, () => const EinkaufScreen()),
+      GoRoute(
+        path: '${Routen.sorte}/:id',
+        builder: (context, state) =>
+            SorteBearbeitenScreen(sorteId: state.pathParameters['id']!),
+      ),
       GoRoute(
         path: '${Routen.mitglied}/:id',
         builder: (context, state) =>

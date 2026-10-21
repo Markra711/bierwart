@@ -1,0 +1,47 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/e2",
+      "daten": {
+        "typ": "einkauf",
+        "zeilen": {
+          "s1": 24
+        },
+        "betragCents": 1890,
+        "ortId": "kasse",
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/sorten/s1",
+      "daten": {
+        "bestand": {
+          "$erhoehen": 24
+        },
+        "letzteBuchungId": "e2"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/orte/kasse",
+      "daten": {
+        "standCents": {
+          "$erhoehen": -1890
+        },
+        "letzteBuchungId": "e2"
+      }
+    }
+  ]
+}
