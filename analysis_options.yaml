@@ -5,3 +5,5 @@ analyzer:
     - build/**
     - android/**
     - ios/**
+    # Node-Abhängigkeiten der Rules-Tests enthalten Dart-Vorlagen von firebase-tools
+    - rules-tests/**
