@@ -6,10 +6,10 @@ rules_version = '2';
 // Muster und Wirkungen: docs/architecture.md, „Summen“ und „Buchungen“.
 // Tests: rules-tests/.
 //
-// Stand: Buchungen, Stammdaten (Mitglieder, Namen, Sorten) und Mitgliedschaft
-// (Kasse erstellen, Beitreten, Übernahme, Austreten). Die Admin-Funktionen
-// (Link erneuern, Rollen, Wiederherstellung, Auflösen) folgen; bis dahin dürfen
-// Clients dort nichts schreiben.
+// Stand: Buchungen, Stammdaten (Mitglieder, Namen, Sorten), Mitgliedschaft
+// (Kasse erstellen, Beitreten, Übernahme, Austreten) und Admin-Funktionen
+// (Link erneuern, Bierwart entfernen, Rollen, Umbenennen, Wiederherstellung,
+// Auflösen).
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -29,6 +29,16 @@ service cloud.firestore {
       // Auch wer im selben Batch Bierwart wird (Kasse erstellen, Beitreten).
       function istOderWirdBierwart() {
         return request.auth != null && existsAfter(pfad('bierwarte', request.auth.uid));
+      }
+      function istAdmin() {
+        return request.auth != null && get(kassePfad()).data.adminUid == request.auth.uid;
+      }
+      function aufgeloest() {
+        return exists(kassePfad()) && get(kassePfad()).data.get('aufgeloest', false) == true;
+      }
+      // Eine aufgelöste Kasse sieht nur noch der Admin, der sie löscht (ADM-05).
+      function darfLesen() {
+        return istBierwart() && (!aufgeloest() || istAdmin());
       }
       function istKassenwart() {
         return get(/databases/$(database)/documents/kassen/$(k)).data.kassenwartUid == request.auth.uid;
@@ -95,7 +105,7 @@ service cloud.firestore {
           : 0;
       }
 
-      allow read: if istBierwart();
+      allow read: if darfLesen();
 
       // ---- Kasse und Mitgliedschaft ----------------------------------------
       // Einladungen und Übernahme-Anfragen gelten 7 Tage ab dem Serverzeitpunkt
@@ -154,11 +164,55 @@ service cloud.firestore {
           // Übernahme (UC-03): Rollen und Anzahl prüft die Buchung
           || (b.typ == 'uebernahmeBestaetigt'
             && nurFelder(['anzahlBierwarte', 'adminUid', 'kassenwartUid', 'leerSeit', 'letzteBuchungId'])
-            && d.leerSeit == null);
+            && d.leerSeit == null)
+          || (b.typ == 'einladungErneuert'                                  // ADM-01
+            && nurFelder(['einladungCode', 'letzteBuchungId'])
+            && codeGueltig(d.einladungCode))
+          || (b.typ == 'bierwartEntfernt'                                   // ADM-02
+            && nurFelder(['anzahlBierwarte', 'einladungCode', 'letzteBuchungId'])
+            && delta('anzahlBierwarte') == -1
+            && codeGueltig(d.einladungCode))
+          || (b.typ == 'rolleGeaendert'                                     // ADM-03
+            && nurFelder([b.rolle == 'admin' ? 'adminUid' : 'kassenwartUid', 'letzteBuchungId']))
+          || (b.typ == 'kasseUmbenannt'                                     // ADM-04
+            && nurFelder(['name', 'letzteBuchungId'])
+            && nameGueltig(d.name))
+          || (b.typ == 'kasseAufgeloest'                                    // ADM-05
+            && nurFelder(['aufgeloest', 'aufloesenBestaetigung', 'letzteBuchungId'])
+            && d.aufgeloest == true
+            && d.aufloesenBestaetigung == resource.data.name)
+          // Wiederherstellung (ADM-06): Rollen und Anzahl prüft die Buchung
+          || (b.typ == 'adminWiederhergestellt'
+            && nurFelder(['adminUid', 'kassenwartUid', 'anzahlBierwarte', 'leerSeit', 'wiederherstellungHash', 'letzteBuchungId'])
+            && d.leerSeit == null)
+          || (b.typ == 'wiederherstellungscodeErneuert'                     // ADM-08
+            && nurFelder(['wiederherstellungHash', 'letzteBuchungId']));
       }
+      function codeGueltig(code) {
+        return code is string && code.matches('[A-Za-z0-9_-]{16,64}');
+      }
+      function hashGueltig(hash) {
+        return hash is bytes && hash.size() == 32;
+      }
+      // Einladung und Wiederherstellung zeigen nach jeder Änderung auf diese
+      // Kasse; die Einladung zeigt Name und Anzahl (AUTH-05).
       allow update: if buchungDiesesRequests() != null
         && kasseGeaendert(buchungDiesesRequests())
-        && getAfter(/databases/$(database)/documents/einladungen/$(resource.data.einladungCode)).data.anzahlBierwarte == request.resource.data.anzahlBierwarte;
+        && getAfter(/databases/$(database)/documents/einladungen/$(request.resource.data.einladungCode)).data.kasseId == k
+        && getAfter(/databases/$(database)/documents/einladungen/$(request.resource.data.einladungCode)).data.anzahlBierwarte == request.resource.data.anzahlBierwarte
+        && getAfter(/databases/$(database)/documents/einladungen/$(request.resource.data.einladungCode)).data.kassenName == request.resource.data.name
+        && hashGueltig(request.resource.data.wiederherstellungHash)
+        && getAfter(/databases/$(database)/documents/wiederherstellung/$(request.resource.data.wiederherstellungHash.toHexString().lower())).data.kasseId == k;
+
+      // Auflösen (ADM-05, UC-10): Erst wird die Kasse als aufgelöst markiert,
+      // dann löscht die App des Admins alle Dokumente und zuletzt die Kasse.
+      function loeschtAdmin() {
+        return aufgeloest() && istAdmin();
+      }
+      allow delete: if loeschtAdmin();
+      match /{sammlung}/{id} {
+        allow delete: if loeschtAdmin();
+      }
 
       // ---- Stammdaten ------------------------------------------------------
       // Jede Änderung verweist über letzteBuchungId auf ihre Log-Buchung im
@@ -192,25 +246,34 @@ service cloud.firestore {
                 && getAfter(/databases/$(database)/documents/users/$(uid)).data.kasseId == k)
               // Übernahme bestätigt (UC-03, ADR-0008): angelegt vom Entscheider
               || (b.typ == 'uebernahmeBestaetigt' && b.neueUid == uid
-                && d.einladungCode == get(pfad('uebernahmen', b.uebernahmeId)).data.einladungCode));
+                && d.einladungCode == get(pfad('uebernahmen', b.uebernahmeId)).data.einladungCode)
+              // Wiederherstellung ohne Bierwart-Eintrag (ADM-06, UC-03)
+              || (b.typ == 'adminWiederhergestellt' && b.neueUid == uid
+                && uid == request.auth.uid && d.einladungCode == null
+                && getAfter(/databases/$(database)/documents/users/$(uid)).data.kasseId == k));
         }
         function buchungUeber(buchungId) {
           let b = nachher('buchungen', buchungId);
           return b.stempel.am == request.time ? b : null;
         }
-        function ausgetreten() {
+        function ausgetretenOderEntfernt() {
           let b = buchungUeber(getAfter(kassePfad()).data.letzteBuchungId);
-          return b != null && b.typ == 'ausgetreten' && b.stempel.uid == uid;
+          return b != null
+            && ((b.typ == 'ausgetreten' && b.stempel.uid == uid)
+              || (b.typ == 'bierwartEntfernt' && b.uid == uid));
         }
         function alteUidUebernommen() {
           let b = buchungUeber(nachher('mitglieder', resource.data.mitgliedId).letzteBuchungId);
-          return b != null && b.typ == 'uebernahmeBestaetigt' && b.alteUid == uid;
+          return b != null
+            && (b.typ == 'uebernahmeBestaetigt' || b.typ == 'adminWiederhergestellt')
+            && b.alteUid == uid;
         }
 
-        allow read: if istBierwart();
+        allow read: if darfLesen();
         allow create: if neuerBierwart();
-        // Austreten (UC-05) oder alte UID nach einer Übernahme (ADR-0008)
-        allow delete: if request.auth != null && (ausgetreten() || alteUidUebernommen());
+        // Austreten (UC-05), Entfernen (ADM-02) oder alte UID nach einer
+        // Übernahme (ADR-0008, ADM-06)
+        allow delete: if request.auth != null && (ausgetretenOderEntfernt() || alteUidUebernommen());
         // Name des Bierwarts folgt der Umbenennung seines Mitglieds (UI-09).
         allow update: if buchungDiesesRequests() != null
           && nurFelder(['name', 'letzteBuchungId'])
@@ -234,7 +297,7 @@ service cloud.firestore {
             && exists(pfad('bierwarte', resource.data.bierwartUid));
         }
 
-        allow read: if istBierwart();
+        allow read: if darfLesen();
 
         // Neues Mitglied: Saldo 0, Name im Index.
         allow create: if request.auth != null
@@ -255,7 +318,8 @@ service cloud.firestore {
             || (request.resource.data.istGast == false
               && request.resource.data.bierwartUid == request.auth.uid
               && nachher('bierwarte', request.auth.uid).mitgliedId == mitgliedId
-              && (stammdatenBuchung('kasseErstellt') || stammdatenBuchung('bierwartBeigetreten')))
+              && (stammdatenBuchung('kasseErstellt') || stammdatenBuchung('bierwartBeigetreten')
+                || stammdatenBuchung('adminWiederhergestellt')))
             // „Gäste“ entsteht mit der Kasse (KAD-03)
             || (mitgliedId == 'gaeste'
               && request.resource.data.name == 'Gäste'
@@ -291,11 +355,11 @@ service cloud.firestore {
           || (nurFelder(['entfernt', 'letzteBuchungId'])
             && resource.data.entfernt == true && request.resource.data.entfernt == false
             && stammdatenBuchung('mitgliedWiederaufgenommen'))
-          // Übernahme (UC-03): geht auf die neue UID über; ein entferntes
-          // Mitglied wird dabei wieder aktiv (KAD-02, KAD-08)
+          // Übernahme (UC-03, ADM-06): geht auf die neue UID über; ein
+          // entferntes Mitglied wird dabei wieder aktiv (KAD-02, KAD-08)
           || (nurFelder(['bierwartUid', 'entfernt', 'letzteBuchungId'])
             && request.resource.data.entfernt == false
-            && stammdatenBuchung('uebernahmeBestaetigt')
+            && (stammdatenBuchung('uebernahmeBestaetigt') || stammdatenBuchung('adminWiederhergestellt'))
             && request.resource.data.bierwartUid == buchungDiesesRequests().neueUid);
       }
 
@@ -304,7 +368,7 @@ service cloud.firestore {
         // für „Das bin ich“ die mitgliedId kennen (AUTH-07). Nur per get, so
         // lassen sich die Namen einer Kasse nicht auflisten.
         allow get: if request.auth != null;
-        allow list: if istBierwart();
+        allow list: if darfLesen();
         // Ein zweites create auf denselben Schlüssel ist ein update und scheitert:
         // so bleibt jeder Name pro Kasse eindeutig (AUTH-07, UI-09).
         allow create: if istOderWirdBierwart()
@@ -333,7 +397,7 @@ service cloud.firestore {
           return betrag is int && betrag >= 0;
         }
 
-        allow read: if istBierwart();
+        allow read: if darfLesen();
 
         // Anlegen (BES-01): Bestand startet bei 0, Einkauf oder Korrektur füllen ihn.
         allow create: if istBierwart()
@@ -362,7 +426,7 @@ service cloud.firestore {
                 : request.resource.data.vorherigerPreisCents == resource.data.preisCents)
             && sorteBuchung('sorteGeaendert'))
           // Reihenfolge im Raster, ohne Log-Eintrag
-          || (istBierwart() && nurFelder(['reihenfolge']) && request.resource.data.reihenfolge is int);
+          || (istBierwart() && !aufgeloest() && nurFelder(['reihenfolge']) && request.resource.data.reihenfolge is int);
       }
 
       match /orte/{ortId} {
@@ -381,17 +445,27 @@ service cloud.firestore {
               && (((b.typ == 'kasseErstellt' || b.typ == 'bierwartBeigetreten')
                   && b.stempel.uid == ortId && d.standCents == 0)
                 || (b.typ == 'uebernahmeBestaetigt'
-                  && b.neueUid == ortId && d.standCents == b.standCents));
+                  && b.neueUid == ortId && d.standCents == b.standCents)
+                || (b.typ == 'adminWiederhergestellt'
+                  && b.neueUid == ortId && d.standCents == 0));
         }
-        allow read: if istBierwart();
+        // Ehemalig (GEL-08): bleibt sichtbar, bis es per Übergabe auf 0 steht.
+        function wirdEhemalig(b) {
+          return nurFelder(['ehemalig', 'letzteBuchungId'])
+            && request.resource.data.ehemalig == true
+            && ((b.typ == 'bierwartEntfernt' && b.uid == ortId)
+              || (b.typ == 'adminWiederhergestellt' && b.get('alteUid', null) == ortId));
+        }
+        allow read: if darfLesen();
         allow create: if buchungDiesesRequests() != null
           && request.resource.data.keys().hasOnly(['art', 'uid', 'name', 'standCents', 'ehemalig', 'letzteBuchungId'])
           && request.resource.data.keys().hasAll(['art', 'uid', 'name', 'standCents', 'ehemalig', 'letzteBuchungId'])
           && request.resource.data.ehemalig == false
           && ortNeu(request.resource.data, buchungDiesesRequests());
         allow update: if buchungDiesesRequests() != null
-          && summeGeaendert('standCents', standWirkung(buchungDiesesRequests(), ortId))
-          && standGueltig(buchungDiesesRequests());
+          && ((summeGeaendert('standCents', standWirkung(buchungDiesesRequests(), ortId))
+              && standGueltig(buchungDiesesRequests()))
+            || wirdEhemalig(buchungDiesesRequests()));
       }
 
       match /uebernahmen/{anfrageId} {
@@ -406,7 +480,7 @@ service cloud.firestore {
             && request.resource.data.entschiedenAm == request.time;
         }
 
-        allow read: if istBierwart()
+        allow read: if darfLesen()
           || (request.auth != null && resource.data.neueUid == request.auth.uid);
 
         // Anfragen (UC-03, AUTH-07): gültiger Link wie beim Beitreten, für jeden
@@ -583,6 +657,118 @@ service cloud.firestore {
           && danach.anzahlBierwarte == vorher.anzahlBierwarte + (alteAktiv ? 0 : 1);
       }
 
+      // ---- Admin-Funktionen ------------------------------------------------
+
+      // Neuer Link: der alte ist im selben Batch ersetzt (ADM-01).
+      function linkErneuert(buchungId) {
+        let vorher = get(kassePfad()).data;
+        let danach = getAfter(kassePfad()).data;
+        return danach.letzteBuchungId == buchungId
+          && danach.einladungCode != vorher.einladungCode
+          && getAfter(/databases/$(database)/documents/einladungen/$(vorher.einladungCode)).data.ersetzt == true;
+      }
+      // Neuer Wiederherstellungscode: das alte Dokument ist weg (ADM-06, ADM-08).
+      function codeGewechselt(buchungId) {
+        let vorher = get(kassePfad()).data;
+        let danach = getAfter(kassePfad()).data;
+        return danach.letzteBuchungId == buchungId
+          && danach.wiederherstellungHash != vorher.wiederherstellungHash
+          && !existsAfter(/databases/$(database)/documents/wiederherstellung/$(vorher.wiederherstellungHash.toHexString().lower()));
+      }
+      // Die App sendet den normalisierten Code (siehe Format des Codes).
+      function nachweisGueltig(nachweis) {
+        return nachweis is string
+          && hashing.sha256(nachweis) == get(kassePfad()).data.wiederherstellungHash;
+      }
+      // Ein Kassenwart ohne aktiven Bierwart-Eintrag geht bei der
+      // Wiederherstellung mit (offene Frage 25).
+      function kassenwartNachWiederherstellung(alteUid) {
+        let kw = get(kassePfad()).data.kassenwartUid;
+        return kw == alteUid || !exists(pfad('bierwarte', kw)) ? request.auth.uid : kw;
+      }
+
+      // Wiederherstellung ohne Bierwart-Eintrag (ADM-06, UC-03): Er übernimmt
+      // ein bestehendes Mitglied oder legt ein neues an. Den Stand des alten
+      // Portemonnaies kann er nicht lesen, es wird ehemalig (GEL-08).
+      function wiederherstellungMitEintritt(d, buchungId) {
+        let vorher = get(kassePfad()).data;
+        let danach = getAfter(kassePfad()).data;
+        let mitgliedNeu = !exists(pfad('mitglieder', d.mitgliedId));
+        let alteAktiv = d.alteUid != null && exists(pfad('bierwarte', d.alteUid));
+        let altesOrt = d.alteUid != null && d.alteUid != d.neueUid && exists(pfad('orte', d.alteUid));
+        return d.neueUid == request.auth.uid
+          && nachweisGueltig(d.nachweis)
+          && codeGewechselt(buchungId)
+          && (mitgliedNeu
+            ? d.alteUid == null
+            : get(pfad('mitglieder', d.mitgliedId)).data.get('bierwartUid', null) == d.alteUid
+              && get(pfad('mitglieder', d.mitgliedId)).data.get('istGast', false) == false)
+          && verweistAuf('mitglieder', d.mitgliedId, buchungId)
+          && verweistAuf('bierwarte', d.neueUid, buchungId)
+          && (!alteAktiv || !existsAfter(pfad('bierwarte', d.alteUid)))
+          && (!altesOrt || (verweistAuf('orte', d.alteUid, buchungId)
+            && nachher('orte', d.alteUid).ehemalig == true))
+          && (d.alteUid == d.neueUid || verweistAuf('orte', d.neueUid, buchungId))
+          && danach.adminUid == request.auth.uid
+          && danach.kassenwartUid == kassenwartNachWiederherstellung(d.alteUid)
+          && danach.anzahlBierwarte == vorher.anzahlBierwarte + (alteAktiv ? 0 : 1);
+      }
+
+      function adminGueltig(d, buchungId) {
+        let vorher = get(kassePfad()).data;
+        let danach = getAfter(kassePfad()).data;
+        return (d.typ == 'einladungErneuert'                                // ADM-01, UC-07
+            && felder(d, [])
+            && istAdmin()
+            && linkErneuert(buchungId))
+          // Entfernen (ADM-02, UC-08): bleibt Mitglied, Portemonnaie wird
+          // ehemalig (GEL-08), der Link wird erneuert.
+          || (d.typ == 'bierwartEntfernt'
+            && felder(d, ['uid', 'mitgliedId'])
+            && istAdmin()
+            && d.uid != vorher.adminUid
+            && d.uid != vorher.kassenwartUid
+            && get(pfad('bierwarte', d.uid)).data.mitgliedId == d.mitgliedId
+            && !existsAfter(pfad('bierwarte', d.uid))
+            && verweistAuf('orte', d.uid, buchungId)
+            && nachher('orte', d.uid).ehemalig == true
+            && linkErneuert(buchungId))
+          || (d.typ == 'rolleGeaendert'                                     // ADM-03, UC-09
+            && felder(d, ['rolle', 'vonUid', 'nachUid'])
+            && istAdmin()
+            && d.rolle in ['admin', 'kassenwart']
+            && d.vonUid == vorher[d.rolle + 'Uid']
+            && d.nachUid == danach[d.rolle + 'Uid']
+            && d.nachUid != d.vonUid
+            && exists(pfad('bierwarte', d.nachUid))
+            && danach.letzteBuchungId == buchungId)
+          || (d.typ == 'kasseUmbenannt'                                     // ADM-04
+            && felder(d, ['nameAlt', 'nameNeu'])
+            && istAdmin()
+            && d.nameAlt == vorher.name
+            && d.nameNeu == danach.name
+            && d.nameNeu != d.nameAlt
+            && danach.letzteBuchungId == buchungId)
+          || (d.typ == 'kasseAufgeloest'                                    // ADM-05, UC-10
+            && felder(d, [])
+            && istAdmin()
+            && danach.aufgeloest == true
+            && danach.letzteBuchungId == buchungId)
+          // Wiederherstellung als Bierwart (ADM-06, UC-04): der bisherige
+          // Admin bleibt normaler Bierwart.
+          || (d.typ == 'adminWiederhergestellt'
+            && felder(d, ['nachweis'])
+            && nachweisGueltig(d.nachweis)
+            && codeGewechselt(buchungId)
+            && danach.adminUid == request.auth.uid
+            && danach.kassenwartUid == kassenwartNachWiederherstellung(null)
+            && danach.anzahlBierwarte == vorher.anzahlBierwarte)
+          || (d.typ == 'wiederherstellungscodeErneuert'                     // ADM-08
+            && felder(d, [])
+            && istAdmin()
+            && codeGewechselt(buchungId));
+      }
+
       // Verwaltung durch einen Bierwart. Die Rules der betroffenen Dokumente
       // prüfen die Werte, hier Form, Verweise und Vorbedingungen (LOG-01).
       function verwaltungGueltig(d, buchungId) {
@@ -633,7 +819,10 @@ service cloud.firestore {
             && felder(d, ['uebernahmeId', 'mitgliedId'])
             && nachher('uebernahmen', d.uebernahmeId).mitgliedId == d.mitgliedId
             && nachher('uebernahmen', d.uebernahmeId).neueUid == request.auth.uid
-            && verweistAuf('uebernahmen', d.uebernahmeId, buchungId));
+            && verweistAuf('uebernahmen', d.uebernahmeId, buchungId))
+          || (d.typ == 'adminWiederhergestellt'                             // ADM-06, UC-03
+            && felder(d, ['nachweis', 'mitgliedId', 'alteUid', 'neueUid'])
+            && wiederherstellungMitEintritt(d, buchungId));
       }
 
       // Name im Stempel: der des Bierwarts. Wer gerade Bierwart wird, steht
@@ -652,13 +841,17 @@ service cloud.firestore {
       }
 
       match /buchungen/{buchungId} {
-        allow read: if istBierwart();
+        allow read: if darfLesen();
         allow create: if request.auth != null
           && stempelGueltig(request.resource.data.stempel, stempelName(request.resource.data))
+          && !aufgeloest()
           && (istBierwart()
-            ? buchungGueltig(request.resource.data, buchungId) || verwaltungGueltig(request.resource.data, buchungId)
+            ? buchungGueltig(request.resource.data, buchungId)
+              || verwaltungGueltig(request.resource.data, buchungId)
+              || adminGueltig(request.resource.data, buchungId)
             : ohneMitgliedschaftGueltig(request.resource.data, buchungId));
-        allow update, delete: if false;   // LOG-02
+        // Gelöscht wird nur beim Auflösen (LOG-02, ADM-05), siehe oben.
+        allow update: if false;
       }
     }
 
@@ -671,22 +864,40 @@ service cloud.firestore {
         return getAfter(/databases/$(database)/documents/kassen/$(request.resource.data.kasseId)).data;
       }
       allow get: if request.auth != null;
-      // Erste Einladung beim Erstellen der Kasse (UC-01)
+      function kasseVorher(kasseId) {
+        return /databases/$(database)/documents/kassen/$(kasseId);
+      }
+      // Neuer Code in diesem Request: beim Erstellen der Kasse (UC-01) oder
+      // beim Erneuern (ADM-01, ADM-02); die Kassen-Rules prüfen den Admin.
+      function codeNeu() {
+        return !exists(kasseVorher(request.resource.data.kasseId))
+          ? kasseDanach().erstelltAm == request.time
+          : get(kasseVorher(request.resource.data.kasseId)).data.einladungCode != code;
+      }
       allow create: if request.auth != null
         && request.resource.data.keys().hasOnly(['kasseId', 'kassenName', 'anzahlBierwarte', 'erstelltAm', 'ersetzt'])
         && request.resource.data.keys().hasAll(['kasseId', 'kassenName', 'anzahlBierwarte', 'erstelltAm', 'ersetzt'])
-        && !exists(/databases/$(database)/documents/kassen/$(request.resource.data.kasseId))
-        && kasseDanach().erstelltAm == request.time
+        && codeNeu()
         && kasseDanach().einladungCode == code
         && request.resource.data.kassenName == kasseDanach().name
-        && request.resource.data.anzahlBierwarte == 1
+        && request.resource.data.anzahlBierwarte == kasseDanach().anzahlBierwarte
         && request.resource.data.erstelltAm == request.time
         && request.resource.data.ersetzt == false;
-      // Die Anzahl folgt der Kasse (Beitreten, Austreten, Übernahme).
-      allow update: if request.auth != null
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['anzahlBierwarte'])
-        && request.resource.data.anzahlBierwarte
-          == getAfter(/databases/$(database)/documents/kassen/$(resource.data.kasseId)).data.anzahlBierwarte;
+      allow update: if request.auth != null && (
+        // Name und Anzahl folgen der Kasse (AUTH-05)
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['anzahlBierwarte', 'kassenName'])
+          && request.resource.data.anzahlBierwarte
+            == getAfter(kasseVorher(resource.data.kasseId)).data.anzahlBierwarte
+          && request.resource.data.kassenName
+            == getAfter(kasseVorher(resource.data.kasseId)).data.name)
+        // Ersetzt, sobald die Kasse einen anderen Code hat (ADM-01)
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ersetzt'])
+          && request.resource.data.ersetzt == true
+          && getAfter(kasseVorher(resource.data.kasseId)).data.einladungCode != code));
+      // Beim Auflösen (ADM-05)
+      allow delete: if request.auth != null
+        && get(kasseVorher(resource.data.kasseId)).data.get('aufgeloest', false) == true
+        && get(kasseVorher(resource.data.kasseId)).data.adminUid == request.auth.uid;
     }
 
     match /wiederherstellung/{hashHex} {
@@ -694,13 +905,24 @@ service cloud.firestore {
         return getAfter(/databases/$(database)/documents/kassen/$(request.resource.data.kasseId)).data;
       }
       allow get: if request.auth != null;
-      // Beim Erstellen der Kasse (UC-01, AUTH-03). toHexString() liefert
-      // Großbuchstaben, die Dokument-ID ist klein geschrieben.
+      function kasseVorher(kasseId) {
+        return /databases/$(database)/documents/kassen/$(kasseId);
+      }
+      // Beim Erstellen der Kasse (UC-01, AUTH-03) oder mit neuem Code (ADM-06,
+      // ADM-08); die Kassen-Rules prüfen Admin bzw. Nachweis. toHexString()
+      // liefert Großbuchstaben, die Dokument-ID ist klein geschrieben.
       allow create: if request.auth != null
         && request.resource.data.keys().hasOnly(['kasseId'])
-        && !exists(/databases/$(database)/documents/kassen/$(request.resource.data.kasseId))
-        && kasseDanach().erstelltAm == request.time
-        && kasseDanach().wiederherstellungHash.toHexString().lower() == hashHex;
+        && kasseDanach().wiederherstellungHash.toHexString().lower() == hashHex
+        && (!exists(kasseVorher(request.resource.data.kasseId))
+          ? kasseDanach().erstelltAm == request.time
+          : get(kasseVorher(request.resource.data.kasseId)).data.wiederherstellungHash.toHexString().lower() != hashHex);
+      // Der alte Code fällt weg, sobald die Kasse einen neuen hat, oder beim
+      // Auflösen (ADM-05).
+      allow delete: if request.auth != null
+        && (get(kasseVorher(resource.data.kasseId)).data.get('aufgeloest', false) == true
+          ? get(kasseVorher(resource.data.kasseId)).data.adminUid == request.auth.uid
+          : getAfter(kasseVorher(resource.data.kasseId)).data.wiederherstellungHash.toHexString().lower() != hashHex);
     }
 
     // Zeigt auf die Kasse des Nutzers. Release 1: eine Kasse je Nutzer (AUTH-14

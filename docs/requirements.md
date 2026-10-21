@@ -10,6 +10,7 @@
 > - 2026-10-21: KAD-03 – Buchungen auf „Gäste“ sind immer bar, nicht nur standardmäßig (architecture.md, offene Frage 10).
 > - 2026-10-21, nach dem Einfrieren: ADM-08 neu – Admin kann einen neuen Wiederherstellungscode erzeugen (architecture.md, offene Frage 12).
 > - 2026-10-21, nach dem Einfrieren: KAD-08 neu – entfernte Mitglieder behalten ihren Namen und lassen sich wieder aufnehmen (architecture.md, offene Frage 20).
+> - 2026-10-21, nach dem Einfrieren: AUTH-07 – bei der Übernahme per Wiederherstellungscode wird das alte Portemonnaie ehemalig, weil der Stand vorher nicht lesbar ist (architecture.md, Verwaltung als Batches).
 
 ## Vision & Abgrenzung
 
@@ -115,7 +116,7 @@ Jede Anforderung hat eine ID und ein Release. Release 1 ist das MVP für Android
 | AUTH-04 | Einladungslinks öffnen: App installiert → App öffnet sich; nicht installiert → Webseite mit Store-Link und Code | 1 |
 | AUTH-05 | nach dem Öffnen eines Links „Kasse X beitreten?“ mit Kassenname und Anzahl Bierwarte fragen, Ja oder Nein | 1 |
 | AUTH-06 | einen Link merken, der vor dem Onboarding geöffnet wurde, und nach der Namenswahl beitreten | 1 |
-| AUTH-07 | Namen pro Kasse eindeutig halten; bei vergebenem Namen „Das bin ich (neues Gerät)“ anbieten; die alte Mitgliedschaft samt Portemonnaie und Rollen erst übertragen, wenn ein anderer aktiver Bierwart die Anfrage bestätigt; ohne anderen aktiven Bierwart nur per Wiederherstellungscode | 1 |
+| AUTH-07 | Namen pro Kasse eindeutig halten; bei vergebenem Namen „Das bin ich (neues Gerät)“ anbieten; die alte Mitgliedschaft samt Portemonnaie und Rollen erst übertragen, wenn ein anderer aktiver Bierwart die Anfrage bestätigt; ohne anderen aktiven Bierwart nur per Wiederherstellungscode; dabei wird das alte Portemonnaie „ehemalig“ (GEL-08), statt übertragen zu werden | 1 |
 | AUTH-08 | abgelaufene oder ersetzte Links mit klarer Meldung ablehnen, serverseitig geprüft | 1 |
 | AUTH-09 | Austreten nur bei Portemonnaie = 0 erlauben; Admin und Kassenwart müssen vorher einen Nachfolger wählen | 1 |
 | AUTH-10 | eine Kasse ohne Bierwarte nach 30 Tagen löschen; bis dahin per Wiederherstellungscode reaktivierbar | 2 |
