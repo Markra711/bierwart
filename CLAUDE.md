@@ -23,7 +23,9 @@ flutter analyze                       # muss ohne Befund durchlaufen
 flutter test                          # alle Dart-Tests
 dart format lib test                  # vor jedem Commit
 flutter run                           # gegen das echte Projekt
-flutter run --dart-define=USE_EMULATORS=true   # gegen lokale Emulatoren (sobald verdrahtet)
+flutter run --dart-define=USE_EMULATORS=true   # gegen lokale Emulatoren (Projekt demo-bierwart)
+#   echtes Gerät im WLAN: zusätzlich --dart-define=EMULATOR_HOST=<IP des Rechners>,
+#   die Emulatoren müssen dann in firebase.json auf "host": "0.0.0.0" lauschen
 
 # Emulatoren immer mit Demo-Projekt, nie mit echten Daten
 firebase emulators:start --project demo-bierwart

@@ -63,7 +63,7 @@ Release 1 kennt nur das dunkle Theme.
 - **Barlow Condensed** (`display`) für Titel, Beträge und Outline-Ziffern. Titel immer in Großbuchstaben.
 - **Barlow** (`body`) für alles andere.
 - **Beträge immer mit Tabellenziffern** (`FontFeature.tabularFigures()`), damit sie untereinander stehen und beim Buchen nicht springen.
-- Beide Schriften kommen von Google Fonts, in Flutter über das Paket `google_fonts`.
+- Beide Schriften stammen von Google Fonts (Lizenz OFL) und liegen als Assets in der App (`assets/fonts/`), nur in den Schnitten aus `tokens.json`. So sieht die App auch beim ersten Start ohne Netz richtig aus. `test/core/theme/schriften_test.dart` prüft, dass jeder Schnitt der Tokens mitgeliefert ist.
 
 | Stil | Familie | Größe / Zeile | Gewicht | Sperrung | Verwendung |
 | --- | --- | --- | --- | --- | --- |

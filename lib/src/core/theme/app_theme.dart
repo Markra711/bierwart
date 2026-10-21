@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'tokens.dart';
 
 /// Liefert die Schriften für `display` (Barlow Condensed) und `body` (Barlow).
-/// Tests nutzen [BwFonts.plain], damit nichts aus dem Netz geladen wird.
+/// Beide liegen als Assets in der App (pubspec.yaml), es wird nichts aus dem
+/// Netz geladen. Tests können [BwFonts.plain] nutzen.
 class BwFonts {
   const BwFonts({required this.display, required this.body});
 
   final TextStyle Function(TextStyle) display;
   final TextStyle Function(TextStyle) body;
 
-  static const google = BwFonts(display: _barlowCondensed, body: _barlow);
+  static const barlow = BwFonts(display: _barlowCondensed, body: _barlow);
   static const plain = BwFonts(display: _unchanged, body: _unchanged);
 
   static TextStyle _barlowCondensed(TextStyle s) =>
-      GoogleFonts.barlowCondensed(textStyle: s);
-  static TextStyle _barlow(TextStyle s) => GoogleFonts.barlow(textStyle: s);
+      s.copyWith(fontFamily: 'Barlow Condensed');
+  static TextStyle _barlow(TextStyle s) => s.copyWith(fontFamily: 'Barlow');
   static TextStyle _unchanged(TextStyle s) => s;
 }
 
@@ -93,7 +93,7 @@ class BwTextStyles extends ThemeExtension<BwTextStyles> {
 }
 
 /// Das dunkle Theme (Release 1 kennt nur dunkel, ADR-0005).
-ThemeData buildBierwartTheme({BwFonts fonts = BwFonts.google}) {
+ThemeData buildBierwartTheme({BwFonts fonts = BwFonts.barlow}) {
   final text = BwTextStyles.from(fonts);
   const scheme = ColorScheme.dark(
     primary: BwColors.gradEnd,

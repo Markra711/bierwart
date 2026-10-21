@@ -4,4 +4,7 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Nur im Debug-Build: Die Firebase-Emulatoren sprechen unverschlüsseltes
+         HTTP (USE_EMULATORS, siehe lib/src/core/firebase/emulatoren.dart). -->
+    <application android:usesCleartextTraffic="true"/>
 </manifest>
