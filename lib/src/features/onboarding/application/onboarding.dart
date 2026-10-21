@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/anmeldung_repository.dart';
 import '../data/kasse_repository.dart';
+import '../domain/einladung.dart';
 import '../domain/erstellte_kasse.dart';
 
 /// Wo die App beim Start steht (UI-01, AUTH-01).
@@ -80,3 +81,45 @@ final ersteKasseProvider =
     NotifierProvider<ErsteKasseNotifier, ErstellteKasse?>(
       ErsteKasseNotifier.new,
     );
+
+/// Die Einladung zu einem Code, frisch vom Server (AUTH-05). `null`, wenn es
+/// sie nicht gibt.
+final einladungProvider = FutureProvider.autoDispose.family<Einladung?, String>(
+  (ref, code) => ref.read(kasseRepositoryProvider).einladungLaden(code),
+  retry: (_, _) => null,
+);
+
+/// Ergebnis eines Beitrittsversuchs.
+enum Beitritt { erfolgreich, nameVergeben }
+
+/// Beitreten (UC-02). Der Zustand ist `true`, solange geschrieben wird; die
+/// Weiterleitung lässt den Nutzer dann auf „Wie heißt du?“, auch wenn die
+/// Kasse lokal schon sichtbar ist. Lehnt der Server ab, sieht er die Meldung
+/// dort (NFA-10).
+class BeitrittNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  /// Prüft zuerst den Namen (AUTH-07), dann der Batch. Wirft
+  /// [VerwaltungsFehler] mit Meldung.
+  Future<Beitritt> beitreten(Einladung einladung, String eigenerName) async {
+    final meldung = einladung.zustand(DateTime.now()).meldung;
+    if (meldung != null) throw VerwaltungsFehler(meldung);
+    final repo = ref.read(kasseRepositoryProvider);
+    if (await repo.nameVergeben(einladung.kasseId, eigenerName)) {
+      return Beitritt.nameVergeben;
+    }
+    final uid = await ref.read(anmeldungProvider.future);
+    state = true;
+    try {
+      await repo.beitreten(uid, einladung, eigenerName);
+      return Beitritt.erfolgreich;
+    } finally {
+      state = false;
+    }
+  }
+}
+
+final beitrittProvider = NotifierProvider<BeitrittNotifier, bool>(
+  BeitrittNotifier.new,
+);

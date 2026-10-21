@@ -2,6 +2,7 @@
   "uid": "gruender",
   "schreibvorgaenge": [
     {
+      "art": "set",
       "pfad": "kassen/k2",
       "daten": {
         "name": "SV Neu",
@@ -21,6 +22,7 @@
       }
     },
     {
+      "art": "set",
       "pfad": "kassen/k2/bierwarte/gruender",
       "daten": {
         "mitgliedId": "m1",
@@ -33,6 +35,7 @@
       }
     },
     {
+      "art": "set",
       "pfad": "kassen/k2/mitglieder/m1",
       "daten": {
         "name": "Lena Koch",
@@ -48,12 +51,14 @@
       }
     },
     {
+      "art": "set",
       "pfad": "kassen/k2/namen/lena koch",
       "daten": {
         "mitgliedId": "m1"
       }
     },
     {
+      "art": "set",
       "pfad": "kassen/k2/mitglieder/gaeste",
       "daten": {
         "name": "Gäste",
@@ -69,12 +74,14 @@
       }
     },
     {
+      "art": "set",
       "pfad": "kassen/k2/namen/gäste",
       "daten": {
         "mitgliedId": "gaeste"
       }
     },
     {
+      "art": "set",
       "pfad": "kassen/k2/orte/kasse",
       "daten": {
         "art": "kasse",
@@ -86,6 +93,7 @@
       }
     },
     {
+      "art": "set",
       "pfad": "kassen/k2/orte/gruender",
       "daten": {
         "art": "portemonnaie",
@@ -97,6 +105,7 @@
       }
     },
     {
+      "art": "set",
       "pfad": "einladungen/K7Q2MXA93DWFT2HC8RNP",
       "daten": {
         "kasseId": "k2",
@@ -109,18 +118,21 @@
       }
     },
     {
+      "art": "set",
       "pfad": "wiederherstellung/be105af532593b07b857dbbb0012fc12a939efb515656aa111fc0120993c0609",
       "daten": {
         "kasseId": "k2"
       }
     },
     {
+      "art": "set",
       "pfad": "users/gruender",
       "daten": {
         "kasseId": "k2"
       }
     },
     {
+      "art": "set",
       "pfad": "kassen/k2/buchungen/l1",
       "daten": {
         "typ": "kasseErstellt",

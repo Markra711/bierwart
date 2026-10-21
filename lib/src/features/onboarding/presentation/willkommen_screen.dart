@@ -53,10 +53,7 @@ class WillkommenScreen extends StatelessWidget {
           text: 'Ich habe einen Einladungslink',
           art: BwKnopfArt.outline,
           gross: true,
-          // Beitreten (UC-02) kommt im nächsten Schritt.
-          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Beitreten per Link kommt bald.')),
-          ),
+          onPressed: () => context.go(Routen.linkEinfuegen),
         ),
         Text(
           'Anonyme Anmeldung über Firebase. Das Gerät bleibt angemeldet.',
