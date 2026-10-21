@@ -33,6 +33,7 @@ class BwFeld extends StatefulWidget {
     this.eingabeAktion = TextInputAction.next,
     this.onSubmitted,
     this.autofocus = false,
+    this.fokus,
   });
 
   final String label;
@@ -48,22 +49,29 @@ class BwFeld extends StatefulWidget {
   final ValueChanged<String>? onSubmitted;
   final bool autofocus;
 
+  /// Von außen, z. B. um nach einem Fehler ins Feld zu springen.
+  final FocusNode? fokus;
+
   @override
   State<BwFeld> createState() => _BwFeldState();
 }
 
 class _BwFeldState extends State<BwFeld> {
-  final _fokus = FocusNode();
+  FocusNode? _eigener;
+  FocusNode get _fokus => widget.fokus ?? (_eigener ??= FocusNode());
 
   @override
   void initState() {
     super.initState();
-    _fokus.addListener(() => setState(() {}));
+    _fokus.addListener(_neuZeichnen);
   }
+
+  void _neuZeichnen() => setState(() {});
 
   @override
   void dispose() {
-    _fokus.dispose();
+    _fokus.removeListener(_neuZeichnen);
+    _eigener?.dispose();
     super.dispose();
   }
 

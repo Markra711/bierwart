@@ -4,13 +4,15 @@ import 'package:bier_wart/src/app.dart';
 import 'package:bier_wart/src/core/theme/app_theme.dart';
 import 'package:bier_wart/src/features/onboarding/data/anmeldung_repository.dart';
 import 'package:bier_wart/src/features/onboarding/data/kasse_repository.dart';
+import 'package:bier_wart/src/features/kader/domain/name.dart';
+import 'package:bier_wart/src/features/onboarding/domain/einladung.dart';
 import 'package:bier_wart/src/features/onboarding/domain/erstellte_kasse.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Ersetzt Firestore beim Erstellen. Nach Erfolg meldet es die neue Kasse
-/// über [kasseIds], wie es `users/{uid}` täte.
+/// Ersetzt Firestore beim Erstellen und Beitreten. Nach Erfolg meldet es die
+/// Kasse über [kasseIds], wie es `users/{uid}` täte.
 class FakeKasseRepository implements KasseRepository {
   FakeKasseRepository(this.kasseIds);
 
@@ -18,6 +20,12 @@ class FakeKasseRepository implements KasseRepository {
   final aufrufe = <ErstellteKasse>[];
   Object? fehler;
   Completer<void>? halten;
+
+  /// Einladungen nach Code; fehlt ein Code, gibt es die Einladung nicht.
+  final einladungen = <String, Einladung>{};
+  final vergebeneNamen = <String>{};
+  final beitritte = <String>[];
+  Object? ladeFehler;
 
   @override
   ErstellteKasse vorbereiten({
@@ -41,6 +49,24 @@ class FakeKasseRepository implements KasseRepository {
     await halten?.future;
     if (fehler != null) throw fehler!;
     kasseIds.add(kasse.kasseId);
+  }
+
+  @override
+  Future<Einladung?> einladungLaden(String code) async {
+    if (ladeFehler != null) throw ladeFehler!;
+    return einladungen[code];
+  }
+
+  @override
+  Future<bool> nameVergeben(String kasseId, String name) async =>
+      vergebeneNamen.contains(nameKey(name));
+
+  @override
+  Future<void> beitreten(String uid, Einladung e, String eigenerName) async {
+    beitritte.add(eigenerName);
+    await halten?.future;
+    if (fehler != null) throw fehler!;
+    kasseIds.add(e.kasseId);
   }
 }
 

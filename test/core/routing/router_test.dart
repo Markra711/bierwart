@@ -37,6 +37,32 @@ void main() {
       );
     });
 
+    test('ohne Kasse auch die Seiten zum Beitreten (UC-02)', () {
+      for (final ort in [
+        Routen.linkEinfuegen,
+        Routen.beitreten,
+        Routen.nameWaehlen,
+      ]) {
+        expect(weiterleitung(const OhneKasse(), null, ort), isNull);
+        expect(
+          weiterleitung(const InKasse('k1'), null, ort),
+          Routen.strichliste,
+        );
+      }
+    });
+
+    test('während des Beitritts auf der Namenswahl bleiben', () {
+      expect(
+        weiterleitung(
+          const InKasse('k1'),
+          null,
+          Routen.nameWaehlen,
+          beitrittLaeuft: true,
+        ),
+        isNull,
+      );
+    });
+
     test('mit Kasse auf die Strichliste (UI-01)', () {
       expect(weiterleitung(const InKasse('k1'), null, '/'), isNull);
       expect(

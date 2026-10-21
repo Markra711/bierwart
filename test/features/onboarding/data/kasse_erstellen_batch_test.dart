@@ -1,24 +1,8 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:bier_wart/src/features/onboarding/data/kasse_erstellen_batch.dart';
-import 'package:bier_wart/src/features/onboarding/data/schreibvorgang.dart';
 import 'package:bier_wart/src/features/onboarding/domain/codes.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-// Vertrag mit den Rules: Der Batch muss rules-tests/fixtures/ entsprechen,
-// und rules-tests/vertrag.test.js spielt genau diese Datei gegen den
-// Emulator ab. Neu schreiben mit:
-//   FIXTURES_AKTUALISIEREN=1 flutter test test/features/onboarding/data
-const fixture = 'rules-tests/fixtures/kasse-erstellen.json';
-
-Object? alsJson(Object? wert) => switch (wert) {
-  Serverzeit() => {r'$serverzeit': true},
-  Bytes(:final wert) => {r'$bytes': hexVon(wert)},
-  DateTime() => {r'$geraetzeit': true},
-  Map() => {for (final e in wert.entries) e.key as String: alsJson(e.value)},
-  _ => wert,
-};
+import '../../../helpers/fixtures.dart';
 
 void main() {
   final batch = kasseErstellenBatch(
@@ -33,19 +17,9 @@ void main() {
     wiederherstellungsHash: hashVon('ABCD1234EFGH5678'),
     geraetZeit: DateTime(2026, 10, 21),
   );
-  final json = const JsonEncoder.withIndent('  ').convert({
-    'uid': 'gruender',
-    'schreibvorgaenge': [
-      for (final s in batch) {'pfad': s.pfad, 'daten': alsJson(s.daten)},
-    ],
-  });
 
   test('entspricht dem Vertrag mit den Rules', () {
-    final datei = File(fixture);
-    if (Platform.environment['FIXTURES_AKTUALISIEREN'] == '1') {
-      datei.writeAsStringSync('$json\n');
-    }
-    expect(json, datei.readAsStringSync().trim());
+    vertragPruefen('kasse-erstellen.json', batchAlsJson('gruender', batch));
   });
 
   test('Namen werden bereinigt gespeichert', () {

@@ -1,0 +1,99 @@
+{
+  "uid": "neu",
+  "schreibvorgaenge": [
+    {
+      "art": "set",
+      "pfad": "kassen/k2/bierwarte/neu",
+      "daten": {
+        "mitgliedId": "m2",
+        "name": "Jonas Weber",
+        "beigetretenAm": {
+          "$serverzeit": true
+        },
+        "einladungCode": "K7Q2MXA93DWFT2HC8RNP",
+        "letzteBuchungId": "l2"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/mitglieder/m2",
+      "daten": {
+        "name": "Jonas Weber",
+        "nameKey": "jonas weber",
+        "istGast": false,
+        "bierwartUid": "neu",
+        "entfernt": false,
+        "saldoCents": 0,
+        "letzteBuchungId": "l2",
+        "angelegtAm": {
+          "$serverzeit": true
+        }
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/namen/jonas weber",
+      "daten": {
+        "mitgliedId": "m2"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/orte/neu",
+      "daten": {
+        "art": "portemonnaie",
+        "uid": "neu",
+        "name": "Jonas Weber",
+        "standCents": 0,
+        "ehemalig": false,
+        "letzteBuchungId": "l2"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2",
+      "daten": {
+        "anzahlBierwarte": {
+          "$erhoehen": 1
+        },
+        "leerSeit": null,
+        "letzteBuchungId": "l2"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "einladungen/K7Q2MXA93DWFT2HC8RNP",
+      "daten": {
+        "anzahlBierwarte": {
+          "$erhoehen": 1
+        }
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "users/neu",
+      "daten": {
+        "kasseId": "k2"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/l2",
+      "daten": {
+        "typ": "bierwartBeigetreten",
+        "mitgliedId": "m2",
+        "name": "Jonas Weber",
+        "stempel": {
+          "uid": "neu",
+          "name": "Jonas Weber",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

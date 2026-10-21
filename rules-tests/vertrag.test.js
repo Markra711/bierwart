@@ -9,7 +9,7 @@ import {
   assertSucceeds,
   initializeTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { Bytes, doc, getDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { Bytes, doc, getDoc, increment, serverTimestamp, writeBatch } from 'firebase/firestore';
 
 let env;
 
@@ -33,6 +33,7 @@ const fixture = (name) => JSON.parse(readFileSync(new URL(`fixtures/${name}`, im
 function wert(v) {
   if (v === null || typeof v !== 'object') return v;
   if (v.$serverzeit) return serverTimestamp();
+  if (v.$erhoehen !== undefined) return increment(v.$erhoehen);
   if (v.$geraetzeit) return new Date();
   if (v.$bytes) return Bytes.fromUint8Array(Uint8Array.from(Buffer.from(v.$bytes, 'hex')));
   return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, wert(x)]));
@@ -41,8 +42,10 @@ function wert(v) {
 function abspielen({ uid, schreibvorgaenge }, { als = uid, ohne = [] } = {}) {
   const fs = env.authenticatedContext(als).firestore();
   const b = writeBatch(fs);
-  for (const { pfad, daten } of schreibvorgaenge) {
-    if (!ohne.includes(pfad)) b.set(doc(fs, pfad), wert(daten));
+  for (const { art, pfad, daten } of schreibvorgaenge) {
+    if (ohne.includes(pfad)) continue;
+    if (art === 'update') b.update(doc(fs, pfad), wert(daten));
+    else b.set(doc(fs, pfad), wert(daten));
   }
   return b.commit();
 }
@@ -66,3 +69,34 @@ describe('Kasse erstellen aus der App (UC-01)', () => {
     await assertFails(abspielen(batch, { ohne: ['kassen/k2/mitglieder/gaeste'] }));
   });
 });
+
+describe('Beitreten aus der App (UC-02)', () => {
+  const kasse = fixture('kasse-erstellen.json');
+  const batch = fixture('beitreten.json');
+  // withSecurityRulesDisabled gibt den Wert des Callbacks nicht zurück.
+  async function lesen(pfad) {
+    let daten;
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      daten = (await getDoc(doc(ctx.firestore(), pfad))).data();
+    });
+    return daten;
+  }
+
+  beforeEach(() => abspielen(kasse));
+
+  test('wird angenommen, Anzahl in Kasse und Einladung zählt mit', async () => {
+    await assertSucceeds(abspielen(batch));
+    expect((await lesen('kassen/k2')).anzahlBierwarte).toBe(2);
+    expect((await lesen('einladungen/K7Q2MXA93DWFT2HC8RNP')).anzahlBierwarte).toBe(2);
+    expect((await lesen('kassen/k2/mitglieder/m2')).bierwartUid).toBe('neu');
+  });
+
+  test('ohne Portemonnaie abgelehnt', async () => {
+    await assertFails(abspielen(batch, { ohne: ['kassen/k2/orte/neu'] }));
+  });
+
+  test('der Gründer tritt nicht noch einmal bei', async () => {
+    await assertFails(abspielen(batch, { als: kasse.uid }));
+  });
+});
+
