@@ -356,7 +356,7 @@ Bausteine:
 ## Lokale Entwicklung und Tests
 
 - Emulatoren: Auth, Firestore (und Hosting für die Fallback-Seite). Lokal mit Demo-Projekt `demo-bierwart`, damit nie echte Daten berührt werden.
-- Die App verbindet sich mit den Emulatoren, wenn sie mit `--dart-define=USE_EMULATORS=true` gestartet wird; in Release-Builds ist der Schalter immer aus. Sie nutzt dann die Projekt-ID `demo-bierwart`, damit nie echte Daten berührt werden. Host ist `10.0.2.2` (Android-Emulator), für ein echtes Gerät `--dart-define=EMULATOR_HOST=<IP des Rechners>`. Das Debug-Manifest erlaubt dafür unverschlüsseltes HTTP (`lib/src/core/firebase/emulatoren.dart`).
+- Die App verbindet sich mit den Emulatoren, wenn sie mit `--dart-define=USE_EMULATORS=true` gestartet wird; in Release-Builds ist der Schalter immer aus. Sie nutzt dann eine eigene Firebase-App mit `demoProjectId: demo-bierwart`, damit nie echte Daten berührt werden. Eine eigene App ist nötig, weil das native Android-SDK aus `google-services.json` schon die Standard-App für `bier-wart` anlegt und FlutterFire abweichende Optionen dafür still ignoriert. Deshalb holen alle Dienste ihre Instanz über `firebaseAppProvider` (`instanceFor(app: …)`), nie über `.instance`. Host ist `10.0.2.2` (Android-Emulator), für ein echtes Gerät `--dart-define=EMULATOR_HOST=<IP des Rechners>`. Das Debug-Manifest erlaubt dafür unverschlüsseltes HTTP (`lib/src/core/firebase/emulatoren.dart`).
 - Tests:
   - Dart: Unit-Tests für Domain (Geld, Buchungswirkung, Batch-Aufbau), Widget-Tests für Bildschirme.
   - Rules: `rules-tests/` mit `@firebase/rules-unit-testing` gegen den Emulator (NFA-07): `npm --prefix rules-tests run test:emulator`. Die Firebase CLI ist dort als feste Version eingetragen, damit lokal und in der CI dasselbe läuft.
