@@ -54,12 +54,14 @@ const ohneKasse = {
 /// Onboarding, mit Kasse auf die Strichliste (UI-01). Wer gerade eine Kasse
 /// erstellt, bleibt im Ablauf, bis der Server sie angenommen hat und Code und
 /// Einladung gezeigt wurden (AUTH-03). Wer gerade beitritt, bleibt auf „Wie
-/// heißt du?“, bis der Server geantwortet hat.
+/// heißt du?“, bis der Server geantwortet hat. Ein offener Einladungscode
+/// führt ohne Kasse vom Start direkt zu „Kasse beitreten?“ (AUTH-06).
 String? weiterleitung(
   Startzustand zustand,
   ErstellteKasse? neu,
   String ort, {
   bool beitrittLaeuft = false,
+  String? offenerCode,
 }) {
   if (beitrittLaeuft) {
     return ort == Routen.nameWaehlen ? null : Routen.nameWaehlen;
@@ -74,6 +76,10 @@ String? weiterleitung(
   }
   return switch (zustand) {
     StartLaedt() || StartFehler() => ort == Routen.laden ? null : Routen.laden,
+    OhneKasse()
+        when offenerCode != null &&
+            (ort == Routen.willkommen || !ohneKasse.contains(ort)) =>
+      Routen.mitCode(Routen.beitreten, offenerCode),
     OhneKasse() => ohneKasse.contains(ort) ? null : Routen.willkommen,
     InKasse() => _onboarding.contains(ort) ? Routen.strichliste : null,
   };
@@ -96,6 +102,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ref.read(ersteKasseProvider),
       state.uri.path,
       beitrittLaeuft: ref.read(beitrittProvider),
+      offenerCode: ref.read(offenerCodeProvider),
     ),
     routes: [
       seite(Routen.strichliste, () => const StrichlisteScreen()),
@@ -121,6 +128,20 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
     errorBuilder: (context, state) => const _UnbekannteSeite(),
   );
+  // Ein Link bei offener App springt sofort zu „Kasse beitreten?“; wer schon
+  // in einer Kasse ist, braucht ihn nicht (Release 1: eine Kasse, AUTH-14).
+  ref.listen(offenerCodeProvider, (alt, code) {
+    if (code == null || code == alt) return;
+    if (ref.read(startzustandProvider) is InKasse) {
+      ref.read(offenerCodeProvider.notifier).verwerfen();
+    } else if (ref.read(ersteKasseProvider) == null &&
+        !ref.read(beitrittProvider)) {
+      router.go(Routen.mitCode(Routen.beitreten, code));
+    }
+  });
+  ref.listen(startzustandProvider, (_, zustand) {
+    if (zustand is InKasse) ref.read(offenerCodeProvider.notifier).verwerfen();
+  });
   ref.onDispose(() {
     router.dispose();
     aenderung.dispose();

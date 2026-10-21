@@ -63,6 +63,37 @@ void main() {
       );
     });
 
+    test('offener Code führt ohne Kasse zu „Kasse beitreten?“ (AUTH-06)', () {
+      const code = 'K7Q2MXA93DWFT2HC8RNP';
+      final ziel = Routen.mitCode(Routen.beitreten, code);
+      expect(
+        weiterleitung(const OhneKasse(), null, '/', offenerCode: code),
+        ziel,
+      );
+      expect(
+        weiterleitung(
+          const OhneKasse(),
+          null,
+          Routen.willkommen,
+          offenerCode: code,
+        ),
+        ziel,
+      );
+      expect(
+        weiterleitung(
+          const OhneKasse(),
+          null,
+          Routen.nameWaehlen,
+          offenerCode: code,
+        ),
+        isNull,
+      );
+      expect(
+        weiterleitung(const InKasse('k1'), null, '/', offenerCode: code),
+        isNull,
+      );
+    });
+
     test('mit Kasse auf die Strichliste (UI-01)', () {
       expect(weiterleitung(const InKasse('k1'), null, '/'), isNull);
       expect(

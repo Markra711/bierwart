@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Einladung · Bierwart</title>
+<!-- Fallback für Einladungslinks (AUTH-04): Wer die App hat, landet gar
+     nicht hier, weil der App-Link sie öffnet. Wer sie nicht hat, bekommt
+     den Store-Link mit dem Code als Referrer (AUTH-12) und den Code zum
+     Einfügen. Farben und Schriften aus docs/design/tokens.json. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;600;700&family=Barlow:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #25272c;
+  --shadow-dark: #18191d;
+  --shadow-light: #32353b;
+  --ink: #f1eee9;
+  --ink-muted: #a3a09b;
+  --line-strong: #5a5d64;
+  --grad-start: #ff4d86;
+  --grad-end: #ffa24a;
+  --on-accent: #1e1f23;
+  --negative: #ff6f8f;
+  --positive: #7cd39a;
+  --grad-accent: linear-gradient(100deg, var(--grad-start), var(--grad-end));
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body {
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-weight: 500;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+main {
+  width: 100%;
+  max-width: 420px;
+  padding: 72px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: var(--grad-accent);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+h1 {
+  margin: 0;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 42px;
+  line-height: 42px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+h1 span { font-weight: 300; color: transparent; -webkit-text-stroke: 1.2px var(--ink); }
+p { margin: 0; font-size: 15px; line-height: 22px; color: var(--ink-muted); }
+.code {
+  padding: 22px 12px;
+  border-radius: 18px;
+  box-shadow: inset 4px 4px 9px var(--shadow-dark), inset -4px -4px 9px var(--shadow-light);
+  text-align: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.knopf {
+  min-height: 56px;
+  border-radius: 999px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  font: 800 13px 'Barlow', sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+.primaer { background: var(--grad-accent); color: var(--on-accent); }
+.sekundaer {
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: 5px 5px 12px var(--shadow-dark), -5px -5px 12px var(--shadow-light);
+}
+.knopf:focus-visible { outline: 2px solid var(--grad-end); outline-offset: 3px; }
+.hinweis { font-size: 12px; line-height: 17px; font-weight: 600; color: var(--ink-muted); }
+.fehler { color: var(--negative); }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="label">Einladung</div>
+  <h1>Kasse <span>beitreten</span></h1>
+
+  <section id="gueltig" hidden>
+    <div style="display: flex; flex-direction: column; gap: 20px">
+      <p>Du bist zu einer Kasse bei Bierwart eingeladen, der Strichliste für eure Mannschaft. Installier die App, danach geht es direkt mit der Einladung weiter.</p>
+      <a id="store" class="knopf primaer" href="#">Bierwart im Play Store</a>
+      <p>Hast du die App schon? Öffne sie, tipp auf „Ich habe einen Einladungslink“ und füg den Code ein:</p>
+      <div id="code" class="code" aria-label="Einladungscode"></div>
+      <button id="kopieren" class="knopf sekundaer" type="button">Code kopieren</button>
+      <div id="kopiert" class="hinweis" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section id="ungueltig" hidden>
+    <p class="fehler">Dieser Link ist unvollständig. Frag nach einem neuen oder kopier ihn noch einmal ganz.</p>
+  </section>
+
+  <p class="hinweis">Einladungen gelten 7 Tage. Kein Konto, keine E-Mail.</p>
+</main>
+<script>
+// Gleiche Regeln wie lib/src/features/onboarding/domain/codes.dart:
+// 20 Zeichen Crockford-Base32, normalisiert (Großbuchstaben, ohne
+// Bindestriche, O → 0, I und L → 1).
+(function () {
+  var CROCKFORD = /^[0-9ABCDEFGHJKMNPQRSTVWXYZ]{20}$/;
+  var PAKET = 'io.github.markra711.bierwart';
+
+  function normalisieren(roh) {
+    return roh.toUpperCase().replace(/[\s-]/g, '').replace(/O/g, '0').replace(/[IL]/g, '1');
+  }
+
+  function gruppieren(code) {
+    return code.match(/.{1,4}/g).join('-');
+  }
+
+  var teile = location.pathname.split('/').filter(Boolean);
+  var code = teile[0] === 'j' && teile[1] ? normalisieren(decodeURIComponent(teile[1])) : '';
+
+  if (!CROCKFORD.test(code)) {
+    document.getElementById('ungueltig').hidden = false;
+    return;
+  }
+
+  document.getElementById('gueltig').hidden = false;
+  document.getElementById('code').textContent = gruppieren(code);
+  document.getElementById('store').href =
+    'https://play.google.com/store/apps/details?id=' + PAKET +
+    '&referrer=' + encodeURIComponent('code=' + code);
+
+  var status = document.getElementById('kopiert');
+  document.getElementById('kopieren').addEventListener('click', function () {
+    if (!navigator.clipboard) {
+      status.textContent = 'Kopieren geht hier nicht. Markier den Code und kopier ihn von Hand.';
+      return;
+    }
+    navigator.clipboard.writeText(code).then(
+      function () { status.textContent = 'Code kopiert.'; },
+      function () { status.textContent = 'Kopieren hat nicht geklappt. Markier den Code und kopier ihn von Hand.'; }
+    );
+  });
+})();
+</script>
+</body>
+</html>
