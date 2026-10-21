@@ -1,0 +1,46 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/b2",
+      "daten": {
+        "typ": "strichBar",
+        "mitgliedId": "gaeste",
+        "sorteId": "s1",
+        "preisCents": 150,
+        "ortId": "gruender",
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/orte/gruender",
+      "daten": {
+        "standCents": {
+          "$erhoehen": 150
+        },
+        "letzteBuchungId": "b2"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/sorten/s1",
+      "daten": {
+        "bestand": {
+          "$erhoehen": -1
+        },
+        "letzteBuchungId": "b2"
+      }
+    }
+  ]
+}

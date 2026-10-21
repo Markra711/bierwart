@@ -1,5 +1,5 @@
 import 'package:bier_wart/src/features/onboarding/data/beitreten_batch.dart';
-import 'package:bier_wart/src/features/onboarding/data/schreibvorgang.dart';
+import 'package:bier_wart/src/core/firebase/schreibvorgang.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../helpers/fixtures.dart';

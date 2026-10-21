@@ -76,7 +76,7 @@ void main() {
     await tester.enterText(find.byType(TextField), '  Jonas Weber ');
     await tippen(tester, 'Beitreten');
     expect(repo.beitritte, ['  Jonas Weber ']);
-    expect(find.text('Hier entsteht die Strichliste.'), findsOneWidget);
+    expect(find.text('STRICHLISTE'), findsOneWidget);
   });
 
   testWidgets('vergebener Name: Hinweis, anderen Namen wählen (AUTH-07)', (
@@ -174,6 +174,6 @@ void main() {
 
     repo.halten!.complete();
     await tester.pumpAndSettle();
-    expect(find.text('Hier entsteht die Strichliste.'), findsOneWidget);
+    expect(find.text('STRICHLISTE'), findsOneWidget);
   });
 }

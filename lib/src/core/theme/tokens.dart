@@ -197,3 +197,14 @@ abstract final class BwType {
     fontWeight: 600,
   );
 }
+
+/// Schatten auf `surface-float` (Sheets). Nicht in tokens.json, sondern aus
+/// styleguide.md, Komponente Sheet: Weil `surface-float` heller ist als `bg`,
+/// braucht der helle Schatten einen eigenen Ton.
+abstract final class BwSheet {
+  static const schattenHell = Color(0xFF363A41);
+  static const inset = [
+    NeuShadow(4, 4, 9, BwColors.shadowDark, inset: true),
+    NeuShadow(-4, -4, 9, schattenHell, inset: true),
+  ];
+}

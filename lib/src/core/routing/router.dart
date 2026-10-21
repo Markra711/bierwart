@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/einstellungen/presentation/einstellungen_screen.dart';
+import '../../features/geld/presentation/geld_screen.dart';
+import '../../features/kader/presentation/kader_screen.dart';
+import '../../features/lager/presentation/lager_screen.dart';
 import '../../features/onboarding/application/onboarding.dart';
 import '../../features/onboarding/domain/erstellte_kasse.dart';
 import '../../features/onboarding/presentation/beitreten_screen.dart';
@@ -14,6 +18,7 @@ import '../../features/onboarding/presentation/wiederherstellungscode_screen.dar
 import '../../features/onboarding/presentation/willkommen_screen.dart';
 import '../../features/strichliste/presentation/strichliste_screen.dart';
 import '../theme/app_theme.dart';
+import 'app_rahmen.dart';
 import '../theme/tokens.dart';
 
 /// Pfade der App. Beitreten und Name wählen tragen den Einladungscode als
@@ -29,6 +34,12 @@ abstract final class Routen {
   static const linkEinfuegen = '/link-einfuegen';
   static const beitreten = '/beitreten';
   static const nameWaehlen = '/name-waehlen';
+
+  // Tabs (UI-02) und Seiten in der Kasse
+  static const kader = '/kader';
+  static const lager = '/lager';
+  static const geld = '/geld';
+  static const einstellungen = '/einstellungen';
 
   static String mitCode(String pfad, String code) =>
       Uri(path: pfad, queryParameters: {'code': code}).toString();
@@ -105,7 +116,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       offenerCode: ref.read(offenerCodeProvider),
     ),
     routes: [
-      seite(Routen.strichliste, () => const StrichlisteScreen()),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, shell) => AppRahmen(shell: shell),
+        branches: [
+          for (final (pfad, bauen) in [
+            (Routen.strichliste, () => const StrichlisteScreen()),
+            (Routen.kader, () => const KaderScreen()),
+            (Routen.lager, () => const LagerScreen()),
+            (Routen.geld, () => const GeldScreen()),
+          ])
+            StatefulShellBranch(routes: [seite(pfad, bauen)]),
+        ],
+      ),
+      seite(Routen.einstellungen, () => const EinstellungenScreen()),
       seite(Routen.laden, () => const LadenScreen()),
       seite(Routen.willkommen, () => const WillkommenScreen()),
       seite(Routen.kasseErstellen, () => const KasseErstellenScreen()),

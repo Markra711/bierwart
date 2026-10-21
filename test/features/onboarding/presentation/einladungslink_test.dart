@@ -85,7 +85,7 @@ void main() {
     await tippen(tester, 'Ja, beitreten');
     await tester.enterText(find.byType(TextField), 'Jonas Weber');
     await tippen(tester, 'Beitreten');
-    expect(find.text('Hier entsteht die Strichliste.'), findsOneWidget);
+    expect(find.text('STRICHLISTE'), findsOneWidget);
     expect(speicher.code, isNull);
   });
 
@@ -99,7 +99,7 @@ void main() {
 
     links.oeffnen(link);
     await tester.pumpAndSettle();
-    expect(find.text('Hier entsteht die Strichliste.'), findsOneWidget);
+    expect(find.text('STRICHLISTE'), findsOneWidget);
     expect(speicher.code, isNull);
   });
 }

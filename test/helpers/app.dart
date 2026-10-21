@@ -1,17 +1,23 @@
 import 'dart:async';
 
 import 'package:bier_wart/src/app.dart';
+import 'package:bier_wart/src/core/firebase/batch_schreiber.dart';
+import 'package:bier_wart/src/core/speicher/lokaler_speicher.dart';
 import 'package:bier_wart/src/core/theme/app_theme.dart';
+import 'package:bier_wart/src/features/kader/data/mitglieder_repository.dart';
+import 'package:bier_wart/src/features/lager/data/sorten_repository.dart';
 import 'package:bier_wart/src/features/onboarding/data/anmeldung_repository.dart';
 import 'package:bier_wart/src/features/onboarding/data/einladungslinks.dart';
 import 'package:bier_wart/src/features/onboarding/data/kasse_repository.dart';
 import 'package:bier_wart/src/features/kader/domain/name.dart';
 import 'package:bier_wart/src/features/onboarding/domain/einladung.dart';
 import 'package:bier_wart/src/features/onboarding/domain/erstellte_kasse.dart';
+import 'package:bier_wart/src/features/strichliste/data/kassenkopf_repository.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'datenbank.dart';
 import 'links.dart';
 
 /// Ersetzt Firestore beim Erstellen und Beitreten. Nach Erfolg meldet es die
@@ -73,16 +79,28 @@ class FakeKasseRepository implements KasseRepository {
   }
 }
 
+/// Eine Fake-Datenbank mit Kasse `k1`, dem Nutzer `uid` als Bierwart
+/// „Tobias Meier“ und „Gäste“.
+FakeDatenbank testDatenbank() => FakeDatenbank()
+  ..kasse('k1', name: 'SV Test')
+  ..bierwart('k1', 'uid', 'Tobias Meier')
+  ..mitglied('k1', 'gaeste', 'Gäste', gast: true);
+
 /// Startet die App mit angemeldetem Nutzer `uid` und [kasseId] (oder ohne
 /// Kasse). Liefert das Fake-Repository für Erstellen und Beitreten; Links
-/// kommen über [links], ein gemerkter Code über [speicher].
+/// kommen über [links], ein gemerkter Code über [speicher], die Daten der
+/// Kasse aus [db] (Standard: [testDatenbank]).
 Future<FakeKasseRepository> appStarten(
   WidgetTester tester, {
   String? kasseId,
   Object? anmeldeFehler,
   FakeLinkQuelle? links,
   FakeCodeSpeicher? speicher,
+  FakeDatenbank? db,
+  FakeSpeicher? einstellungen,
 }) async {
+  final daten = db ?? testDatenbank();
+  addTearDown(daten.schliessen);
   final quelle = links ?? FakeLinkQuelle();
   addTearDown(quelle.schliessen);
   final kasseIds = StreamController<String?>.broadcast();
@@ -101,6 +119,13 @@ Future<FakeKasseRepository> appStarten(
       kasseRepositoryProvider.overrideWithValue(repo),
       linkQuelleProvider.overrideWithValue(quelle),
       codeSpeicherProvider.overrideWithValue(speicher ?? FakeCodeSpeicher()),
+      schreiberProvider.overrideWithValue(daten),
+      sortenRepositoryProvider.overrideWithValue(daten),
+      mitgliederRepositoryProvider.overrideWithValue(FakeMitglieder(daten)),
+      kassenkopfRepositoryProvider.overrideWithValue(daten),
+      lokalerSpeicherProvider.overrideWithValue(
+        einstellungen ?? FakeSpeicher(),
+      ),
     ],
   );
   addTearDown(container.dispose);

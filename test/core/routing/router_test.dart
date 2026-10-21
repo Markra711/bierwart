@@ -133,20 +133,21 @@ void main() {
 
   testWidgets('startet mit Kasse auf der Strichliste (UI-01)', (tester) async {
     await appStarten(tester, kasseId: 'k1');
-    expect(find.text('BIERWART'), findsOneWidget);
+    expect(find.text('STRICHLISTE'), findsOneWidget);
   });
 
   testWidgets(
     'unbekannter Pfad zeigt eine Meldung statt leerer Seite (NFA-10)',
     (tester) async {
       await appStarten(tester, kasseId: 'k1');
-      GoRouter.of(tester.element(find.text('BIERWART'))).go('/gibt-es-nicht');
+      GoRouter.of(tester.element(find.text('STRICHLISTE')))
+          .go('/gibt-es-nicht');
       await tester.pumpAndSettle();
       expect(find.text('NICHT GEFUNDEN'), findsOneWidget);
 
       await tester.tap(find.text('ZUR STRICHLISTE'));
       await tester.pumpAndSettle();
-      expect(find.text('BIERWART'), findsOneWidget);
+      expect(find.text('STRICHLISTE'), findsOneWidget);
     },
   );
 }

@@ -1,0 +1,39 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "set",
+      "pfad": "kassen/k2/sorten/s1",
+      "daten": {
+        "name": "Bier 0,5",
+        "preisCents": 150,
+        "vorherigerPreisCents": null,
+        "aktiv": true,
+        "bestand": 0,
+        "letzteBuchungId": "l3",
+        "reihenfolge": 0
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/l3",
+      "daten": {
+        "typ": "sorteAngelegt",
+        "sorteId": "s1",
+        "name": "Bier 0,5",
+        "preisCents": 150,
+        "aktiv": true,
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import '../../kader/domain/name.dart';
-import 'schreibvorgang.dart';
+import '../../../core/firebase/schreibvorgang.dart';
 
 /// Der Batch „Beitreten“ (UC-02, AUTH-07, AUTH-08), genau so, wie ihn
 /// `firestore.rules` verlangt (architecture.md, Verwaltung als Batches): eigener

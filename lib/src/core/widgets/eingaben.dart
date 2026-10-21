@@ -34,6 +34,7 @@ class BwFeld extends StatefulWidget {
     this.onSubmitted,
     this.autofocus = false,
     this.fokus,
+    this.aufSheet = false,
   });
 
   final String label;
@@ -51,6 +52,9 @@ class BwFeld extends StatefulWidget {
 
   /// Von außen, z. B. um nach einem Fehler ins Feld zu springen.
   final FocusNode? fokus;
+
+  /// Im Sheet liegt das Feld auf `surface-float` (styleguide.md, Sheet).
+  final bool aufSheet;
 
   @override
   State<BwFeld> createState() => _BwFeldState();
@@ -87,6 +91,8 @@ class _BwFeldState extends State<BwFeld> {
         const SizedBox(height: BwSpacing.space2),
         BwEingedrueckt(
           rahmen: _fokus.hasFocus ? BwGradients.accent : null,
+          grund: widget.aufSheet ? BwColors.surfaceFloat : BwColors.bg,
+          schatten: widget.aufSheet ? BwSheet.inset : BwShadows.inset,
           padding: const EdgeInsets.symmetric(
             horizontal: BwSpacing.space4,
             vertical: BwSpacing.space3,

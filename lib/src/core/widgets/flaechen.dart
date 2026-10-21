@@ -45,6 +45,7 @@ class BwEingedrueckt extends StatelessWidget {
     this.schatten = BwShadows.inset,
     this.padding,
     this.rahmen,
+    this.grund = BwColors.bg,
   });
 
   final Widget child;
@@ -55,6 +56,9 @@ class BwEingedrueckt extends StatelessWidget {
   /// Optionaler Verlaufsrahmen, z. B. für das Feld mit Fokus.
   final Gradient? rahmen;
 
+  /// Fläche darunter; im Sheet `surface-float`.
+  final Color grund;
+
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
@@ -62,6 +66,7 @@ class BwEingedrueckt extends StatelessWidget {
         radius: radius,
         schatten: schatten,
         rahmen: rahmen,
+        grund: grund,
       ),
       child: Padding(padding: padding ?? EdgeInsets.zero, child: child),
     );
@@ -76,18 +81,20 @@ class InnenschattenPainter extends CustomPainter {
     required this.schatten,
     this.rahmen,
     this.rahmenBreite = 1.5,
+    this.grund = BwColors.bg,
   });
 
   final double radius;
   final List<NeuShadow> schatten;
   final Gradient? rahmen;
   final double rahmenBreite;
+  final Color grund;
 
   @override
   void paint(Canvas canvas, Size size) {
     final flaeche = Offset.zero & size;
     final form = RRect.fromRectAndRadius(flaeche, Radius.circular(radius));
-    canvas.drawRRect(form, Paint()..color = BwColors.bg);
+    canvas.drawRRect(form, Paint()..color = grund);
 
     canvas.save();
     canvas.clipRRect(form);
@@ -120,7 +127,10 @@ class InnenschattenPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(InnenschattenPainter old) =>
-      old.radius != radius || old.schatten != schatten || old.rahmen != rahmen;
+      old.radius != radius ||
+      old.schatten != schatten ||
+      old.rahmen != rahmen ||
+      old.grund != grund;
 }
 
 /// Gestrichelter Rahmen (4px Strich, 4px Lücke), z. B. für deaktivierte
@@ -230,7 +240,11 @@ class BwVerlaufText extends StatelessWidget {
 
 /// Konturschrift ohne Füllung, wie der helle Teil der Titel. `color` und
 /// `foreground` schließen sich aus, deshalb ein neuer Stil.
-TextStyle alsKontur(TextStyle style, {double breite = 1.2}) => TextStyle(
+TextStyle alsKontur(
+  TextStyle style, {
+  double breite = 1.2,
+  Color farbe = BwColors.ink,
+}) => TextStyle(
   fontFamily: style.fontFamily,
   fontSize: style.fontSize,
   fontWeight: style.fontWeight,
@@ -240,6 +254,6 @@ TextStyle alsKontur(TextStyle style, {double breite = 1.2}) => TextStyle(
   foreground: Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = breite
-    ..color = BwColors.ink
+    ..color = farbe
     ..strokeJoin = ui.StrokeJoin.round,
 );

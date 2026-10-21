@@ -148,6 +148,8 @@ Gemeinsame Felder:
 
 „Rückgängig“ in der Snackbar (STR-04) erzeugt eine `storno`-Buchung, löscht also nichts.
 
+**Strichliste (STR-01 bis STR-05):** Die gewählte Sorte steht lokal in `shared_preferences` je Kasse (UI-07), ohne Wahl gilt die erste. Ein Tipp baut den Batch und schreibt ihn sofort, ohne auf den Server zu warten. Lokal ist der Strich gleich sichtbar (NFA-06), offline wird er nachgereicht (NFA-02). Gebucht wird erst, wenn Kasse, UID und der eigene Name für den Stempel geladen sind. Bis Lager und Kader ausgebaut sind, bietet die Strichliste „+ Sorte“ und „+ Mitglied“ als Sheets an.
+
 **Storno (STR-04, STR-06):**
 - Das Mitglied-Detail zeigt alle Striche, auch bar bezahlte, mit dem Vermerk „bar“ (KAD-06).
 - Strich offen stornieren: Saldo − Preis, Bestand + 1.
@@ -198,12 +200,12 @@ Die Rules sind in Release 1 die Geschäftslogik. Grundsätze (NFA-07):
 - Jede Verwaltungsaktion schreibt ihre Log-Buchung im selben Batch. Die Rules verlangen sie (`existsAfter`).
 - `einladungen` und `wiederherstellung`: nur `get` für Angemeldete, kein `list`.
 
-Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 184 Emulator-Tests in `rules-tests/`:
+Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 189 Emulator-Tests in `rules-tests/`:
 - `buchungen.test.js` (47): Strich offen und bar, Storno, Zahlung, Einkauf, Bestandskorrektur, Übergabe, Ein-/Auszahlung, Kassensturz, Fälle ohne passende Buchung, Unveränderlichkeit des Logs.
 - `stammdaten.test.js` (32): Mitglieder anlegen, umbenennen, entfernen, wieder aufnehmen; Namensindex; Sorten anlegen, ändern, ausblenden.
 - `verwaltung.test.js` (56): Kasse erstellen, Beitreten, Übernahme anfragen, zurückziehen und entscheiden, Austreten, `users/`, Lesen von Einladungen und Namensindex.
 - `admin.test.js` (43): Link erneuern, Bierwart entfernen, Rollen, Umbenennen, Wiederherstellungscode erneuern, Admin wiederherstellen mit und ohne Bierwart-Eintrag, Auflösen und Löschen.
-- `vertrag.test.js` (6): Batches, wie die App sie baut (Kasse erstellen, danach Beitreten in diese Kasse). Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
+- `vertrag.test.js` (11): Batches, wie die App sie baut: Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
 
 Kern des Musters:
 
@@ -350,6 +352,8 @@ Bausteine:
 - Firestore-Offline-Persistenz ist auf Android standardmäßig an. Buchungen und Stammdaten werden lokal geschrieben und später synchronisiert (NFA-02).
 - Jede Buchung ist ein neues Dokument mit Client-ID. Summen ändern sich nur per `increment()`. Damit gibt es keine verlorenen Updates (NFA-03). Ausnahme sind die absoluten Buchungen (siehe Summen, Punkt 7).
 - Lehnen die Rules eine Offline-Schreibung beim Sync ab (z. B. Name inzwischen vergeben, Stand beim Kassensturz geändert), nimmt Firestore den lokalen Batch zurück, und die App meldet das sichtbar (NFA-10). Dafür müssen die Write-Futures beobachtet werden, auch nach dem Verlassen des Bildschirms (globaler Fehlerkanal, Snackbar).
+  - Umgesetzt im `FehlerkanalNotifier` (`lib/src/core/fehler/`): Buchungen und Stammdaten warten nicht auf den Server, ihr Schreib-Future beobachtet der Kanal. Schlägt es fehl, zeigt die App eine Snackbar, egal auf welchem Bildschirm.
+- **Batches als Daten:** Jeder Batch entsteht im App-Code als Liste von `Schreibvorgang` (`lib/src/core/firebase/schreibvorgang.dart`), geschrieben über `Schreiber` (Firestore: `BatchSchreiber`). Das macht ihn als Fixture für die Rules prüfbar und in Widget-Tests mit einer Fake-Datenbank anwendbar.
 - Verwaltungsaktionen prüft die App vorab auf Netz: eine Abfrage direkt beim Server (`Source.server`). Ohne Netz zeigt sie sofort „Dafür brauchst du Netz“, statt endlos zu warten. Antwortet der Server nicht binnen 20 Sekunden, meldet sie das ebenfalls.
 - **Kasse erstellen:** Codes und IDs stehen fest, bevor geschrieben wird. Die Weiterleitung hält den Nutzer im Ablauf, bis der Server den Batch angenommen und die App Wiederherstellungscode und Einladung gezeigt hat (AUTH-03). Lehnt der Server ab, bleibt er im Formular und sieht die Meldung (NFA-10).
 - **Beitreten:** Link einfügen → „Kasse beitreten?“ → „Wie heißt du?“. Der Code steht als `?code=` in der Route, damit Einladungslinks später direkt einsteigen. Die App lädt die Einladung direkt vom Server und zeigt abgelaufene, ersetzte und unbekannte Links mit eigener Meldung (AUTH-08); maßgeblich bleiben die Rules. Vor dem Batch prüft sie `namen/{nameKey}`. Ist der Name vergeben, zeigt sie das und lässt einen anderen wählen. „Das bin ich“ (UC-03) fehlt noch, bis Warte- und Anfrage-Screen im Design-Canvas stehen (offene Frage 23). Während der Batch läuft, hält die Weiterleitung den Nutzer auf der Namenswahl.

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/firebase/batch_schreiber.dart';
 import '../../../core/firebase/firebase_providers.dart';
 import '../../kader/domain/name.dart';
 import '../domain/codes.dart';
@@ -10,7 +11,7 @@ import '../domain/einladung.dart';
 import '../domain/erstellte_kasse.dart';
 import 'beitreten_batch.dart';
 import 'kasse_erstellen_batch.dart';
-import 'schreibvorgang.dart';
+import '../../../core/firebase/schreibvorgang.dart';
 
 /// Fehler einer Verwaltungsaktion mit einer Meldung für den Nutzer (NFA-10).
 class VerwaltungsFehler implements Exception {
@@ -49,14 +50,15 @@ class FirestoreKasseRepository implements KasseRepository {
   FirestoreKasseRepository(
     this._db, {
     this.antwortFrist = const Duration(seconds: 20),
-  });
+  }) : _schreiber = BatchSchreiber(_db);
 
   final FirebaseFirestore _db;
+  final BatchSchreiber _schreiber;
   final Duration antwortFrist;
 
   static const _server = GetOptions(source: Source.server);
 
-  String _neueId() => _db.collection('kassen').doc().id;
+  String _neueId() => _schreiber.neueId();
 
   @override
   ErstellteKasse vorbereiten({
@@ -142,20 +144,8 @@ class FirestoreKasseRepository implements KasseRepository {
         ),
       );
 
-  Future<void> _schreiben(List<Schreibvorgang> vorgaenge) async {
-    final batch = _db.batch();
-    for (final s in vorgaenge) {
-      final ref = _db.doc(s.pfad);
-      final daten = _firestoreWerte(s.daten);
-      switch (s.art) {
-        case Art.set:
-          batch.set(ref, daten);
-        case Art.update:
-          batch.update(ref, daten);
-      }
-    }
-    await batch.commit().timeout(antwortFrist);
-  }
+  Future<void> _schreiben(List<Schreibvorgang> vorgaenge) =>
+      _schreiber.schreiben(vorgaenge).timeout(antwortFrist);
 
   /// Übersetzt Firebase-Fehler in Meldungen (NFA-10).
   Future<T> _mitServer<T>(String sonst, Future<T> Function() aktion) async {
@@ -175,19 +165,6 @@ class FirestoreKasseRepository implements KasseRepository {
       });
     }
   }
-
-  static Map<String, Object?> _firestoreWerte(Map<String, Object?> daten) => {
-    for (final e in daten.entries) e.key: _wert(e.value),
-  };
-
-  static Object? _wert(Object? v) => switch (v) {
-    Serverzeit() => FieldValue.serverTimestamp(),
-    Erhoehen(:final um) => FieldValue.increment(um),
-    Bytes(:final wert) => Blob(wert),
-    DateTime() => Timestamp.fromDate(v),
-    Map<String, Object?>() => _firestoreWerte(v),
-    _ => v,
-  };
 }
 
 final kasseRepositoryProvider = Provider<KasseRepository>(

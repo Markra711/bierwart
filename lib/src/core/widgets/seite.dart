@@ -23,7 +23,12 @@ class BwTitel extends StatelessWidget {
       child: Text.rich(
         TextSpan(
           children: [
-            if (voll != null) TextSpan(text: '${voll!.toUpperCase()} '),
+            if (voll != null)
+              TextSpan(
+                text: kontur == null && danach == null
+                    ? voll!.toUpperCase()
+                    : '${voll!.toUpperCase()} ',
+              ),
             if (kontur != null)
               TextSpan(text: kontur!.toUpperCase(), style: duenn),
             if (danach != null) TextSpan(text: ' ${danach!.toUpperCase()}'),

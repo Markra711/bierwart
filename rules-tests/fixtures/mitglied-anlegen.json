@@ -1,0 +1,47 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "set",
+      "pfad": "kassen/k2/mitglieder/m3",
+      "daten": {
+        "name": "Tim Richter",
+        "nameKey": "tim richter",
+        "istGast": false,
+        "bierwartUid": null,
+        "entfernt": false,
+        "saldoCents": 0,
+        "letzteBuchungId": "l4",
+        "angelegtAm": {
+          "$serverzeit": true
+        }
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/namen/tim richter",
+      "daten": {
+        "mitgliedId": "m3"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/l4",
+      "daten": {
+        "typ": "mitgliedAngelegt",
+        "mitgliedId": "m3",
+        "name": "Tim Richter",
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

@@ -100,3 +100,51 @@ describe('Beitreten aus der App (UC-02)', () => {
   });
 });
 
+describe('Strichliste aus der App (STR-02 bis STR-06, BES-01, KAD-01)', () => {
+  const kette = ['kasse-erstellen.json', 'sorte-anlegen.json', 'mitglied-anlegen.json'].map(fixture);
+  async function lesen(pfad) {
+    let daten;
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      daten = (await getDoc(doc(ctx.firestore(), pfad))).data();
+    });
+    return daten;
+  }
+
+  beforeEach(async () => {
+    for (const batch of kette) await assertSucceeds(abspielen(batch));
+  });
+
+  test('Sorte und Mitglied sind angelegt', async () => {
+    expect((await lesen('kassen/k2/sorten/s1')).bestand).toBe(0);
+    expect((await lesen('kassen/k2/namen/tim richter')).mitgliedId).toBe('m3');
+  });
+
+  test('Strich offen und Storno: Saldo und Bestand wieder wie vorher', async () => {
+    await assertSucceeds(abspielen(fixture('strich.json')));
+    expect((await lesen('kassen/k2/mitglieder/m3')).saldoCents).toBe(150);
+    expect((await lesen('kassen/k2/sorten/s1')).bestand).toBe(-1);
+
+    await assertSucceeds(abspielen(fixture('storno-strich.json')));
+    expect((await lesen('kassen/k2/mitglieder/m3')).saldoCents).toBe(0);
+    expect((await lesen('kassen/k2/sorten/s1')).bestand).toBe(0);
+  });
+
+  test('ein Strich lässt sich nur einmal stornieren (STR-06)', async () => {
+    await assertSucceeds(abspielen(fixture('strich.json')));
+    await assertSucceeds(abspielen(fixture('storno-strich.json')));
+    await assertFails(abspielen(fixture('storno-strich.json')));
+  });
+
+  test('Bar-Strich auf „Gäste“ und Storno: Portemonnaie wie vorher', async () => {
+    await assertSucceeds(abspielen(fixture('strich-bar.json')));
+    expect((await lesen('kassen/k2/orte/gruender')).standCents).toBe(150);
+
+    await assertSucceeds(abspielen(fixture('storno-bar.json')));
+    expect((await lesen('kassen/k2/orte/gruender')).standCents).toBe(0);
+  });
+
+  test('ein Fremder kann nicht buchen', async () => {
+    await assertFails(abspielen(fixture('strich.json'), { als: 'fremd' }));
+  });
+});
+
