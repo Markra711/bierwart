@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:bier_wart/src/features/onboarding/data/schreibvorgang.dart';
+import 'package:bier_wart/src/core/firebase/schreibvorgang.dart';
 import 'package:bier_wart/src/features/onboarding/domain/codes.dart';
 import 'package:flutter_test/flutter_test.dart';
 

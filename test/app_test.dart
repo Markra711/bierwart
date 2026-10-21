@@ -9,7 +9,7 @@ void main() {
   testWidgets('App startet im dunklen Bierwart-Theme', (tester) async {
     await appStarten(tester, kasseId: 'k1');
 
-    expect(find.text('BIERWART'), findsOneWidget);
+    expect(find.text('STRICHLISTE'), findsOneWidget);
     final context = tester.element(find.byType(Scaffold));
     final theme = Theme.of(context);
     expect(theme.brightness, Brightness.dark);

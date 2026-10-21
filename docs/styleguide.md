@@ -142,7 +142,7 @@ Linien-Icons, 22px, Strichstärke 1,8, runde Enden. Inaktiv in `ink-muted`, akti
 
 - Touch-Ziele mindestens 44px.
 - Die Strichliste startet die App (UI-01). Tippen bucht offen, Halten bucht bar (STR-02, STR-03).
-- Bestätigungsdialoge nur bei Unumkehrbarem (UI-04). Buchungen bekommen stattdessen „Rückgängig“ in der Snackbar (STR-04). Sie bleibt bis zur nächsten Buchung, höchstens 8 Sekunden.
+- Bestätigungsdialoge nur bei Unumkehrbarem (UI-04). Buchungen bekommen stattdessen „Rückgängig“ in der Snackbar (STR-04), der Knopf heißt genau so, nicht „Zurück“. Sie bleibt bis zur nächsten Buchung, höchstens 8 Sekunden.
 - Kassenwart- und Admin-Funktionen sind für andere unsichtbar, nicht ausgegraut (UI-08).
 
 ## Komponenten
@@ -186,7 +186,7 @@ Bottom-Sheet für kurze Aktionen (UI-03): Zahlung erfassen, Ein-/Auszahlung, Üb
 - Titel im Stil `page-title`, der Betrag als großes eingedrücktes Feld im Display-Font mit Tabellenziffern.
 - Schnellwahl als erhabene Chips; der gewählte Chip ist eingedrückt mit Text in `grad-end`.
 - Unten genau ein Primärbutton, dessen Text den Betrag nennt: „12,00 € verbuchen“.
-- Weil `surface-float` heller ist als `bg`, nutzen Schatten im Sheet einen eigenen hellen Ton (`#363a41`).
+- Weil `surface-float` heller ist als `bg`, nutzen Schatten im Sheet einen eigenen hellen Ton (`#363a41`). Er steht nicht in `tokens.json`; in Flutter liegt er als `BwSheet.schattenHell` in `tokens.dart`, Eingabefelder im Sheet nutzen `BwFeld(aufSheet: true)`.
 
 ### TabBar
 

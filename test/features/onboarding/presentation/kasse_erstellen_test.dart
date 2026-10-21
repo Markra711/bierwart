@@ -73,7 +73,7 @@ void main() {
     expect(find.text('K7Q2-MXA9-3DWF-T2HC-8RNP'), findsOneWidget);
     expect(find.textContaining('7 Tage gültig'), findsOneWidget);
     await tippen(tester, 'Weiter zur Strichliste');
-    expect(find.text('Hier entsteht die Strichliste.'), findsOneWidget);
+    expect(find.text('STRICHLISTE'), findsOneWidget);
   });
 
   testWidgets('Pflichtfelder und Betrag werden geprüft', (tester) async {

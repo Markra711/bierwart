@@ -34,3 +34,16 @@ class Bytes {
 
   final Uint8List wert;
 }
+
+/// Stempel jeder Log-Buchung (LOG-01): wer, unter welchem Namen, wann laut
+/// Server und wann laut Gerät. `am` prüfen die Rules gegen `request.time`.
+Map<String, Object?> stempel({
+  required String uid,
+  required String name,
+  required DateTime geraetZeit,
+}) => {
+  'uid': uid,
+  'name': name,
+  'am': const Serverzeit(),
+  'geraetAm': geraetZeit,
+};

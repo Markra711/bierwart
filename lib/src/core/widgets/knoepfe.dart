@@ -54,6 +54,7 @@ class BwKnopf extends StatelessWidget {
     final radius = BorderRadius.circular(BwRadius.pill);
 
     final inhalt = Row(
+      mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (laedt)
@@ -74,6 +75,7 @@ class BwKnopf extends StatelessWidget {
               text.toUpperCase(),
               style: stil.copyWith(color: textFarbe),
               overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
         ],
@@ -120,7 +122,13 @@ class BwKnopf extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                     horizontal: BwSpacing.space5,
                   ),
-                  child: inhalt,
+                  // Ohne feste Breite (z. B. in einer Row) so breit wie
+                  // der Inhalt, sonst würde Flexible scheitern.
+                  child: LayoutBuilder(
+                    builder: (context, raum) => raum.hasBoundedWidth
+                        ? inhalt
+                        : IntrinsicWidth(child: inhalt),
+                  ),
                 ),
               ),
             ),

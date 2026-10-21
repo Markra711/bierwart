@@ -1,0 +1,45 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/b1",
+      "daten": {
+        "typ": "strich",
+        "mitgliedId": "m3",
+        "sorteId": "s1",
+        "preisCents": 150,
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/mitglieder/m3",
+      "daten": {
+        "saldoCents": {
+          "$erhoehen": 150
+        },
+        "letzteBuchungId": "b1"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/sorten/s1",
+      "daten": {
+        "bestand": {
+          "$erhoehen": -1
+        },
+        "letzteBuchungId": "b1"
+      }
+    }
+  ]
+}

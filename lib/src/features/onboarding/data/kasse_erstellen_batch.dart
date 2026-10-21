@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import '../../kader/domain/name.dart';
 import '../domain/codes.dart';
-import 'schreibvorgang.dart';
+import '../../../core/firebase/schreibvorgang.dart';
 
 /// Feste ID und Name des Mitglieds „Gäste“ (KAD-03).
 const gaesteId = 'gaeste';
