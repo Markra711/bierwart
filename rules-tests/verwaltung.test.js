@@ -26,6 +26,7 @@ const K = 'kassen/k1';
 const CODE = 'einladung-aktuell-0001';
 const NAMEN = { anna: 'Anna Schulz', kw: 'Karl Wagner' };
 const TAG = 24 * 60 * 60 * 1000;
+const RCODE_K1 = 'K7QM3XRA9DWFT2HC';
 let env;
 
 beforeAll(async () => {
@@ -57,8 +58,9 @@ beforeEach(async () => {
     const set = (pfad, daten) => setDoc(doc(db, pfad.startsWith('/') ? pfad.slice(1) : `${K}/${pfad}`), daten);
     await set('/' + K, {
       name: 'FC Test', adminUid: 'kw', kassenwartUid: 'kw', einladungCode: CODE, anzahlBierwarte: 2,
-      wiederherstellungHash: hashBytes('K7QM3XRA9DWFT2HC'), leerSeit: null, aufgeloest: false, erstelltAm: vor(30), letzteBuchungId: null,
+      wiederherstellungHash: hashBytes(RCODE_K1), leerSeit: null, aufgeloest: false, erstelltAm: vor(30), letzteBuchungId: null,
     });
+    await set(`/wiederherstellung/${hashHex(RCODE_K1)}`, { kasseId: 'k1' });
     await set(`/einladungen/${CODE}`, { kasseId: 'k1', kassenName: 'FC Test', anzahlBierwarte: 2, erstelltAm: vor(1), ersetzt: false });
     await set('/einladungen/einladung-ersetzt-0001', { kasseId: 'k1', kassenName: 'FC Test', anzahlBierwarte: 2, erstelltAm: vor(1), ersetzt: true });
     // Nicht mehr der Link der Kasse, aber versehentlich nicht als ersetzt markiert
