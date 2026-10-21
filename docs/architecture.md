@@ -150,6 +150,14 @@ Gemeinsame Felder:
 
 **Strichliste (STR-01 bis STR-05):** Die gewählte Sorte steht lokal in `shared_preferences` je Kasse (UI-07), ohne Wahl gilt die erste. Ein Tipp baut den Batch und schreibt ihn sofort, ohne auf den Server zu warten. Lokal ist der Strich gleich sichtbar (NFA-06), offline wird er nachgereicht (NFA-02). Gebucht wird erst, wenn Kasse, UID und der eigene Name für den Stempel geladen sind. Bis Lager und Kader ausgebaut sind, bietet die Strichliste „+ Sorte“ und „+ Mitglied“ als Sheets an.
 
+**Kader und Mitglied-Detail (KAD-01 bis KAD-08, GEL-02, GEL-03, STR-06):**
+- Der Kader sortiert nach Saldo absteigend: Schulden zuerst, Guthaben zuletzt, „Gäste“ nicht (KAD-05). Die Rollen-Badges kommen aus `kassen/{k}` (Admin, Kassenwart) und `bierwarte/` (aktiv).
+- Die Unterzeile „6× Bier 0,5“ aus dem Design-Canvas fehlt vorerst. Sie bräuchte die Buchungen jedes Mitglieds; die Liste zeigt nur bei Guthaben „Hat im Voraus bezahlt“.
+- Das Detail zeigt Striche und Zahlungen des Mitglieds, neueste zuerst, seitenweise zu 30 Buchungen („Ältere laden“). Welche Striche nach einer Teilzahlung noch „offen“ sind, ist nicht festgelegt, deshalb gibt es keinen Abschnitt „Offene Striche“. Stornos erscheinen nicht selbst, sondern markieren ihren Strich. Ohne Serverzeit (offline gebucht) gilt `stempel.geraetAm`.
+- Eine Zahlung geht ins eigene Portemonnaie, der Kassenwart kann die Kasse wählen; die Wahl sehen andere nicht (UI-08). Überzahlung wird Guthaben.
+- Umbenennen nur, wenn sich der Schlüssel im Namensindex ändert. Eine reine Änderung der Groß- und Kleinschreibung lehnen die Rules ab; die App sagt das (offene Frage 26).
+- Entfernen nur bei Saldo 0, nie „Gäste“ und nie aktive Bierwarte (KAD-04, KAD-02), mit Bestätigung (UI-04). Wird ein entfernter Name neu angelegt, bietet das Sheet „Wieder aufnehmen“ an (KAD-08).
+
 **Storno (STR-04, STR-06):**
 - Das Mitglied-Detail zeigt alle Striche, auch bar bezahlte, mit dem Vermerk „bar“ (KAD-06).
 - Strich offen stornieren: Saldo − Preis, Bestand + 1.
@@ -188,7 +196,7 @@ Die Bildschirme brauchen Salden, Bestand und Ortsstände sofort, ohne jedes Mal 
 | Verlauf | `buchungen orderBy stempel.am desc`, optional `where stempel.uid == X` oder `mitgliedId == X`, seitenweise (LOG-03) |
 | Einstellungen | `bierwarte`, `uebernahmen where status == "offen"` |
 
-Zusammengesetzte Indizes kommen in `firestore.indexes.json`.
+Zusammengesetzte Indizes kommen in `firestore.indexes.json`. Dort steht der Index fürs Mitglied-Detail (`mitgliedId` aufsteigend, `stempel.am` absteigend). Der Emulator braucht ihn nicht, das echte Projekt schon: Er muss vor dem ersten echten Einsatz deployt werden (`firebase deploy --only firestore:indexes`, nur mit Freigabe).
 
 ## Security Rules
 
@@ -200,12 +208,12 @@ Die Rules sind in Release 1 die Geschäftslogik. Grundsätze (NFA-07):
 - Jede Verwaltungsaktion schreibt ihre Log-Buchung im selben Batch. Die Rules verlangen sie (`existsAfter`).
 - `einladungen` und `wiederherstellung`: nur `get` für Angemeldete, kein `list`.
 
-Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 189 Emulator-Tests in `rules-tests/`:
+Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 194 Emulator-Tests in `rules-tests/`:
 - `buchungen.test.js` (47): Strich offen und bar, Storno, Zahlung, Einkauf, Bestandskorrektur, Übergabe, Ein-/Auszahlung, Kassensturz, Fälle ohne passende Buchung, Unveränderlichkeit des Logs.
 - `stammdaten.test.js` (32): Mitglieder anlegen, umbenennen, entfernen, wieder aufnehmen; Namensindex; Sorten anlegen, ändern, ausblenden.
 - `verwaltung.test.js` (56): Kasse erstellen, Beitreten, Übernahme anfragen, zurückziehen und entscheiden, Austreten, `users/`, Lesen von Einladungen und Namensindex.
 - `admin.test.js` (43): Link erneuern, Bierwart entfernen, Rollen, Umbenennen, Wiederherstellungscode erneuern, Admin wiederherstellen mit und ohne Bierwart-Eintrag, Auflösen und Löschen.
-- `vertrag.test.js` (11): Batches, wie die App sie baut: Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
+- `vertrag.test.js` (16): Batches, wie die App sie baut: Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
 
 Kern des Musters:
 
@@ -435,3 +443,4 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 23. **Wo sehen Bierwarte offene Anfragen?** Hinweis auf der Strichliste, in den Einstellungen oder beides? Warte-Bildschirm und Anfrage-Ansicht fehlen im Design-Canvas.
 24. **Fehlerhafte Zahlung korrigieren:** STR-06 erlaubt nur, Striche zu stornieren, und die Rules lassen nur das zu. Wie wird eine versehentlich gebuchte Zahlung zurückgenommen: per Storno auch für Zahlungen (STR-06 erweitern) oder über eine Auszahlung mit Grund?
 25. ~~**Kassenwart einer leeren Kasse**~~ – entschieden: Die Wiederherstellung übernimmt auch die Kassenwart-Rolle, wenn deren UID kein aktiver Bierwart mehr ist (siehe [Verwaltung als Batches](#verwaltung-als-batches)).
+26. **Groß- und Kleinschreibung beim Umbenennen:** Die Rules verlangen beim Umbenennen einen anderen `nameKey`. „jonas weber“ lässt sich deshalb nicht in „Jonas Weber“ ändern. Soll die Rule eine reine Schreibweisen-Änderung erlauben (gleicher Schlüssel, Index bleibt), oder reicht das so?

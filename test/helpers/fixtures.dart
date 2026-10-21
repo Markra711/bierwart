@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 // Vertrag mit den Rules: Ein Batch muss seiner Datei in rules-tests/fixtures/
 // entsprechen, und rules-tests/vertrag.test.js spielt genau diese Datei gegen
 // den Emulator ab. Neu schreiben mit:
-//   FIXTURES_AKTUALISIEREN=1 flutter test test/features/onboarding/data
+//   FIXTURES_AKTUALISIEREN=1 flutter test
 
 Object? alsJson(Object? wert) => switch (wert) {
   Serverzeit() => {r'$serverzeit': true},

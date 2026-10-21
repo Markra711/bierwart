@@ -5,6 +5,7 @@ class Mitglied {
     required this.name,
     required this.saldoCents,
     this.istGast = false,
+    this.bierwartUid,
   });
 
   final String id;
@@ -15,6 +16,10 @@ class Mitglied {
 
   /// „Gäste“: immer bar, nie offen (KAD-03).
   final bool istGast;
+
+  /// UID des Bierwarts, der dieses Mitglied ist (KAD-02), auch nach dem
+  /// Austritt. Ob er aktiv ist, steht in `bierwarte/`.
+  final String? bierwartUid;
 }
 
 /// Reihenfolge im Raster der Strichliste: alphabetisch nach Vornamen,

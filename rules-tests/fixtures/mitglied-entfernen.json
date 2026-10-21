@@ -1,0 +1,31 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "update",
+      "pfad": "kassen/k2/mitglieder/m3",
+      "daten": {
+        "entfernt": true,
+        "letzteBuchungId": "l5"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/l5",
+      "daten": {
+        "typ": "mitgliedEntfernt",
+        "mitgliedId": "m3",
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

@@ -45,6 +45,7 @@ function abspielen({ uid, schreibvorgaenge }, { als = uid, ohne = [] } = {}) {
   for (const { art, pfad, daten } of schreibvorgaenge) {
     if (ohne.includes(pfad)) continue;
     if (art === 'update') b.update(doc(fs, pfad), wert(daten));
+    else if (art === 'delete') b.delete(doc(fs, pfad));
     else b.set(doc(fs, pfad), wert(daten));
   }
   return b.commit();
@@ -145,6 +146,52 @@ describe('Strichliste aus der App (STR-02 bis STR-06, BES-01, KAD-01)', () => {
 
   test('ein Fremder kann nicht buchen', async () => {
     await assertFails(abspielen(fixture('strich.json'), { als: 'fremd' }));
+  });
+});
+
+describe('Kader aus der App (KAD-01, KAD-04, KAD-08, GEL-02, GEL-03, UI-09)', () => {
+  const kette = ['kasse-erstellen.json', 'sorte-anlegen.json', 'mitglied-anlegen.json', 'strich.json'].map(fixture);
+  async function lesen(pfad) {
+    let daten;
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      daten = (await getDoc(doc(ctx.firestore(), pfad))).data();
+    });
+    return daten;
+  }
+
+  beforeEach(async () => {
+    for (const batch of kette) await assertSucceeds(abspielen(batch));
+  });
+
+  test('Zahlung ins eigene Portemonnaie gleicht den Saldo aus', async () => {
+    await assertSucceeds(abspielen(fixture('zahlung.json')));
+    expect((await lesen('kassen/k2/mitglieder/m3')).saldoCents).toBe(0);
+    expect((await lesen('kassen/k2/orte/gruender')).standCents).toBe(150);
+  });
+
+  test('Zahlung in die Kasse als Kassenwart', async () => {
+    await assertSucceeds(abspielen(fixture('zahlung-kasse.json')));
+    expect((await lesen('kassen/k2/orte/kasse')).standCents).toBe(5150);
+  });
+
+  test('Entfernen erst bei Saldo 0, dann wieder aufnehmen (KAD-04, KAD-08)', async () => {
+    await assertFails(abspielen(fixture('mitglied-entfernen.json')));
+    await assertSucceeds(abspielen(fixture('zahlung.json')));
+    await assertSucceeds(abspielen(fixture('mitglied-entfernen.json')));
+    expect((await lesen('kassen/k2/mitglieder/m3')).entfernt).toBe(true);
+    await assertSucceeds(abspielen(fixture('mitglied-wiederaufnehmen.json')));
+    expect((await lesen('kassen/k2/mitglieder/m3')).entfernt).toBe(false);
+  });
+
+  test('Mitglied ohne App umbenennen, alter Name wird frei', async () => {
+    await assertSucceeds(abspielen(fixture('mitglied-umbenennen.json')));
+    expect((await lesen('kassen/k2/mitglieder/m3')).name).toBe('Tim Richter-Berg');
+    expect(await lesen('kassen/k2/namen/tim richter')).toBeUndefined();
+  });
+
+  test('Bierwart umbenennen, Stempel-Name zieht mit', async () => {
+    await assertSucceeds(abspielen(fixture('bierwart-umbenennen.json')));
+    expect((await lesen('kassen/k2/bierwarte/gruender')).name).toBe('Lena Koch-Meier');
   });
 });
 

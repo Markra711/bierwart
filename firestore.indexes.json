@@ -1,4 +1,13 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "buchungen",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mitgliedId", "order": "ASCENDING" },
+        { "fieldPath": "stempel.am", "order": "DESCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

@@ -13,6 +13,9 @@ enum BwKnopfArt {
 
   /// 1,5px Rahmen in `ink`.
   outline,
+
+  /// Wie Outline, aber in `negative`: Entfernen, Austreten, Auflösen.
+  destruktiv,
 }
 
 /// Pillen-Button (styleguide.md, Button). Ohne [onPressed] ist er
@@ -48,9 +51,11 @@ class BwKnopf extends StatelessWidget {
     final deaktiviert = onPressed == null && !laedt;
     final textFarbe = deaktiviert
         ? BwColors.inkMuted
-        : art == BwKnopfArt.primaer
-        ? BwColors.onAccent
-        : BwColors.ink;
+        : switch (art) {
+            BwKnopfArt.primaer => BwColors.onAccent,
+            BwKnopfArt.destruktiv => BwColors.negative,
+            _ => BwColors.ink,
+          };
     final radius = BorderRadius.circular(BwRadius.pill);
 
     final inhalt = Row(
@@ -97,6 +102,10 @@ class BwKnopf extends StatelessWidget {
             BwKnopfArt.outline => BoxDecoration(
               borderRadius: radius,
               border: Border.all(color: BwColors.ink, width: 1.5),
+            ),
+            BwKnopfArt.destruktiv => BoxDecoration(
+              borderRadius: radius,
+              border: Border.all(color: BwColors.negative, width: 1.5),
             ),
           };
 

@@ -1,10 +1,21 @@
 /// Fehler in den Eingaben eines Anlege-Sheets, je Feld.
 class Eingabefehler {
-  const Eingabefehler({this.name, this.preis, this.allgemein});
+  const Eingabefehler({
+    this.name,
+    this.preis,
+    this.allgemein,
+    this.entferntesMitgliedId,
+  });
 
   final String? name;
+
+  /// Preis oder Betrag.
   final String? preis;
   final String? allgemein;
+
+  /// Der Name gehört einem entfernten Mitglied; das Sheet bietet „wieder
+  /// aufnehmen“ an (KAD-08).
+  final String? entferntesMitgliedId;
 
   bool get keine => name == null && preis == null && allgemein == null;
 }

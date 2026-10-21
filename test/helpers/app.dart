@@ -5,6 +5,7 @@ import 'package:bier_wart/src/core/firebase/batch_schreiber.dart';
 import 'package:bier_wart/src/core/speicher/lokaler_speicher.dart';
 import 'package:bier_wart/src/core/theme/app_theme.dart';
 import 'package:bier_wart/src/features/kader/data/mitglieder_repository.dart';
+import 'package:bier_wart/src/features/kader/data/verlauf_repository.dart';
 import 'package:bier_wart/src/features/lager/data/sorten_repository.dart';
 import 'package:bier_wart/src/features/onboarding/data/anmeldung_repository.dart';
 import 'package:bier_wart/src/features/onboarding/data/einladungslinks.dart';
@@ -82,7 +83,7 @@ class FakeKasseRepository implements KasseRepository {
 /// Eine Fake-Datenbank mit Kasse `k1`, dem Nutzer `uid` als Bierwart
 /// „Tobias Meier“ und „Gäste“.
 FakeDatenbank testDatenbank() => FakeDatenbank()
-  ..kasse('k1', name: 'SV Test')
+  ..neueKasse('k1', name: 'SV Test')
   ..bierwart('k1', 'uid', 'Tobias Meier')
   ..mitglied('k1', 'gaeste', 'Gäste', gast: true);
 
@@ -123,6 +124,7 @@ Future<FakeKasseRepository> appStarten(
       sortenRepositoryProvider.overrideWithValue(daten),
       mitgliederRepositoryProvider.overrideWithValue(FakeMitglieder(daten)),
       kassenkopfRepositoryProvider.overrideWithValue(daten),
+      verlaufRepositoryProvider.overrideWithValue(daten),
       lokalerSpeicherProvider.overrideWithValue(
         einstellungen ?? FakeSpeicher(),
       ),
