@@ -30,6 +30,12 @@ flutter run --dart-define=USE_EMULATORS=true   # gegen lokale Emulatoren (Projek
 # Emulatoren immer mit Demo-Projekt, nie mit echten Daten
 firebase emulators:start --project demo-bierwart
 
+# App lokal ausprobieren (Android-Emulator auf demselben Rechner):
+#   1. Emulatoren starten (siehe oben), Oberfläche unter http://localhost:4000
+#   2. flutter run --dart-define=USE_EMULATORS=true
+# Ohne den Schalter spricht die App mit dem echten Projekt. Dort sind die
+# Rules noch nicht deployt, also wird alles außer der Anmeldung abgelehnt.
+
 # Rules-Tests (Node, Vitest) gegen den Firestore-Emulator
 npm --prefix rules-tests ci
 npm --prefix rules-tests run test:emulator

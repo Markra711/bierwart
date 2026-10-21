@@ -89,8 +89,9 @@ class FirestoreKasseRepository implements KasseRepository {
     } on FirebaseException catch (e) {
       throw VerwaltungsFehler(switch (e.code) {
         'unavailable' => 'Dafür brauchst du Netz.',
-        'permission-denied' =>
-          'Abgelehnt. Bist du schon in einer anderen Kasse?',
+        // Kann vieles heißen (andere Kasse, Rules nicht deployt), daher
+        // keine Vermutung, aber der Code für die Fehlersuche.
+        'permission-denied' => 'Der Server hat abgelehnt (permission-denied).',
         _ => 'Die Kasse ließ sich nicht erstellen (${e.code}).',
       });
     }
