@@ -1,0 +1,110 @@
+{
+  "uid": "zurueck",
+  "schreibvorgaenge": [
+    {
+      "art": "update",
+      "pfad": "kassen/k2",
+      "daten": {
+        "adminUid": "zurueck",
+        "kassenwartUid": "zurueck",
+        "wiederherstellungHash": {
+          "$bytes": "3aaaaf11347760ee94db6c8d8b397eca34c6e3816d92071b31e260dc676468bc"
+        },
+        "leerSeit": null,
+        "letzteBuchungId": "w1"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "wiederherstellung/3aaaaf11347760ee94db6c8d8b397eca34c6e3816d92071b31e260dc676468bc",
+      "daten": {
+        "kasseId": "k2"
+      }
+    },
+    {
+      "art": "delete",
+      "pfad": "wiederherstellung/be105af532593b07b857dbbb0012fc12a939efb515656aa111fc0120993c0609",
+      "daten": {}
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/mitglieder/m1",
+      "daten": {
+        "bierwartUid": "zurueck",
+        "entfernt": false,
+        "letzteBuchungId": "w1"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/bierwarte/zurueck",
+      "daten": {
+        "mitgliedId": "m1",
+        "name": "Lena Koch",
+        "beigetretenAm": {
+          "$serverzeit": true
+        },
+        "einladungCode": null,
+        "letzteBuchungId": "w1"
+      }
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/bierwarte/gruender",
+      "daten": {}
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/orte/gruender",
+      "daten": {
+        "ehemalig": true,
+        "letzteBuchungId": "w1"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/orte/zurueck",
+      "daten": {
+        "art": "portemonnaie",
+        "uid": "zurueck",
+        "name": "Lena Koch",
+        "standCents": 0,
+        "ehemalig": false,
+        "letzteBuchungId": "w1"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "users/zurueck",
+      "daten": {
+        "kasseId": "k2"
+      }
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/wiederherstellungen/zurueck",
+      "daten": {}
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/w1",
+      "daten": {
+        "typ": "adminWiederhergestellt",
+        "nachweis": "ABCD1234EFGH5678",
+        "mitgliedId": "m1",
+        "alteUid": "gruender",
+        "neueUid": "zurueck",
+        "stempel": {
+          "uid": "zurueck",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

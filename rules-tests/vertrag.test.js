@@ -485,3 +485,57 @@ describe('Wiederherstellungscode aus der App (ADM-06, ADM-08)', () => {
     }));
   });
 });
+
+describe('Wiederherstellung aus dem Onboarding (ADM-06, UC-03, UC-04, ADR-0010)', () => {
+  const kette = ['kasse-erstellen.json', 'beitreten.json'].map(fixture);
+  async function lesen(pfad) {
+    let daten;
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const snap = await getDoc(doc(ctx.firestore(), pfad));
+      daten = snap.exists() ? snap.data() : undefined;
+    });
+    return daten;
+  }
+  const fs = () => env.authenticatedContext('zurueck').firestore();
+
+  beforeEach(async () => {
+    for (const batch of kette) await assertSucceeds(abspielen(batch));
+  });
+
+  test('ohne Nachweis sieht das neue Gerät nichts, mit Nachweis alles Nötige', async () => {
+    await assertFails(getDoc(doc(fs(), 'kassen/k2')));
+    await assertSucceeds(abspielen(fixture('nachweis.json')));
+    await assertSucceeds(getDoc(doc(fs(), 'kassen/k2')));
+    for (const s of ['mitglieder', 'bierwarte', 'orte', 'namen']) {
+      await assertSucceeds(getDocs(collection(fs(), `kassen/k2/${s}`)));
+    }
+  });
+
+  test('als Lena zurück: Admin und Kassenwart, alter Zugang weg', async () => {
+    await assertSucceeds(abspielen(fixture('nachweis.json')));
+    await assertSucceeds(abspielen(fixture('wiederherstellen-mitglied.json')));
+    const kasse = await lesen('kassen/k2');
+    expect([kasse.adminUid, kasse.kassenwartUid, kasse.anzahlBierwarte]).toEqual(['zurueck', 'zurueck', 2]);
+    expect(await lesen('kassen/k2/bierwarte/gruender')).toBeUndefined();
+    expect((await lesen('kassen/k2/orte/gruender')).ehemalig).toBe(true);
+    expect((await lesen('users/zurueck')).kasseId).toBe('k2');
+    expect(await lesen('kassen/k2/wiederherstellungen/zurueck')).toBeUndefined();
+  });
+
+  test('als neues Mitglied: Admin, Lena bleibt Kassenwart', async () => {
+    await assertSucceeds(abspielen(fixture('nachweis.json')));
+    await assertSucceeds(abspielen(fixture('wiederherstellen-neu.json')));
+    const kasse = await lesen('kassen/k2');
+    expect([kasse.adminUid, kasse.kassenwartUid, kasse.anzahlBierwarte]).toEqual(['zurueck', 'gruender', 3]);
+    expect((await lesen('einladungen/K7Q2MXA93DWFT2HC8RNP')).anzahlBierwarte).toBe(3);
+  });
+
+  test('danach gilt der alte Code nicht mehr, auch nicht als Nachweis', async () => {
+    await assertSucceeds(abspielen(fixture('nachweis.json')));
+    await assertSucceeds(abspielen(fixture('wiederherstellen-neu.json')));
+    const fremd = env.authenticatedContext('fremd').firestore();
+    await assertFails(setDoc(doc(fremd, 'kassen/k2/wiederherstellungen/fremd'), {
+      nachweis: 'ABCD1234EFGH5678', angelegtAm: serverTimestamp(),
+    }));
+  });
+});

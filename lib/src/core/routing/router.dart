@@ -14,6 +14,7 @@ import '../../features/lager/presentation/einkauf_screen.dart';
 import '../../features/lager/presentation/lager_screen.dart';
 import '../../features/lager/presentation/sorte_bearbeiten_screen.dart';
 import '../../features/onboarding/application/onboarding.dart';
+import '../../features/onboarding/application/wiederherstellung.dart';
 import '../../features/onboarding/domain/erstellte_kasse.dart';
 import '../../features/onboarding/presentation/beitreten_screen.dart';
 import '../../features/onboarding/presentation/einladen_screen.dart';
@@ -21,6 +22,7 @@ import '../../features/onboarding/presentation/kasse_erstellen_screen.dart';
 import '../../features/onboarding/presentation/laden_screen.dart';
 import '../../features/onboarding/presentation/link_einfuegen_screen.dart';
 import '../../features/onboarding/presentation/name_waehlen_screen.dart';
+import '../../features/onboarding/presentation/wiederherstellen_screen.dart';
 import '../../features/onboarding/presentation/wiederherstellungscode_screen.dart';
 import '../../features/onboarding/presentation/willkommen_screen.dart';
 import '../../features/strichliste/presentation/strichliste_screen.dart';
@@ -41,6 +43,7 @@ abstract final class Routen {
   static const linkEinfuegen = '/link-einfuegen';
   static const beitreten = '/beitreten';
   static const nameWaehlen = '/name-waehlen';
+  static const wiederherstellen = '/wiederherstellen';
 
   // Tabs (UI-02) und Seiten in der Kasse
   static const kader = '/kader';
@@ -83,22 +86,29 @@ const ohneKasse = {
   Routen.linkEinfuegen,
   Routen.beitreten,
   Routen.nameWaehlen,
+  Routen.wiederherstellen,
 };
 
 /// Wohin die App den Nutzer schickt; `null` = bleiben. Ohne Kasse ins
 /// Onboarding, mit Kasse auf die Strichliste (UI-01), während des Auflösens
 /// nur auf dessen Seite (ADM-05). Wer gerade eine Kasse erstellt, bleibt im
 /// Ablauf, bis der Server sie angenommen hat und Code und Einladung gezeigt
-/// wurden (AUTH-03). Wer gerade beitritt, bleibt auf „Wie
-/// heißt du?“, bis der Server geantwortet hat. Ein offener Einladungscode
-/// führt ohne Kasse vom Start direkt zu „Kasse beitreten?“ (AUTH-06).
+/// wurden (AUTH-03). Wer gerade beitritt, bleibt auf „Wie heißt du?“, bis
+/// der Server geantwortet hat; wer sich mit dem Wiederherstellungscode
+/// zurückmeldet, bis er den neuen Code gesehen hat (ADR-0010). Ein offener
+/// Einladungscode führt ohne Kasse vom Start direkt zu „Kasse beitreten?“
+/// (AUTH-06).
 String? weiterleitung(
   Startzustand zustand,
   ErstellteKasse? neu,
   String ort, {
   bool beitrittLaeuft = false,
+  bool wiederherstellungHaeltFest = false,
   String? offenerCode,
 }) {
+  if (wiederherstellungHaeltFest) {
+    return ort == Routen.wiederherstellen ? null : Routen.wiederherstellen;
+  }
   if (beitrittLaeuft) {
     return ort == Routen.nameWaehlen ? null : Routen.nameWaehlen;
   }
@@ -127,6 +137,10 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen(startzustandProvider, (_, _) => aenderung.value++);
   ref.listen(ersteKasseProvider, (_, _) => aenderung.value++);
   ref.listen(beitrittProvider, (_, _) => aenderung.value++);
+  ref.listen(
+    wiederherstellungProvider.select((w) => w.haeltFest),
+    (_, _) => aenderung.value++,
+  );
 
   GoRoute seite(String pfad, Widget Function() bauen) =>
       GoRoute(path: pfad, builder: (context, state) => bauen());
@@ -139,6 +153,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ref.read(ersteKasseProvider),
       state.uri.path,
       beitrittLaeuft: ref.read(beitrittProvider),
+      wiederherstellungHaeltFest: ref.read(wiederherstellungProvider).haeltFest,
       offenerCode: ref.read(offenerCodeProvider),
     ),
     routes: [
@@ -188,6 +203,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       seite(Routen.einladen, () => const EinladenScreen()),
       seite(Routen.linkEinfuegen, () => const LinkEinfuegenScreen()),
+      seite(Routen.wiederherstellen, () => const WiederherstellenScreen()),
       GoRoute(
         path: Routen.beitreten,
         builder: (context, state) =>

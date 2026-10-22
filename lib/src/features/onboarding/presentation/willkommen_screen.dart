@@ -55,6 +55,19 @@ class WillkommenScreen extends StatelessWidget {
           gross: true,
           onPressed: () => context.go(Routen.linkEinfuegen),
         ),
+        Center(
+          child: TextButton(
+            onPressed: () => context.go(Routen.wiederherstellen),
+            style: TextButton.styleFrom(
+              foregroundColor: BwColors.ink,
+              minimumSize: const Size(0, BwKnopf.hoehe),
+            ),
+            child: Text(
+              'Ich habe einen Wiederherstellungscode',
+              style: text.body.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
         Text(
           'Anonyme Anmeldung über Firebase. Das Gerät bleibt angemeldet.',
           textAlign: TextAlign.center,

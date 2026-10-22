@@ -1,0 +1,123 @@
+{
+  "uid": "zurueck",
+  "schreibvorgaenge": [
+    {
+      "art": "update",
+      "pfad": "kassen/k2",
+      "daten": {
+        "adminUid": "zurueck",
+        "kassenwartUid": "gruender",
+        "wiederherstellungHash": {
+          "$bytes": "3aaaaf11347760ee94db6c8d8b397eca34c6e3816d92071b31e260dc676468bc"
+        },
+        "leerSeit": null,
+        "anzahlBierwarte": {
+          "$erhoehen": 1
+        },
+        "letzteBuchungId": "w1"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "einladungen/K7Q2MXA93DWFT2HC8RNP",
+      "daten": {
+        "anzahlBierwarte": {
+          "$erhoehen": 1
+        }
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "wiederherstellung/3aaaaf11347760ee94db6c8d8b397eca34c6e3816d92071b31e260dc676468bc",
+      "daten": {
+        "kasseId": "k2"
+      }
+    },
+    {
+      "art": "delete",
+      "pfad": "wiederherstellung/be105af532593b07b857dbbb0012fc12a939efb515656aa111fc0120993c0609",
+      "daten": {}
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/mitglieder/m9",
+      "daten": {
+        "name": "Paula Neu",
+        "nameKey": "paula neu",
+        "istGast": false,
+        "bierwartUid": "zurueck",
+        "entfernt": false,
+        "saldoCents": 0,
+        "letzteBuchungId": "w1",
+        "angelegtAm": {
+          "$serverzeit": true
+        }
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/namen/paula neu",
+      "daten": {
+        "mitgliedId": "m9"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/bierwarte/zurueck",
+      "daten": {
+        "mitgliedId": "m9",
+        "name": "Paula Neu",
+        "beigetretenAm": {
+          "$serverzeit": true
+        },
+        "einladungCode": null,
+        "letzteBuchungId": "w1"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/orte/zurueck",
+      "daten": {
+        "art": "portemonnaie",
+        "uid": "zurueck",
+        "name": "Paula Neu",
+        "standCents": 0,
+        "ehemalig": false,
+        "letzteBuchungId": "w1"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "users/zurueck",
+      "daten": {
+        "kasseId": "k2"
+      }
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/wiederherstellungen/zurueck",
+      "daten": {}
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/w1",
+      "daten": {
+        "typ": "adminWiederhergestellt",
+        "nachweis": "ABCD1234EFGH5678",
+        "mitgliedId": "m9",
+        "alteUid": null,
+        "neueUid": "zurueck",
+        "stempel": {
+          "uid": "zurueck",
+          "name": "Paula Neu",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

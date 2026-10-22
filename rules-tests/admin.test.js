@@ -12,9 +12,11 @@ import {
 import {
   Bytes,
   Timestamp,
+  collection,
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   increment,
   serverTimestamp,
   setDoc,
@@ -371,6 +373,66 @@ describe('Admin wiederherstellen ohne Bierwart-Eintrag (ADM-06, UC-03)', () => {
   test('nicht in einer aufgelösten Kasse', async () => {
     await aendern('/' + K, { aufgeloest: true });
     await assertFails(uebernehmen());
+  });
+});
+
+describe('Nachweis für die Wiederherstellung (ADM-06, UC-03, ADR-0010)', () => {
+  // „neu“ ist kein Bierwart und kennt nur den Code.
+  const nachweisen = ({ uid = 'neu', nachweis = RCODE, felder = {} } = {}) =>
+    setDoc(doc(db(uid), `${K}/wiederherstellungen/${uid}`), { nachweis, angelegtAm: serverTimestamp(), ...felder });
+  const lesenAls = (uid, pfad) => getDoc(ref(db(uid), pfad));
+
+  test('ohne Nachweis darf ein Fremder nichts lesen', async () => {
+    await assertFails(lesenAls('neu', '/' + K));
+    await assertFails(lesenAls('neu', 'mitglieder/jonas'));
+  });
+
+  test('mit gültigem Code: Kasse, Mitglieder, Bierwarte und Orte lesbar', async () => {
+    await assertSucceeds(nachweisen());
+    for (const pfad of ['/' + K, 'mitglieder/jonas', 'bierwarte/kw', 'orte/kw']) {
+      await assertSucceeds(lesenAls('neu', pfad));
+    }
+  });
+
+  test('falscher Code oder nicht normalisiert abgelehnt', async () => {
+    await assertFails(nachweisen({ nachweis: RNEU }));
+    await assertFails(nachweisen({ nachweis: 'K7QM-3XRA-9DWF-T2HC' }));
+  });
+
+  test('nur für die eigene UID und ohne weitere Felder', async () => {
+    await assertFails(setDoc(doc(db('neu'), `${K}/wiederherstellungen/anna`), { nachweis: RCODE, angelegtAm: serverTimestamp() }));
+    await assertFails(nachweisen({ felder: { extra: 1 } }));
+  });
+
+  test('den Nachweis lesen nur der Inhaber, nicht die Bierwarte', async () => {
+    await assertSucceeds(nachweisen());
+    await assertSucceeds(lesenAls('neu', 'wiederherstellungen/neu'));
+    await assertFails(lesenAls('anna', 'wiederherstellungen/neu'));
+  });
+
+  test('nach einem neuen Code gilt der Nachweis nicht mehr', async () => {
+    await assertSucceeds(nachweisen());
+    await aendern('/' + K, { wiederherstellungHash: hashBytes(RNEU) });
+    await assertFails(lesenAls('neu', '/' + K));
+  });
+
+  test('nicht in einer aufgelösten Kasse', async () => {
+    await aendern('/' + K, { aufgeloest: true });
+    await assertFails(nachweisen());
+  });
+
+  test('der Inhaber löscht ihn, ein anderer nicht', async () => {
+    await assertSucceeds(nachweisen());
+    await assertFails(deleteDoc(ref(db('anna'), 'wiederherstellungen/neu')));
+    await assertSucceeds(deleteDoc(ref(db('neu'), 'wiederherstellungen/neu')));
+  });
+
+  test('beim Auflösen löscht der Admin auch Nachweise', async () => {
+    await assertSucceeds(nachweisen());
+    await aendern('/' + K, { aufgeloest: true });
+    const q = await getDocs(collection(db('kw'), `${K}/wiederherstellungen`));
+    expect(q.size).toBe(1);
+    await assertSucceeds(deleteDoc(ref(db('kw'), 'wiederherstellungen/neu')));
   });
 });
 
