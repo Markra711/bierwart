@@ -1,0 +1,42 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "update",
+      "pfad": "kassen/k2/mitglieder/m1",
+      "daten": {
+        "name": "Lena KOCH",
+        "nameKey": "lena koch",
+        "letzteBuchungId": "l9"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/bierwarte/gruender",
+      "daten": {
+        "name": "Lena KOCH",
+        "letzteBuchungId": "l9"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/l9",
+      "daten": {
+        "typ": "mitgliedUmbenannt",
+        "mitgliedId": "m1",
+        "nameAlt": "Lena Koch",
+        "nameNeu": "Lena KOCH",
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

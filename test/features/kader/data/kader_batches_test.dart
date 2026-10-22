@@ -119,6 +119,41 @@ void main() {
         ),
       );
     });
+
+    test('Bierwart ändert nur die Schreibweise (offene Frage 26)', () {
+      vertragPruefen(
+        'bierwart-schreibweise.json',
+        batchAlsJson(
+          uid,
+          mitgliedUmbenennenBatch(
+            uid: uid,
+            bierwartName: bierwart,
+            kasseId: 'k2',
+            mitgliedId: 'm1',
+            buchungId: 'l9',
+            nameAlt: 'Lena Koch',
+            nameNeu: 'Lena KOCH',
+            bierwartUid: uid,
+            geraetZeit: zeit,
+          ),
+        ),
+      );
+    });
+  });
+
+  test('nur die Schreibweise: der Namensindex bleibt unberührt', () {
+    final b = mitgliedUmbenennenBatch(
+      uid: uid,
+      bierwartName: bierwart,
+      kasseId: 'k2',
+      mitgliedId: 'm3',
+      buchungId: 'l7',
+      nameAlt: 'tim richter',
+      nameNeu: 'Tim Richter',
+      bierwartUid: null,
+      geraetZeit: zeit,
+    );
+    expect(b.where((s) => s.pfad.contains('/namen/')), isEmpty);
   });
 
   test('Zahlung senkt den Saldo und füllt den Ort', () {

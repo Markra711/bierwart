@@ -184,6 +184,39 @@ describe('Mitglied umbenennen (KAD-01, UI-09)', () => {
     await assertFails(umbenennen('weg', 'Paul Alt', 'Paul Neu'));
   });
 
+  // Nur Groß- und Kleinschreibung (offene Frage 26): gleicher Schlüssel,
+  // der Index bleibt, wie er ist.
+  const schreibweise = (id, alt, neu, { uid = 'anna', mitBierwart = false, mitIndex = false } = {}) => {
+    const aenderungen = [['update', `mitglieder/${id}`, { name: neu, nameKey: key(neu), letzteBuchungId: 'l2' }]];
+    if (mitIndex) aenderungen.push(['delete', `namen/${key(alt)}`]);
+    if (mitBierwart) aenderungen.push(['update', `bierwarte/${id}`, { name: neu, letzteBuchungId: 'l2' }]);
+    return batch(uid, 'l2', { typ: 'mitgliedUmbenannt', mitgliedId: id, nameAlt: alt, nameNeu: neu }, aenderungen);
+  };
+
+  test('nur die Schreibweise ändern, der Index bleibt', async () => {
+    await assertSucceeds(schreibweise('jonas', 'Jonas Weber', 'Jonas WEBER'));
+    expect((await lesen('mitglieder/jonas')).name).toBe('Jonas WEBER');
+    expect((await lesen('namen/jonas weber')).mitgliedId).toBe('jonas');
+  });
+
+  test('Schreibweise eines Bierwarts: Stempel-Name zieht mit', async () => {
+    await assertFails(schreibweise('kw', 'Karl Wagner', 'KARL Wagner', { uid: 'kw' }));
+    await assertSucceeds(schreibweise('kw', 'Karl Wagner', 'KARL Wagner', { uid: 'kw', mitBierwart: true }));
+  });
+
+  test('bei gleicher Schreibweise wird nichts gebucht', async () => {
+    await assertFails(schreibweise('jonas', 'Jonas Weber', 'Jonas Weber'));
+  });
+
+  test('der Index darf dabei nicht verschwinden', async () => {
+    await assertFails(schreibweise('jonas', 'Jonas Weber', 'Jonas WEBER', { mitIndex: true }));
+  });
+
+  test('auch bei „Gäste“ und entfernten nicht', async () => {
+    await assertFails(schreibweise('gaeste', 'Gäste', 'GÄSTE'));
+    await assertFails(schreibweise('weg', 'Paul Alt', 'Paul ALT'));
+  });
+
   test('Namensindex fremder Mitglieder lässt sich nicht löschen', async () => {
     const fs = db('anna');
     await assertFails(writeBatch(fs).delete(doc(fs, `${K}/namen/jonas weber`)).commit());
