@@ -171,6 +171,11 @@ Gemeinsame Felder:
 - **Übergabe** (GEL-04) sieht nur der Kassenwart: „In die Kasse“ von einem Portemonnaie, „Aus der Kasse“ in eines. Zur Wahl stehen alle sichtbaren Portemonnaies, auch das eigene und ehemalige. Der Betrag startet mit dem, was sich ausgleichen lässt: dem Stand des Portemonnaies, beziehungsweise der Auslage. Geht offline und wartet nicht.
 - **Kassensturz** (GEL-06) sieht nur der Kassenwart. Er geht nur mit Netz, wie die Bestandskorrektur (siehe Summen, Punkt 7): Die App liest den Kassenstand mit `Source.server`. Weicht er von dem Stand ab, den das Sheet gezeigt hat, bucht sie nicht und bittet, die Differenz zu prüfen. So wird nie eine andere Differenz gebucht als die angezeigte. Sonst schreibt sie gezählten Betrag und Differenz und wartet auf den Server.
 
+**Verlauf (LOG-03):**
+- Eine Unterseite vom Geld-Tab aus („Verlauf ansehen“). Sie zeigt alle Buchungen der Kasse nach Tagen („Samstag, 17. Oktober“), neueste zuerst, mit Uhrzeit, Text, Stempel-Name und Betrag, seitenweise zu 50 („Ältere laden“). Ohne Serverzeit gilt `stempel.geraetAm`.
+- Filter nach Bierwart (`stempel.uid`) und nach Mitglied (`mitgliedId`), auch beide zusammen; die Auswahl öffnet ein Sheet. Zur Wahl stehen alle Bierwarte, die je ein Portemonnaie hatten, und die aktuellen Mitglieder.
+- Den Text baut `logZeile` in `geld/domain` aus einer `Logbuchung`, die `data/` aus dem Dokument liest. Namen löst die App über Kader (auch entfernte Mitglieder), Sorten und Orte auf; fehlt einer, steht dort „Mitglied“ oder „Sorte“, nie eine ID. Zahlungen und Einzahlungen erscheinen in `positive` mit Plus, Einkauf, Auszahlung und eine negative Kassendifferenz in `negative`, Buchungen ohne Geld mit „—“. Unbekannte Typen zeigen „Buchung“.
+
 **Storno (STR-04, STR-06):**
 - Das Mitglied-Detail zeigt alle Striche, auch bar bezahlte, mit dem Vermerk „bar“ (KAD-06).
 - Strich offen stornieren: Saldo − Preis, Bestand + 1.
@@ -206,10 +211,10 @@ Die Bildschirme brauchen Salden, Bestand und Ortsstände sofort, ohne jedes Mal 
 | Kader | `mitglieder where entfernt == false` (Sortierung nach Saldo im Client, KAD-05) |
 | Mitglied-Detail | `buchungen where mitgliedId == X orderBy stempel.am desc` (Index nötig, KAD-06) |
 | Geld | `orte`, `kassen/{k}`, letzter Kassensturz: `buchungen where typ == "kassensturz" orderBy stempel.am desc limit 1` (Index nötig, GEL-06) |
-| Verlauf | `buchungen orderBy stempel.am desc`, optional `where stempel.uid == X` oder `mitgliedId == X`, seitenweise (LOG-03) |
+| Verlauf | `buchungen orderBy stempel.am desc`, optional `where stempel.uid == X` und/oder `mitgliedId == X`, seitenweise zu 50 (Indizes nötig, LOG-03) |
 | Einstellungen | `bierwarte`, `uebernahmen where status == "offen"` |
 
-Zusammengesetzte Indizes kommen in `firestore.indexes.json`. Dort stehen die Indizes fürs Mitglied-Detail (`mitgliedId` aufsteigend, `stempel.am` absteigend) und für den letzten Kassensturz (`typ` aufsteigend, `stempel.am` absteigend). Der Emulator braucht sie nicht, das echte Projekt schon: Sie müssen vor dem ersten echten Einsatz deployt werden (`firebase deploy --only firestore:indexes`, nur mit Freigabe).
+Zusammengesetzte Indizes kommen in `firestore.indexes.json`. Dort stehen die Indizes fürs Mitglied-Detail (`mitgliedId` aufsteigend, `stempel.am` absteigend) für den letzten Kassensturz (`typ` aufsteigend, `stempel.am` absteigend) und für die Filter im Verlauf (`stempel.uid`, optional `mitgliedId`, jeweils mit `stempel.am` absteigend). Der Emulator braucht sie nicht, das echte Projekt schon: Sie müssen vor dem ersten echten Einsatz deployt werden (`firebase deploy --only firestore:indexes`, nur mit Freigabe).
 
 ## Security Rules
 

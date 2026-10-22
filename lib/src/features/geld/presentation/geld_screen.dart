@@ -24,7 +24,7 @@ import 'uebergabe_sheet.dart';
 /// Tab 04 (GEL-07): Vermögen der Mannschaft im Kopf, die Kasse als
 /// Hauptkarte, alle Portemonnaies, auch ehemalige mit Restbetrag (GEL-08).
 /// Ein- und Auszahlung für alle; Übergabe und Kassensturz sieht nur der
-/// Kassenwart (UI-08).
+/// Kassenwart (UI-08). Darunter geht es zum Verlauf (LOG-03).
 class GeldScreen extends ConsumerWidget {
   const GeldScreen({super.key});
 
@@ -79,12 +79,34 @@ class GeldScreen extends ConsumerWidget {
                 ),
               ],
             ),
+          const _VerlaufLink(),
         ],
         AsyncError() => const [
           BwFehler('Kasse und Portemonnaies ließen sich nicht laden.'),
         ],
         _ => const [],
       },
+    );
+  }
+}
+
+/// „Verlauf ansehen →“ als ruhiger Textknopf (LOG-03).
+class _VerlaufLink extends StatelessWidget {
+  const _VerlaufLink();
+
+  @override
+  Widget build(BuildContext context) {
+    final stil = Theme.of(context).extension<BwTextStyles>()!.button;
+    return Center(
+      child: TextButton(
+        onPressed: () => context.push(Routen.verlauf),
+        style: TextButton.styleFrom(
+          foregroundColor: BwColors.ink,
+          minimumSize: const Size(0, BwKnopf.hoehe),
+          textStyle: stil,
+        ),
+        child: const Text('VERLAUF ANSEHEN →'),
+      ),
     );
   }
 }

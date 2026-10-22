@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/einstellungen/presentation/einstellungen_screen.dart';
 import '../../features/geld/presentation/geld_screen.dart';
+import '../../features/geld/presentation/verlauf_screen.dart';
 import '../../features/kader/presentation/kader_screen.dart';
 import '../../features/kader/presentation/mitglied_detail_screen.dart';
 import '../../features/lager/presentation/einkauf_screen.dart';
@@ -46,6 +47,7 @@ abstract final class Routen {
   static const mitglied = '/mitglied';
   static const einkauf = '/einkauf';
   static const sorte = '/sorte';
+  static const verlauf = '/verlauf';
 
   /// Sorte bearbeiten, eine Unterseite ohne Tab-Leiste.
   static String sorteBearbeiten(String id) => '$sorte/$id';
@@ -142,6 +144,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       seite(Routen.einstellungen, () => const EinstellungenScreen()),
       seite(Routen.einkauf, () => const EinkaufScreen()),
+      seite(Routen.verlauf, () => const VerlaufScreen()),
       GoRoute(
         path: '${Routen.sorte}/:id',
         builder: (context, state) =>

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bier_wart/src/core/firebase/batch_schreiber.dart';
 import 'package:bier_wart/src/core/firebase/schreibvorgang.dart';
 import 'package:bier_wart/src/core/speicher/lokaler_speicher.dart';
+import 'package:bier_wart/src/features/geld/data/log_repository.dart';
 import 'package:bier_wart/src/features/geld/data/orte_repository.dart';
 import 'package:bier_wart/src/features/geld/domain/ort.dart';
 import 'package:bier_wart/src/features/kader/data/mitglieder_repository.dart';
@@ -23,7 +24,8 @@ class FakeDatenbank
         SortenRepository,
         KassenkopfRepository,
         VerlaufRepository,
-        OrteRepository {
+        OrteRepository,
+        LogRepository {
   final docs = <String, Map<String, Object?>>{};
   final batches = <List<Schreibvorgang>>[];
   final _aenderung = StreamController<void>.broadcast();
@@ -169,6 +171,13 @@ class FakeDatenbank
     ],
   );
 
+  Stream<Map<String, String>> mitgliederNamen(String kasseId) => _beobachten(
+    () => {
+      for (final e in _unter('kassen/$kasseId/mitglieder'))
+        _letzte(e.key): e.value['name']! as String,
+    },
+  );
+
   Future<NamensBesitzer?> nameBelegt(String kasseId, String name) async {
     final id = docs['kassen/$kasseId/namen/${nameKey(name)}']?['mitgliedId'];
     if (id == null) return null;
@@ -265,6 +274,29 @@ class FakeDatenbank
     return letzter;
   });
 
+  /// Wie die Firestore-Abfrage: alle Buchungen, optional gefiltert,
+  /// neueste zuerst, höchstens [anzahl].
+  @override
+  Stream<LogSeite> log(
+    String kasseId, {
+    String? bierwartUid,
+    String? mitgliedId,
+    required int anzahl,
+  }) => _beobachten(() {
+    DateTime zeit(Map<String, Object?> d) =>
+        (d['stempel']! as Map)['geraetAm']! as DateTime;
+    final buchungen = [
+      for (final e in _unter('kassen/$kasseId/buchungen'))
+        if ((bierwartUid == null ||
+                (e.value['stempel']! as Map)['uid'] == bierwartUid) &&
+            (mitgliedId == null || e.value['mitgliedId'] == mitgliedId))
+          (_letzte(e.key), e.value),
+    ]..sort((a, b) => zeit(b.$2).compareTo(zeit(a.$2)));
+    return LogSeite([
+      for (final (id, d) in buchungen.take(anzahl)) logbuchungAus(id, d),
+    ], mehr: buchungen.length > anzahl);
+  });
+
   @override
   Stream<String?> kassenName(String kasseId) =>
       _beobachten(() => docs['kassen/$kasseId']?['name'] as String?);
@@ -287,6 +319,10 @@ class FakeMitglieder implements MitgliederRepository {
   @override
   Future<NamensBesitzer?> nameBelegt(String kasseId, String name) =>
       db.nameBelegt(kasseId, name);
+
+  @override
+  Stream<Map<String, String>> namen(String kasseId) =>
+      db.mitgliederNamen(kasseId);
 }
 
 /// Einstellungen im Arbeitsspeicher statt shared_preferences.
