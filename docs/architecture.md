@@ -422,6 +422,7 @@ Bausteine:
 Bis dahin läuft alles lokal gegen die Emulatoren. Release 1 braucht nur den Spark-Tarif.
 
 - [ ] Security Rules mit vollständigen Emulator-Tests fertig, bevor irgendetwas deployt wird (NFA-07).
+- [ ] Gerätetest nach [geraetetest.md](geraetetest.md) auf dem Android-Emulator gegen die lokalen Emulatoren.
 - [ ] Limit der Dokumentzugriffe beim Einkauf gegen das echte Projekt prüfen (Emulator: 12 Sorten). Dafür braucht es einen Rules-Deploy, also deine Freigabe.
 - [ ] Deploy nur mit ausdrücklicher Freigabe (siehe `CLAUDE.md`).
 
