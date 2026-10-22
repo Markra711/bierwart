@@ -167,7 +167,10 @@ class BwIconKnopf extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Eigener Knoten, sonst geht das Label in der Zeile drumherum auf und
+    // ein Tipp darauf landet in deren Mitte.
     return Semantics(
+      container: true,
       button: true,
       label: label,
       excludeSemantics: true,

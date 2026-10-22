@@ -48,6 +48,7 @@ class VerlaufScreen extends ConsumerWidget {
                 const SizedBox(width: BwSpacing.space3),
                 Semantics(
                   header: true,
+                  container: true,
                   child: Text('VERLAUF', style: text.pageTitle),
                 ),
               ],

@@ -1,0 +1,33 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "update",
+      "pfad": "kassen/k2",
+      "daten": {
+        "adminUid": "neu",
+        "letzteBuchungId": "v-admin"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/v-admin",
+      "daten": {
+        "typ": "rolleGeaendert",
+        "rolle": "admin",
+        "vonUid": "gruender",
+        "nachUid": "neu",
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

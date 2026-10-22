@@ -293,3 +293,76 @@ describe('Geld aus der App (GEL-04 bis GEL-06)', () => {
     await assertFails(abspielen(alsJonas));
   });
 });
+
+describe('Verwaltung aus der App (ADM-01 bis ADM-04)', () => {
+  const kette = ['kasse-erstellen.json', 'beitreten.json'].map(fixture);
+  async function lesen(pfad) {
+    let daten;
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const snap = await getDoc(doc(ctx.firestore(), pfad));
+      daten = snap.exists() ? snap.data() : undefined;
+    });
+    return daten;
+  }
+  const ALT = 'K7Q2MXA93DWFT2HC8RNP';
+  const NEU = 'N3W7C0DE4X5Y6Z8A9B1C';
+
+  beforeEach(async () => {
+    for (const batch of kette) await assertSucceeds(abspielen(batch));
+  });
+
+  test('Link erneuern: neuer gilt, alter ersetzt', async () => {
+    await assertSucceeds(abspielen(fixture('link-erneuern.json')));
+    expect((await lesen('kassen/k2')).einladungCode).toBe(NEU);
+    expect((await lesen(`einladungen/${ALT}`)).ersetzt).toBe(true);
+    expect((await lesen(`einladungen/${NEU}`)).anzahlBierwarte).toBe(2);
+  });
+
+  test('Bierwart entfernen: bleibt Mitglied, Portemonnaie ehemalig, neuer Link', async () => {
+    await assertSucceeds(abspielen(fixture('bierwart-entfernen.json')));
+    expect(await lesen('kassen/k2/bierwarte/neu')).toBeUndefined();
+    expect((await lesen('kassen/k2/mitglieder/m2')).entfernt).toBe(false);
+    expect((await lesen('kassen/k2/orte/neu')).ehemalig).toBe(true);
+    expect((await lesen('kassen/k2')).anzahlBierwarte).toBe(1);
+    expect((await lesen(`einladungen/${NEU}`)).anzahlBierwarte).toBe(1);
+  });
+
+  test('Kassenwart bestimmen und Admin übergeben', async () => {
+    await assertSucceeds(abspielen(fixture('rolle-kassenwart.json')));
+    await assertSucceeds(abspielen(fixture('rolle-admin.json')));
+    const kasse = await lesen('kassen/k2');
+    expect([kasse.adminUid, kasse.kassenwartUid]).toEqual(['neu', 'neu']);
+  });
+
+  test('nach der Übergabe ist Lena nicht mehr Admin', async () => {
+    await assertSucceeds(abspielen(fixture('rolle-admin.json')));
+    await assertFails(abspielen(fixture('link-erneuern.json')));
+  });
+
+  test('Kasse umbenennen: Name in Kasse und Einladung', async () => {
+    await assertSucceeds(abspielen(fixture('kasse-umbenennen.json')));
+    expect((await lesen('kassen/k2')).name).toBe('SV Umbenannt');
+    expect((await lesen(`einladungen/${ALT}`)).kassenName).toBe('SV Umbenannt');
+  });
+
+  // Derselbe Batch mit Jonas im Stempel: abgelehnt wegen der Rolle, nicht
+  // wegen eines fremden Stempels.
+  const alsJonas = ({ schreibvorgaenge }) => ({
+    uid: 'neu',
+    schreibvorgaenge: schreibvorgaenge.map((s) =>
+      s.pfad.includes('/buchungen/')
+        ? { ...s, daten: { ...s.daten, stempel: { ...s.daten.stempel, uid: 'neu', name: 'Jonas Weber' } } }
+        : s),
+  });
+
+  test('nur der Admin verwaltet', async () => {
+    for (const name of ['link-erneuern.json', 'kasse-umbenennen.json', 'rolle-kassenwart.json']) {
+      await assertFails(abspielen(alsJonas(fixture(name))));
+    }
+  });
+
+  test('als Admin mit Jonas im Stempel geht es (Gegenstück)', async () => {
+    await assertSucceeds(abspielen(fixture('rolle-admin.json')));
+    await assertSucceeds(abspielen(alsJonas(fixture('kasse-umbenennen.json'))));
+  });
+});

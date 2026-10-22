@@ -1,7 +1,10 @@
+import '../../../core/fehler/verwaltung.dart';
+
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../strichliste/data/kassenkopf_repository.dart';
 import '../data/anmeldung_repository.dart';
 import '../data/einladungslinks.dart';
 import '../data/kasse_repository.dart';
@@ -40,12 +43,26 @@ final startzustandProvider = Provider<Startzustand>((ref) {
     return StartFehler(anmeldeFehler(error));
   }
   return switch (ref.watch(meineKasseIdProvider)) {
-    AsyncData(value: final id?) => InKasse(id),
+    // Wer entfernt wurde oder ausgetreten ist, behält `users/{uid}`, bis er
+    // einer anderen Kasse beitritt; er ist trotzdem ohne Kasse (ADM-02).
+    // Solange das unklar ist, gilt die Kasse (offline zuerst, NFA-02).
+    AsyncData(value: final id?) => switch (ref.watch(
+      mitgliedschaftProvider(id),
+    )) {
+      AsyncData(value: Mitgliedschaft.entfernt) => const OhneKasse(),
+      _ => InKasse(id),
+    },
     AsyncData() => const OhneKasse(),
     AsyncError() => const StartFehler('Deine Daten ließen sich nicht laden.'),
     _ => const StartLaedt(),
   };
 });
+
+/// Ob der Nutzer in [kasseId] noch Bierwart ist.
+final mitgliedschaftProvider = StreamProvider.family<Mitgliedschaft, String>(
+  (ref, kasseId) =>
+      ref.watch(kassenkopfRepositoryProvider).mitgliedschaft(kasseId),
+);
 
 /// Die Kasse, die gerade erstellt wird, bis „Weiter zur Strichliste“. Die
 /// Codes stehen fest, bevor geschrieben wird; so geht der

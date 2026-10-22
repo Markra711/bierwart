@@ -123,7 +123,17 @@ class KaderAktionen {
     if (await _besitzer(sitzung.kasseId, bereinigt) != null) {
       return Eingabefehler(name: '„$bereinigt“ gibt es in der Kasse schon.');
     }
-    final aktiv = _ref.read(aktiveBierwarteProvider).value ?? const {};
+    // Ist das Mitglied aktiver Bierwart, verlangen die Rules den neuen Namen
+    // auch im Bierwart-Eintrag; deshalb auf die Liste warten, nicht nur
+    // nehmen, was gerade geladen ist. Ohne Zuhörer pausiert der Provider,
+    // daher das listen.
+    final abo = _ref.listen(aktiveBierwarteProvider, (_, _) {});
+    final Set<String> aktiv;
+    try {
+      aktiv = await _ref.read(aktiveBierwarteProvider.future);
+    } finally {
+      abo.close();
+    }
     final uid = m.bierwartUid;
     _schreiben(
       (s) => mitgliedUmbenennenBatch(

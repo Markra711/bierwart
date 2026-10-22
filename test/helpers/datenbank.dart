@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bier_wart/src/core/firebase/batch_schreiber.dart';
 import 'package:bier_wart/src/core/firebase/schreibvorgang.dart';
 import 'package:bier_wart/src/core/speicher/lokaler_speicher.dart';
+import 'package:bier_wart/src/features/einstellungen/data/einstellungen_repository.dart';
 import 'package:bier_wart/src/features/geld/data/log_repository.dart';
 import 'package:bier_wart/src/features/geld/data/orte_repository.dart';
 import 'package:bier_wart/src/features/geld/domain/ort.dart';
@@ -12,6 +13,7 @@ import 'package:bier_wart/src/features/kader/domain/mitglied.dart';
 import 'package:bier_wart/src/features/kader/domain/name.dart';
 import 'package:bier_wart/src/features/lager/data/sorten_repository.dart';
 import 'package:bier_wart/src/features/lager/domain/sorte.dart';
+import 'package:bier_wart/src/features/onboarding/domain/einladung.dart';
 import 'package:bier_wart/src/features/strichliste/data/kassenkopf_repository.dart';
 
 /// Dokumente im Arbeitsspeicher statt Firestore. Wendet Batches an wie der
@@ -25,11 +27,15 @@ class FakeDatenbank
         KassenkopfRepository,
         VerlaufRepository,
         OrteRepository,
-        LogRepository {
+        LogRepository,
+        EinstellungenRepository {
   final docs = <String, Map<String, Object?>>{};
   final batches = <List<Schreibvorgang>>[];
   final _aenderung = StreamController<void>.broadcast();
   var _id = 0;
+
+  /// Was die Fake-Datenbank als Serverzeit einsetzt.
+  DateTime jetzt = DateTime(2026, 10, 22, 20);
 
   /// Lässt [schreiben] scheitern, z. B. wie eine Ablehnung beim Sync.
   Object? schreibFehler;
@@ -42,17 +48,34 @@ class FakeDatenbank
     required String name,
     String admin = 'uid',
     String kassenwart = 'uid',
+    String einladungCode = 'K7Q2MXA93DWFT2HC8RNP',
   }) {
     docs['kassen/$k'] = {
       'name': name,
       'adminUid': admin,
       'kassenwartUid': kassenwart,
+      'einladungCode': einladungCode,
+      'anzahlBierwarte': 0,
+      'wiederherstellungHash': null,
+      'aufgeloest': false,
+    };
+    docs['einladungen/$einladungCode'] = {
+      'kasseId': k,
+      'kassenName': name,
+      'anzahlBierwarte': 0,
+      'erstelltAm': DateTime(2026, 10, 19, 18),
+      'ersetzt': false,
     };
     _aenderung.add(null);
   }
 
+  /// Zählt `anzahlBierwarte` in Kasse und Einladung mit, wie beim Beitreten.
   void bierwart(String k, String uid, String name, {int stand = 0}) {
     docs['kassen/$k/bierwarte/$uid'] = {'name': name, 'mitgliedId': uid};
+    final kasse = docs['kassen/$k']!;
+    kasse['anzahlBierwarte'] = (kasse['anzahlBierwarte']! as int) + 1;
+    final einladung = docs['einladungen/${kasse['einladungCode']}']!;
+    einladung['anzahlBierwarte'] = kasse['anzahlBierwarte'];
     ort(k, uid, name, stand: stand);
     mitglied(k, uid, name, bierwartUid: uid);
   }
@@ -131,6 +154,7 @@ class FakeDatenbank
       for (final e in s.daten.entries) {
         neu[e.key] = switch (e.value) {
           Erhoehen(:final um) => ((alt[e.key] as int?) ?? 0) + um,
+          Serverzeit() => jetzt,
           _ => e.value,
         };
       }
@@ -221,6 +245,8 @@ class FakeDatenbank
             name: d['name']! as String,
             adminUid: d['adminUid']! as String,
             kassenwartUid: d['kassenwartUid']! as String,
+            einladungCode: d['einladungCode'] as String? ?? '',
+            anzahlBierwarte: d['anzahlBierwarte'] as int? ?? 1,
           );
   });
 
@@ -296,6 +322,61 @@ class FakeDatenbank
       for (final (id, d) in buchungen.take(anzahl)) logbuchungAus(id, d),
     ], mehr: buchungen.length > anzahl);
   });
+
+  /// Wie die Rules für den Testnutzer `uid`: ohne Bierwart-Eintrag oder in
+  /// einer aufgelösten Kasse als Nicht-Admin kein Zugriff.
+  @override
+  Stream<Mitgliedschaft> mitgliedschaft(String kasseId) => _beobachten(() {
+    final kasse = docs['kassen/$kasseId'];
+    final bierwart = docs.containsKey('kassen/$kasseId/bierwarte/uid');
+    if (kasse == null || !bierwart) return Mitgliedschaft.entfernt;
+    if (kasse['aufgeloest'] == true) {
+      return kasse['adminUid'] == 'uid'
+          ? Mitgliedschaft.aufloesen
+          : Mitgliedschaft.entfernt;
+    }
+    return Mitgliedschaft.aktiv;
+  });
+
+  @override
+  Stream<List<BierwartEintrag>> bierwarte(String kasseId) => _beobachten(
+    () => [
+      for (final e in _unter('kassen/$kasseId/bierwarte'))
+        BierwartEintrag(
+          uid: _letzte(e.key),
+          name: e.value['name']! as String,
+          mitgliedId: e.value['mitgliedId']! as String,
+        ),
+    ],
+  );
+
+  @override
+  Stream<Einladung?> einladung(String code) => _beobachten(() {
+    final d = docs['einladungen/$code'];
+    final erstellt = d?['erstelltAm'];
+    if (d == null || erstellt is! DateTime) return null;
+    return Einladung(
+      code: code,
+      kasseId: d['kasseId']! as String,
+      kassenName: d['kassenName']! as String,
+      anzahlBierwarte: d['anzahlBierwarte']! as int,
+      erstelltAm: erstellt,
+      ersetzt: d['ersetzt']! as bool,
+    );
+  });
+
+  @override
+  Future<KasseVomServer> kasseFuerVerwaltung(String kasseId) async {
+    if (serverFehler != null) throw serverFehler!;
+    final d = docs['kassen/$kasseId']!;
+    return KasseVomServer(
+      name: d['name']! as String,
+      einladungCode: d['einladungCode']! as String,
+      anzahlBierwarte: d['anzahlBierwarte']! as int,
+      adminUid: d['adminUid']! as String,
+      kassenwartUid: d['kassenwartUid']! as String,
+    );
+  }
 
   @override
   Stream<String?> kassenName(String kasseId) =>
