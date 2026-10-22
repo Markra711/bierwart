@@ -1,0 +1,68 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/bierwarte/neu",
+      "daten": {}
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/orte/neu",
+      "daten": {
+        "ehemalig": true,
+        "letzteBuchungId": "v2"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2",
+      "daten": {
+        "anzahlBierwarte": {
+          "$erhoehen": -1
+        },
+        "einladungCode": "N3W7C0DE4X5Y6Z8A9B1C",
+        "letzteBuchungId": "v2"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "einladungen/N3W7C0DE4X5Y6Z8A9B1C",
+      "daten": {
+        "kasseId": "k2",
+        "kassenName": "SV Neu",
+        "anzahlBierwarte": 1,
+        "erstelltAm": {
+          "$serverzeit": true
+        },
+        "ersetzt": false
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "einladungen/K7Q2MXA93DWFT2HC8RNP",
+      "daten": {
+        "ersetzt": true
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/v2",
+      "daten": {
+        "typ": "bierwartEntfernt",
+        "uid": "neu",
+        "mitgliedId": "m2",
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

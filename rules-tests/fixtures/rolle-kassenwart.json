@@ -1,0 +1,33 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "update",
+      "pfad": "kassen/k2",
+      "daten": {
+        "kassenwartUid": "neu",
+        "letzteBuchungId": "v-kassenwart"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/v-kassenwart",
+      "daten": {
+        "typ": "rolleGeaendert",
+        "rolle": "kassenwart",
+        "vonUid": "gruender",
+        "nachUid": "neu",
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

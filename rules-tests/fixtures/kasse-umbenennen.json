@@ -1,0 +1,39 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "update",
+      "pfad": "kassen/k2",
+      "daten": {
+        "name": "SV Umbenannt",
+        "letzteBuchungId": "v3"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "einladungen/K7Q2MXA93DWFT2HC8RNP",
+      "daten": {
+        "kassenName": "SV Umbenannt"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/v3",
+      "daten": {
+        "typ": "kasseUmbenannt",
+        "nameAlt": "SV Neu",
+        "nameNeu": "SV Umbenannt",
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

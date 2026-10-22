@@ -1,7 +1,8 @@
+import 'package:bier_wart/src/core/fehler/verwaltung.dart';
+
 import 'dart:async';
 
 import 'package:bier_wart/src/core/routing/router.dart';
-import 'package:bier_wart/src/features/onboarding/data/kasse_repository.dart';
 import 'package:bier_wart/src/features/onboarding/domain/einladung.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -176,6 +176,13 @@ Gemeinsame Felder:
 - Filter nach Bierwart (`stempel.uid`) und nach Mitglied (`mitgliedId`), auch beide zusammen; die Auswahl öffnet ein Sheet. Zur Wahl stehen alle Bierwarte, die je ein Portemonnaie hatten, und die aktuellen Mitglieder.
 - Den Text baut `logZeile` in `geld/domain` aus einer `Logbuchung`, die `data/` aus dem Dokument liest. Namen löst die App über Kader (auch entfernte Mitglieder), Sorten und Orte auf; fehlt einer, steht dort „Mitglied“ oder „Sorte“, nie eine ID. Zahlungen und Einzahlungen erscheinen in `positive` mit Plus, Einkauf, Auszahlung und eine negative Kassendifferenz in `negative`, Buchungen ohne Geld mit „—“. Unbekannte Typen zeigen „Buchung“.
 
+**Einstellungen (ADM-01 bis ADM-04, UC-06 bis UC-09, UI-09):**
+- Unterseite über das Zahnrad: Einladungslink mit „Gültig bis“ und „Teilen“ für alle, „Erneuern“ nur für den Admin. Ein abgelaufener Link lässt sich nicht teilen.
+- Die Bierwarte stehen mit Rollen und Portemonnaie in einer Liste, der eigene Eintrag zuerst. Der Admin hat bei jedem anderen ein Menü: „Zum Kassenwart machen“, „Admin-Rolle übergeben“, „Entfernen“, jeweils mit Bestätigung (UI-04). Admin und Kassenwart lassen sich nicht entfernen; die App sagt, dass erst die Rolle wechseln muss.
+- „Kasse umbenennen“ (nur Admin) und „Meinen Namen ändern“ (das Umbenennen-Sheet aus dem Kader). Ist das Mitglied ein aktiver Bierwart, wartet das Umbenennen auf die Liste der Bierwarte, weil die Rules den neuen Namen auch im Bierwart-Eintrag verlangen.
+- Jede Aktion ist eine Verwaltungsaktion: Die App liest die Kasse mit `Source.server` (Name, Code, Anzahl, Rollen), baut daraus den Batch und wartet auf den Server. Erfolg und Fehler meldet eine Snackbar (NFA-10).
+- **Mitgliedschaft:** Ein entfernter Bierwart behält `users/{uid}`, darf die Kasse aber nicht mehr lesen. Die App hört deshalb auf `kassen/{k}`: Lehnt der Server ab oder gibt es die Kasse auf dem Server nicht mehr, gilt der Nutzer als ohne Kasse und landet im Onboarding. `users/{uid}` überschreibt er beim nächsten Beitritt; die Rules erlauben das, weil er dort nicht mehr Bierwart ist. Ohne Netz und ohne Cache gilt die Kasse weiter.
+
 **Storno (STR-04, STR-06):**
 - Das Mitglied-Detail zeigt alle Striche, auch bar bezahlte, mit dem Vermerk „bar“ (KAD-06).
 - Strich offen stornieren: Saldo − Preis, Bestand + 1.
@@ -226,12 +233,12 @@ Die Rules sind in Release 1 die Geschäftslogik. Grundsätze (NFA-07):
 - Jede Verwaltungsaktion schreibt ihre Log-Buchung im selben Batch. Die Rules verlangen sie (`existsAfter`).
 - `einladungen` und `wiederherstellung`: nur `get` für Angemeldete, kein `list`.
 
-Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 205 Emulator-Tests in `rules-tests/`:
+Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 212 Emulator-Tests in `rules-tests/`:
 - `buchungen.test.js` (47): Strich offen und bar, Storno, Zahlung, Einkauf, Bestandskorrektur, Übergabe, Ein-/Auszahlung, Kassensturz, Fälle ohne passende Buchung, Unveränderlichkeit des Logs.
 - `stammdaten.test.js` (32): Mitglieder anlegen, umbenennen, entfernen, wieder aufnehmen; Namensindex; Sorten anlegen, ändern, ausblenden.
 - `verwaltung.test.js` (56): Kasse erstellen, Beitreten, Übernahme anfragen, zurückziehen und entscheiden, Austreten, `users/`, Lesen von Einladungen und Namensindex.
 - `admin.test.js` (43): Link erneuern, Bierwart entfernen, Rollen, Umbenennen, Wiederherstellungscode erneuern, Admin wiederherstellen mit und ohne Bierwart-Eintrag, Auflösen und Löschen.
-- `vertrag.test.js` (27): Batches, wie die App sie baut: Einkauf aus Portemonnaie und Kasse, Preis ändern, Ausblenden, Bestandskorrektur samt Ablehnung bei veralteter Differenz; Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart; Übergabe in die Kasse und zurück, Auszahlung aus der Kasse, Einzahlung ins Portemonnaie, Kassensturz samt Ablehnung bei veralteter Differenz, Übergabe nur vom Kassenwart. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
+- `vertrag.test.js` (34): Batches, wie die App sie baut: Einkauf aus Portemonnaie und Kasse, Preis ändern, Ausblenden, Bestandskorrektur samt Ablehnung bei veralteter Differenz; Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart; Übergabe in die Kasse und zurück, Auszahlung aus der Kasse, Einzahlung ins Portemonnaie, Kassensturz samt Ablehnung bei veralteter Differenz, Übergabe nur vom Kassenwart; Link erneuern, Bierwart entfernen, Rollen übertragen, Kasse umbenennen, jeweils nur als Admin. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
 
 Kern des Musters:
 

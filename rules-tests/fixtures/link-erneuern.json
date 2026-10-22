@@ -1,0 +1,50 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "update",
+      "pfad": "kassen/k2",
+      "daten": {
+        "einladungCode": "N3W7C0DE4X5Y6Z8A9B1C",
+        "letzteBuchungId": "v1"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "einladungen/N3W7C0DE4X5Y6Z8A9B1C",
+      "daten": {
+        "kasseId": "k2",
+        "kassenName": "SV Neu",
+        "anzahlBierwarte": 2,
+        "erstelltAm": {
+          "$serverzeit": true
+        },
+        "ersetzt": false
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "einladungen/K7Q2MXA93DWFT2HC8RNP",
+      "daten": {
+        "ersetzt": true
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/v1",
+      "daten": {
+        "typ": "einladungErneuert",
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

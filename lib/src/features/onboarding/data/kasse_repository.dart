@@ -1,8 +1,7 @@
-import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/fehler/verwaltung.dart';
 import '../../../core/firebase/batch_schreiber.dart';
 import '../../../core/firebase/firebase_providers.dart';
 import '../../kader/domain/name.dart';
@@ -12,16 +11,6 @@ import '../domain/erstellte_kasse.dart';
 import 'beitreten_batch.dart';
 import 'kasse_erstellen_batch.dart';
 import '../../../core/firebase/schreibvorgang.dart';
-
-/// Fehler einer Verwaltungsaktion mit einer Meldung für den Nutzer (NFA-10).
-class VerwaltungsFehler implements Exception {
-  const VerwaltungsFehler(this.meldung);
-
-  final String meldung;
-
-  @override
-  String toString() => meldung;
-}
 
 abstract interface class KasseRepository {
   /// Codes und IDs für eine neue Kasse. Sie stehen fest, bevor geschrieben
@@ -147,24 +136,8 @@ class FirestoreKasseRepository implements KasseRepository {
   Future<void> _schreiben(List<Schreibvorgang> vorgaenge) =>
       _schreiber.schreiben(vorgaenge).timeout(antwortFrist);
 
-  /// Übersetzt Firebase-Fehler in Meldungen (NFA-10).
-  Future<T> _mitServer<T>(String sonst, Future<T> Function() aktion) async {
-    try {
-      return await aktion();
-    } on TimeoutException {
-      throw const VerwaltungsFehler(
-        'Keine Antwort vom Server. Prüf dein Netz und versuch es noch einmal.',
-      );
-    } on FirebaseException catch (e) {
-      throw VerwaltungsFehler(switch (e.code) {
-        'unavailable' => 'Dafür brauchst du Netz.',
-        // Kann vieles heißen (andere Kasse, Rules nicht deployt), daher
-        // keine Vermutung, aber der Code für die Fehlersuche.
-        'permission-denied' => 'Der Server hat abgelehnt (permission-denied).',
-        _ => '$sonst (${e.code}).',
-      });
-    }
-  }
+  Future<T> _mitServer<T>(String sonst, Future<T> Function() aktion) =>
+      mitServer(sonst, aktion);
 }
 
 final kasseRepositoryProvider = Provider<KasseRepository>(

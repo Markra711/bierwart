@@ -174,6 +174,7 @@ Flächen für Inhalte; ihre Lage (erhaben oder eingedrückt) sagt, ob man sie an
 | Summenkarte | `inset`, `radius-lg` | Reine Anzeige: „Offen gesamt“, „Guthaben“ |
 | Listenzeile | `raised`, `radius-lg`, mind. 60px hoch | Name, Zweitzeile, Betrag rechts (`amount-l`); antippbar |
 | Gruppierte Liste | `inset`, Zeilen ohne eigenen Schatten | Portemonnaies, Striche im Mitglied-Detail |
+| Kachel | `raised-sm`, `radius-lg`, zwei Spalten | Einstellungen „Kasse & ich“: Text, darunter z. B. „nur Admin“ |
 | Bestandsbalken | Rinne `track`, Füllung `grad-accent` | Bestand je Sorte; leere Sorte stattdessen gestrichelt in `negative` mit Schraffur |
 
 Pro Seite gibt es höchstens eine Hauptkarte.
