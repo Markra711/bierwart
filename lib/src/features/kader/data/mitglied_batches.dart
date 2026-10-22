@@ -51,14 +51,19 @@ List<Schreibvorgang> mitgliedUmbenennenBatch({
 }) {
   final k = 'kassen/$kasseId';
   final neu = nameBereinigen(nameNeu);
+  // Nur die Schreibweise: gleicher Schlüssel, der Index bleibt (offene
+  // Frage 26).
+  final nurSchreibweise = nameKey(neu) == nameKey(nameAlt);
   return [
     Schreibvorgang.update('$k/mitglieder/$mitgliedId', {
       'name': neu,
       'nameKey': nameKey(neu),
       'letzteBuchungId': buchungId,
     }),
-    Schreibvorgang('$k/namen/${nameKey(neu)}', {'mitgliedId': mitgliedId}),
-    Schreibvorgang.loeschen('$k/namen/${nameKey(nameAlt)}'),
+    if (!nurSchreibweise) ...[
+      Schreibvorgang('$k/namen/${nameKey(neu)}', {'mitgliedId': mitgliedId}),
+      Schreibvorgang.loeschen('$k/namen/${nameKey(nameAlt)}'),
+    ],
     if (bierwartUid != null)
       Schreibvorgang.update('$k/bierwarte/$bierwartUid', {
         'name': neu,

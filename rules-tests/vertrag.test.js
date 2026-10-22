@@ -197,6 +197,12 @@ describe('Kader aus der App (KAD-01, KAD-04, KAD-08, GEL-02, GEL-03, UI-09)', ()
     expect(await lesen('kassen/k2/namen/tim richter')).toBeUndefined();
   });
 
+  test('Bierwart ändert nur die Schreibweise, Index bleibt', async () => {
+    await assertSucceeds(abspielen(fixture('bierwart-schreibweise.json')));
+    expect((await lesen('kassen/k2/bierwarte/gruender')).name).toBe('Lena KOCH');
+    expect((await lesen('kassen/k2/namen/lena koch')).mitgliedId).toBe('m1');
+  });
+
   test('Bierwart umbenennen, Stempel-Name zieht mit', async () => {
     await assertSucceeds(abspielen(fixture('bierwart-umbenennen.json')));
     expect((await lesen('kassen/k2/bierwarte/gruender')).name).toBe('Lena Koch-Meier');

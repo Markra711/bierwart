@@ -343,15 +343,19 @@ service cloud.firestore {
           // Summen aus Buchungen
           (buchungDiesesRequests() != null
             && summeGeaendert('saldoCents', saldoWirkung(buchungDiesesRequests(), mitgliedId)))
-          // Umbenennen (KAD-01, UI-09): neuer Name im Index, alter frei
+          // Umbenennen (KAD-01, UI-09): neuer Name im Index, alter frei. Nur
+          // die Schreibweise (gleicher Schlüssel): Der Index bleibt (offene
+          // Frage 26).
           || (nurFelder(['name', 'nameKey', 'letzteBuchungId'])
             && resource.data.get('istGast', false) == false
             && resource.data.entfernt == false   // sonst würde ein reservierter Name frei (KAD-08)
             && nameGueltig(request.resource.data.name)
             && request.resource.data.nameKey == nameKey(request.resource.data.name)
-            && request.resource.data.nameKey != resource.data.nameKey
-            && nameIndexZeigtAuf(request.resource.data.nameKey, mitgliedId)
-            && !existsAfter(pfad('namen', resource.data.nameKey))
+            && (request.resource.data.nameKey != resource.data.nameKey
+              ? nameIndexZeigtAuf(request.resource.data.nameKey, mitgliedId)
+                && !existsAfter(pfad('namen', resource.data.nameKey))
+              : request.resource.data.name != resource.data.name
+                && nameIndexZeigtAuf(request.resource.data.nameKey, mitgliedId))
             && bierwartFolgt(request.resource.data)
             && stammdatenBuchung('mitgliedUmbenannt'))
           // Entfernen (KAD-04): nur bei Saldo 0, nie Gäste, nie aktive Bierwarte (KAD-02).
@@ -647,6 +651,7 @@ service cloud.firestore {
             && felder(d, ['mitgliedId', 'nameAlt', 'nameNeu'])
             && get(pfad('mitglieder', d.mitgliedId)).data.name == d.nameAlt
             && nachher('mitglieder', d.mitgliedId).name == d.nameNeu
+            && d.nameNeu != d.nameAlt
             && verweistAuf('mitglieder', d.mitgliedId, buchungId))
           || ((d.typ == 'mitgliedEntfernt' || d.typ == 'mitgliedWiederaufgenommen')   // KAD-04, KAD-08
             && felder(d, ['mitgliedId'])

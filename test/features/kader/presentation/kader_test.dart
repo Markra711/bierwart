@@ -156,6 +156,15 @@ void main() {
       findsOneWidget,
     );
 
+    // Nur die Schreibweise geht auch (offene Frage 26).
+    await tester.enterText(find.byType(TextField), 'ben wolf');
+    await tippen(tester, 'Umbenennen');
+    expect(db.docs['kassen/k1/mitglieder/ben']!['name'], 'ben wolf');
+    expect(db.docs['kassen/k1/namen/ben wolf']!['mitgliedId'], 'ben');
+    await tester.tap(find.bySemanticsLabel('Umbenennen oder entfernen'));
+    await tester.pumpAndSettle();
+    await tippen(tester, 'Umbenennen');
+
     await tester.enterText(find.byType(TextField), 'Benjamin Wolf');
     await tippen(tester, 'Umbenennen');
     expect(letzteBuchung(db)['typ'], 'mitgliedUmbenannt');

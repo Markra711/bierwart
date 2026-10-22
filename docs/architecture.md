@@ -111,7 +111,7 @@ wiederherstellung/{hashHex}                  Hash des Wiederherstellungscodes �
   - Die Eindeutigkeit gilt für **alle Mitglieder** (AUTH-07, UI-09), auch für Bierwarte und „Gäste“.
   - **Entfernte Mitglieder behalten ihren Namen** (KAD-08). `namen/{nameKey}` wird beim Entfernen nicht gelöscht, damit der Verlauf eindeutig bleibt.
   - Legt jemand ein Mitglied mit einem solchen Namen an, bietet die App „Jonas Weber wieder aufnehmen?“ an. Bei Ja setzt ein Batch `entfernt = false` und schreibt die Log-Buchung `mitgliedWiederaufgenommen`. Saldo und Verlauf sind die alten, der Saldo war beim Entfernen 0 (KAD-04).
-  - Beim Umbenennen wird der alte Schlüssel frei: Der Batch löscht `namen/{alt}` und legt `namen/{neu}` an.
+  - Beim Umbenennen wird der alte Schlüssel frei: Der Batch löscht `namen/{alt}` und legt `namen/{neu}` an. Ändert sich nur die Groß- und Kleinschreibung, bleibt der Schlüssel und damit der Index, wie er ist.
 
 ### Buchungen (das Log)
 
@@ -157,7 +157,7 @@ Gemeinsame Felder:
 - Die Unterzeile „6× Bier 0,5“ aus dem Design-Canvas fehlt vorerst. Sie bräuchte die Buchungen jedes Mitglieds; die Liste zeigt nur bei Guthaben „Hat im Voraus bezahlt“.
 - Das Detail zeigt Striche und Zahlungen des Mitglieds, neueste zuerst, seitenweise zu 30 Buchungen („Ältere laden“). Welche Striche nach einer Teilzahlung noch „offen“ sind, ist nicht festgelegt, deshalb gibt es keinen Abschnitt „Offene Striche“. Stornos erscheinen nicht selbst, sondern markieren ihren Strich. Ohne Serverzeit (offline gebucht) gilt `stempel.geraetAm`.
 - Eine Zahlung geht ins eigene Portemonnaie, der Kassenwart kann die Kasse wählen; die Wahl sehen andere nicht (UI-08). Überzahlung wird Guthaben.
-- Umbenennen nur, wenn sich der Schlüssel im Namensindex ändert. Eine reine Änderung der Groß- und Kleinschreibung lehnen die Rules ab; die App sagt das (offene Frage 26).
+- Umbenennen auf einen neuen Namen oder nur in der Schreibweise („jonas weber“ → „Jonas Weber“, offene Frage 26). Derselbe Name wird nicht gebucht.
 - Entfernen nur bei Saldo 0, nie „Gäste“ und nie aktive Bierwarte (KAD-04, KAD-02), mit Bestätigung (UI-04). Wird ein entfernter Name neu angelegt, bietet das Sheet „Wieder aufnehmen“ an (KAD-08).
 
 **Lager (BES-01 bis BES-06):**
@@ -246,12 +246,12 @@ Die Rules sind in Release 1 die Geschäftslogik. Grundsätze (NFA-07):
 - Jede Verwaltungsaktion schreibt ihre Log-Buchung im selben Batch. Die Rules verlangen sie (`existsAfter`).
 - `einladungen` und `wiederherstellung`: nur `get` für Angemeldete, kein `list`.
 
-Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 240 Emulator-Tests in `rules-tests/`:
+Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 246 Emulator-Tests in `rules-tests/`:
 - `buchungen.test.js` (52): Strich offen und bar, Storno von Strichen und Zahlungen, Zahlung, Einkauf, Bestandskorrektur, Übergabe, Ein-/Auszahlung, Kassensturz, Fälle ohne passende Buchung, Unveränderlichkeit des Logs.
-- `stammdaten.test.js` (32): Mitglieder anlegen, umbenennen, entfernen, wieder aufnehmen; Namensindex; Sorten anlegen, ändern, ausblenden.
+- `stammdaten.test.js` (37): Mitglieder anlegen, umbenennen (auch nur die Schreibweise), entfernen, wieder aufnehmen; Namensindex; Sorten anlegen, ändern, ausblenden.
 - `verwaltung.test.js` (56): Kasse erstellen, Beitreten, Übernahme anfragen, zurückziehen und entscheiden, Austreten, `users/`, Lesen von Einladungen und Namensindex.
 - `admin.test.js` (52): Link erneuern, Bierwart entfernen, Rollen, Umbenennen, Wiederherstellungscode erneuern, Admin wiederherstellen mit und ohne Bierwart-Eintrag, Nachweis für die Wiederherstellung (ADR-0010), Auflösen und Löschen.
-- `vertrag.test.js` (48): Batches, wie die App sie baut: Einkauf aus Portemonnaie und Kasse, Preis ändern, Ausblenden, Bestandskorrektur samt Ablehnung bei veralteter Differenz; Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Zahlung stornieren (nur einmal), Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart; Übergabe in die Kasse und zurück, Auszahlung aus der Kasse, Einzahlung ins Portemonnaie, Kassensturz samt Ablehnung bei veralteter Differenz, Übergabe nur vom Kassenwart; Link erneuern, Bierwart entfernen, Rollen übertragen, Kasse umbenennen, jeweils nur als Admin; Austreten (nicht mit Geld im Portemonnaie, als Letzte mit `leerSeit`), Auflösen mit einer vollen Löschportion und dem Schluss-Batch; Wiederherstellungscode erneuern (nur Admin) und mit dem Code Admin werden, danach gilt der alte nicht mehr; Wiederherstellung aus dem Onboarding mit Nachweis, als bestehendes und als neues Mitglied. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
+- `vertrag.test.js` (49): Batches, wie die App sie baut: Einkauf aus Portemonnaie und Kasse, Preis ändern, Ausblenden, Bestandskorrektur samt Ablehnung bei veralteter Differenz; Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Zahlung stornieren (nur einmal), Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart, nur die Schreibweise; Übergabe in die Kasse und zurück, Auszahlung aus der Kasse, Einzahlung ins Portemonnaie, Kassensturz samt Ablehnung bei veralteter Differenz, Übergabe nur vom Kassenwart; Link erneuern, Bierwart entfernen, Rollen übertragen, Kasse umbenennen, jeweils nur als Admin; Austreten (nicht mit Geld im Portemonnaie, als Letzte mit `leerSeit`), Auflösen mit einer vollen Löschportion und dem Schluss-Batch; Wiederherstellungscode erneuern (nur Admin) und mit dem Code Admin werden, danach gilt der alte nicht mehr; Wiederherstellung aus dem Onboarding mit Nachweis, als bestehendes und als neues Mitglied. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
 
 Kern des Musters:
 
@@ -280,7 +280,7 @@ Zusätzlich zu den Entscheidungen oben prüfen die Rules:
 
 **Stammdaten** folgen demselben Muster: Jede Änderung an Mitglied, Sorte oder Bierwart-Namen verweist über `letzteBuchungId` auf ihre Log-Buchung im selben Batch (LOG-01). Was die Rules dabei prüfen:
 - **Mitglied anlegen** (KAD-01): Saldo 0, kein Gast, kein Bierwart, `nameKey` ist die normalisierte Form des Namens (klein, getrimmt, Leerzeichen zusammengefasst), Eintrag in `namen/` im selben Batch.
-- **Umbenennen** (UI-09): Der neue Name kommt in den Index, der alte wird frei. Ist das Mitglied ein aktiver Bierwart, ändert sich `bierwarte/{uid}.name` im selben Batch mit. Nicht erlaubt für „Gäste“ und für entfernte Mitglieder.
+- **Umbenennen** (UI-09): Der neue Name kommt in den Index, der alte wird frei. Bei gleichem Schlüssel (nur Groß- und Kleinschreibung) bleibt der Index, und der Name muss sich unterscheiden. Ist das Mitglied ein aktiver Bierwart, ändert sich `bierwarte/{uid}.name` im selben Batch mit. Nicht erlaubt für „Gäste“ und für entfernte Mitglieder. Die Log-Buchung `mitgliedUmbenannt` verlangt einen anderen Namen; sonst ließe sich über den Zweig für Summen eine Umbenennung ohne Änderung buchen.
 - **Entfernen** (KAD-04): nur bei Saldo 0, nie „Gäste“, nie ein aktiver Bierwart (KAD-02). Der Name bleibt im Index (KAD-08).
 - **Wieder aufnehmen** (KAD-08): `entfernt` zurück auf `false`.
 - **Sorte anlegen** (BES-01): Bestand 0, Preis in ganzen Cent ≥ 0.
@@ -485,4 +485,4 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 23. **Wo sehen Bierwarte offene Anfragen?** Hinweis auf der Strichliste, in den Einstellungen oder beides? Warte-Bildschirm und Anfrage-Ansicht fehlen im Design-Canvas.
 24. ~~**Fehlerhafte Zahlung korrigieren**~~ – entschieden: Storno auch für Zahlungen (STR-06 erweitert), nur wer den Ort verändern darf, in den das Geld ging. Eine Auszahlung hätte den Saldo des Mitglieds nicht korrigiert (siehe [Buchungen](#buchungen-das-log)).
 25. ~~**Kassenwart einer leeren Kasse**~~ – entschieden: Die Wiederherstellung übernimmt auch die Kassenwart-Rolle, wenn deren UID kein aktiver Bierwart mehr ist (siehe [Verwaltung als Batches](#verwaltung-als-batches)).
-26. **Groß- und Kleinschreibung beim Umbenennen:** Die Rules verlangen beim Umbenennen einen anderen `nameKey`. „jonas weber“ lässt sich deshalb nicht in „Jonas Weber“ ändern. Soll die Rule eine reine Schreibweisen-Änderung erlauben (gleicher Schlüssel, Index bleibt), oder reicht das so?
+26. ~~**Groß- und Kleinschreibung beim Umbenennen**~~ – entschieden: erlaubt; bei gleichem `nameKey` bleibt der Index, nur der Name ändert sich (siehe Stammdaten).

@@ -114,13 +114,11 @@ class KaderAktionen {
     if (bereinigt == m.name) {
       return const Eingabefehler(name: 'Das ist schon der Name.');
     }
-    // Die Rules verlangen einen anderen Schlüssel im Namensindex.
-    if (nameKey(bereinigt) == nameKey(m.name)) {
-      return const Eingabefehler(
-        name: 'Nur Groß- und Kleinschreibung ändern geht noch nicht.',
-      );
-    }
-    if (await _besitzer(sitzung.kasseId, bereinigt) != null) {
+    // Nur die Schreibweise geändert: Der Name gehört schon diesem Mitglied
+    // (offene Frage 26).
+    final nurSchreibweise = nameKey(bereinigt) == nameKey(m.name);
+    if (!nurSchreibweise &&
+        await _besitzer(sitzung.kasseId, bereinigt) != null) {
       return Eingabefehler(name: '„$bereinigt“ gibt es in der Kasse schon.');
     }
     // Ist das Mitglied aktiver Bierwart, verlangen die Rules den neuen Namen
