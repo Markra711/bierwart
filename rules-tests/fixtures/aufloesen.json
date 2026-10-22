@@ -1,0 +1,31 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "update",
+      "pfad": "kassen/k2",
+      "daten": {
+        "aufgeloest": true,
+        "aufloesenBestaetigung": "SV Neu",
+        "letzteBuchungId": "v6"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/v6",
+      "daten": {
+        "typ": "kasseAufgeloest",
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

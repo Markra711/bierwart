@@ -49,3 +49,28 @@ String? entfernenGeht(Bierwart b) => b.istAdmin
     : b.istKassenwart
     ? 'Bestimm erst einen anderen Kassenwart.'
     : null;
+
+/// Warum [ich] nicht austreten kann, oder `null` (AUTH-09): Das Portemonnaie
+/// muss leer sein; Admin und Kassenwart übergeben vorher ihre Rolle, außer
+/// sie sind der letzte Bierwart.
+String? austretenGeht(Bierwart ich, {required int anzahlBierwarte}) {
+  final stand = ich.portemonnaieCents;
+  if (stand > 0) {
+    return 'In deinem Portemonnaie sind noch ${formatEuro(stand)}. Gib sie '
+        'erst dem Kassenwart.';
+  }
+  if (stand < 0) {
+    return 'Die Kasse schuldet dir noch ${formatEuro(-stand)}. Lass dir das '
+        'erst vom Kassenwart erstatten.';
+  }
+  if (anzahlBierwarte > 1) {
+    if (ich.istAdmin) return 'Übergib erst die Admin-Rolle.';
+    if (ich.istKassenwart) return 'Bestimm erst einen anderen Kassenwart.';
+  }
+  return null;
+}
+
+/// Ob der abgetippte Name zur Kasse passt (ADM-05); Leerraum am Rand zählt
+/// nicht, Groß- und Kleinschreibung schon, wie in den Rules.
+bool aufloesenBestaetigt(String eingabe, String kassenName) =>
+    eingabe.trim() == kassenName;

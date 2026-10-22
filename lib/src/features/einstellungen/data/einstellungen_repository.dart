@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/firebase/firebase_providers.dart';
+import '../../onboarding/domain/codes.dart';
 import '../../onboarding/domain/einladung.dart';
 
 /// Ein Eintrag aus `kassen/{k}/bierwarte/{uid}`.
@@ -26,6 +27,7 @@ class KasseVomServer {
     required this.anzahlBierwarte,
     required this.adminUid,
     required this.kassenwartUid,
+    this.wiederherstellungHex = '',
   });
 
   final String name;
@@ -33,6 +35,9 @@ class KasseVomServer {
   final int anzahlBierwarte;
   final String adminUid;
   final String kassenwartUid;
+
+  /// Dokument-ID unter `wiederherstellung/` (Hex, klein).
+  final String wiederherstellungHex;
 }
 
 abstract interface class EinstellungenRepository {
@@ -45,6 +50,13 @@ abstract interface class EinstellungenRepository {
   /// Die Kasse direkt vom Server. Ohne Netz scheitert das, und so soll es
   /// sein (NFA-10).
   Future<KasseVomServer> kasseFuerVerwaltung(String kasseId);
+
+  /// Stand des eigenen Portemonnaies direkt vom Server (AUTH-09).
+  Future<int> portemonnaieVomServer(String kasseId, String uid);
+
+  /// Pfade von bis zu [anzahl] Dokumenten einer Sammlung der Kasse, direkt
+  /// vom Server, fürs Auflösen (ADM-05).
+  Future<List<String>> pfade(String kasseId, String sammlung, int anzahl);
 }
 
 class FirestoreEinstellungenRepository implements EinstellungenRepository {
@@ -95,7 +107,32 @@ class FirestoreEinstellungenRepository implements EinstellungenRepository {
       anzahlBierwarte: d['anzahlBierwarte'] as int,
       adminUid: d['adminUid'] as String,
       kassenwartUid: d['kassenwartUid'] as String,
+      wiederherstellungHex: switch (d['wiederherstellungHash']) {
+        Blob(:final bytes) => hexVon(bytes),
+        _ => '',
+      },
     );
+  }
+
+  @override
+  Future<int> portemonnaieVomServer(String kasseId, String uid) async {
+    final s = await _db
+        .doc('kassen/$kasseId/orte/$uid')
+        .get(const GetOptions(source: Source.server));
+    return s.data()?['standCents'] as int? ?? 0;
+  }
+
+  @override
+  Future<List<String>> pfade(
+    String kasseId,
+    String sammlung,
+    int anzahl,
+  ) async {
+    final q = await _db
+        .collection('kassen/$kasseId/$sammlung')
+        .limit(anzahl)
+        .get(const GetOptions(source: Source.server));
+    return [for (final d in q.docs) d.reference.path];
   }
 }
 

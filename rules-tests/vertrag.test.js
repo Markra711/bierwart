@@ -9,7 +9,7 @@ import {
   assertSucceeds,
   initializeTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { Bytes, doc, getDoc, increment, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { Bytes, collection, doc, getDoc, getDocs, increment, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore';
 
 let env;
 
@@ -364,5 +364,79 @@ describe('Verwaltung aus der App (ADM-01 bis ADM-04)', () => {
   test('als Admin mit Jonas im Stempel geht es (Gegenstück)', async () => {
     await assertSucceeds(abspielen(fixture('rolle-admin.json')));
     await assertSucceeds(abspielen(alsJonas(fixture('kasse-umbenennen.json'))));
+  });
+});
+
+describe('Austreten und Auflösen aus der App (UC-05, AUTH-09, ADM-05)', () => {
+  async function lesen(pfad) {
+    let daten;
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const snap = await getDoc(doc(ctx.firestore(), pfad));
+      daten = snap.exists() ? snap.data() : undefined;
+    });
+    return daten;
+  }
+  const setzen = (pfad, daten) => env.withSecurityRulesDisabled((ctx) =>
+    setDoc(doc(ctx.firestore(), pfad), daten, { merge: true }));
+  const ALT = 'K7Q2MXA93DWFT2HC8RNP';
+
+  beforeEach(async () => {
+    await assertSucceeds(abspielen(fixture('kasse-erstellen.json')));
+  });
+
+  test('Jonas tritt aus: Zugang weg, bleibt Mitglied, Anzahl sinkt', async () => {
+    await assertSucceeds(abspielen(fixture('beitreten.json')));
+    await assertSucceeds(abspielen(fixture('austreten.json')));
+    expect(await lesen('kassen/k2/bierwarte/neu')).toBeUndefined();
+    expect(await lesen('users/neu')).toBeUndefined();
+    expect((await lesen('kassen/k2/mitglieder/m2')).entfernt).toBe(false);
+    expect((await lesen('kassen/k2')).anzahlBierwarte).toBe(1);
+    expect((await lesen(`einladungen/${ALT}`)).anzahlBierwarte).toBe(1);
+  });
+
+  test('nicht mit Geld im Portemonnaie (AUTH-09)', async () => {
+    await assertSucceeds(abspielen(fixture('beitreten.json')));
+    await setzen('kassen/k2/orte/neu', { standCents: 100 });
+    await assertFails(abspielen(fixture('austreten.json')));
+  });
+
+  test('die Letzte geht mit ihren Rollen, die Kasse ist leer', async () => {
+    await assertSucceeds(abspielen(fixture('austreten-letzter.json')));
+    const kasse = await lesen('kassen/k2');
+    expect(kasse.anzahlBierwarte).toBe(0);
+    expect(kasse.leerSeit).toBeTruthy();
+  });
+
+  test('Auflösen, eine volle Portion löschen, dann der Schluss', async () => {
+    await assertSucceeds(abspielen(fixture('beitreten.json')));
+    await assertSucceeds(abspielen(fixture('aufloesen.json')));
+    for (let i = 0; i < 200; i++) {
+      await setzen(`kassen/k2/buchungen/x${String(i).padStart(3, '0')}`, { typ: 'test' });
+    }
+    await assertSucceeds(abspielen(fixture('loeschen-portion.json')));
+    expect(await lesen('kassen/k2/buchungen/x199')).toBeUndefined();
+
+    // Den Rest löscht die App genauso portionsweise; hier in einem Batch.
+    const rest = [];
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      for (const s of ['buchungen', 'mitglieder', 'namen', 'sorten', 'orte', 'uebernahmen', 'bierwarte']) {
+        const q = await getDocs(collection(ctx.firestore(), `kassen/k2/${s}`));
+        for (const d of q.docs) if (d.ref.path !== 'kassen/k2/bierwarte/gruender') rest.push(d.ref.path);
+      }
+    });
+    await assertSucceeds(abspielen({
+      uid: 'gruender',
+      schreibvorgaenge: rest.map((pfad) => ({ art: 'delete', pfad, daten: {} })),
+    }));
+
+    await assertSucceeds(abspielen(fixture('aufloesen-schluss.json')));
+    expect(await lesen('kassen/k2')).toBeUndefined();
+    expect(await lesen(`einladungen/${ALT}`)).toBeUndefined();
+    expect(await lesen('users/gruender')).toBeUndefined();
+  });
+
+  test('ohne Auflösen löscht niemand etwas', async () => {
+    await assertFails(abspielen(fixture('loeschen-portion.json')));
+    await assertFails(abspielen(fixture('aufloesen-schluss.json')));
   });
 });

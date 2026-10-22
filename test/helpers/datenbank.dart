@@ -13,6 +13,7 @@ import 'package:bier_wart/src/features/kader/domain/mitglied.dart';
 import 'package:bier_wart/src/features/kader/domain/name.dart';
 import 'package:bier_wart/src/features/lager/data/sorten_repository.dart';
 import 'package:bier_wart/src/features/lager/domain/sorte.dart';
+import 'package:bier_wart/src/features/onboarding/domain/codes.dart';
 import 'package:bier_wart/src/features/onboarding/domain/einladung.dart';
 import 'package:bier_wart/src/features/strichliste/data/kassenkopf_repository.dart';
 
@@ -375,7 +376,29 @@ class FakeDatenbank
       anzahlBierwarte: d['anzahlBierwarte']! as int,
       adminUid: d['adminUid']! as String,
       kassenwartUid: d['kassenwartUid']! as String,
+      wiederherstellungHex: switch (d['wiederherstellungHash']) {
+        Bytes(:final wert) => hexVon(wert),
+        _ => '',
+      },
     );
+  }
+
+  @override
+  Future<int> portemonnaieVomServer(String kasseId, String uid) async {
+    if (serverFehler != null) throw serverFehler!;
+    return docs['kassen/$kasseId/orte/$uid']?['standCents'] as int? ?? 0;
+  }
+
+  @override
+  Future<List<String>> pfade(
+    String kasseId,
+    String sammlung,
+    int anzahl,
+  ) async {
+    if (serverFehler != null) throw serverFehler!;
+    return [for (final e in _unter('kassen/$kasseId/$sammlung')) e.key]
+        .take(anzahl)
+        .toList();
   }
 
   @override

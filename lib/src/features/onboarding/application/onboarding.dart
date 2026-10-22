@@ -37,6 +37,14 @@ class InKasse extends Startzustand {
   final String kasseId;
 }
 
+/// Der Admin hat die Kasse aufgelöst, das Löschen ist nicht fertig. Die App
+/// setzt es fort, auch nach einem Neustart (ADM-05).
+class InAufloesung extends Startzustand {
+  const InAufloesung(this.kasseId);
+
+  final String kasseId;
+}
+
 final startzustandProvider = Provider<Startzustand>((ref) {
   final anmeldung = ref.watch(anmeldungProvider);
   if (anmeldung case AsyncError(:final error)) {
@@ -50,6 +58,7 @@ final startzustandProvider = Provider<Startzustand>((ref) {
       mitgliedschaftProvider(id),
     )) {
       AsyncData(value: Mitgliedschaft.entfernt) => const OhneKasse(),
+      AsyncData(value: Mitgliedschaft.aufloesen) => InAufloesung(id),
       _ => InKasse(id),
     },
     AsyncData() => const OhneKasse(),

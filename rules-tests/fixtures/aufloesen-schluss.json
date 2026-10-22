@@ -1,0 +1,30 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/bierwarte/gruender",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "einladungen/K7Q2MXA93DWFT2HC8RNP",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "wiederherstellung/be105af532593b07b857dbbb0012fc12a939efb515656aa111fc0120993c0609",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "users/gruender",
+      "daten": {}
+    }
+  ]
+}

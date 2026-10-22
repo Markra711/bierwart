@@ -1,0 +1,52 @@
+{
+  "uid": "neu",
+  "schreibvorgaenge": [
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/bierwarte/neu",
+      "daten": {}
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2",
+      "daten": {
+        "anzahlBierwarte": {
+          "$erhoehen": -1
+        },
+        "letzteBuchungId": "v4"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "einladungen/K7Q2MXA93DWFT2HC8RNP",
+      "daten": {
+        "anzahlBierwarte": {
+          "$erhoehen": -1
+        }
+      }
+    },
+    {
+      "art": "delete",
+      "pfad": "users/neu",
+      "daten": {}
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/v4",
+      "daten": {
+        "typ": "ausgetreten",
+        "mitgliedId": "m2",
+        "stempel": {
+          "uid": "neu",
+          "name": "Jonas Weber",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

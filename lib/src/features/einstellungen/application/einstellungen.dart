@@ -168,6 +168,73 @@ class VerwaltungAktionen {
   }
 }
 
+extension AustretenUndAufloesen on VerwaltungAktionen {
+  /// Austreten (UC-05, AUTH-09). Prüft Portemonnaie und Rollen am Stand des
+  /// Servers; danach ist der Nutzer ohne Kasse.
+  Future<void> austreten() =>
+      mitServer('Austreten hat nicht geklappt', () async {
+        final s = _ref.read(sitzungProvider);
+        final ich = _ref
+            .read(bierwarteProvider)
+            .value
+            ?.where((b) => b.uid == s?.uid)
+            .firstOrNull;
+        if (s == null || ich == null) {
+          throw const VerwaltungsFehler('Die Kasse ist noch nicht geladen.');
+        }
+        final repo = _ref.read(einstellungenRepositoryProvider);
+        final kasse = await repo
+            .kasseFuerVerwaltung(s.kasseId)
+            .timeout(antwortFrist);
+        final stand = await repo
+            .portemonnaieVomServer(s.kasseId, s.uid)
+            .timeout(antwortFrist);
+        final grund = austretenGeht(
+          Bierwart(
+            uid: s.uid,
+            name: s.name,
+            mitgliedId: ich.mitgliedId,
+            istAdmin: kasse.adminUid == s.uid,
+            istKassenwart: kasse.kassenwartUid == s.uid,
+            portemonnaieCents: stand,
+          ),
+          anzahlBierwarte: kasse.anzahlBierwarte,
+        );
+        if (grund != null) throw VerwaltungsFehler(grund);
+        await _schreiber
+            .schreiben(
+              austretenBatch(
+                uid: s.uid,
+                bierwartName: s.name,
+                kasseId: s.kasseId,
+                buchungId: _schreiber.neueId(),
+                mitgliedId: ich.mitgliedId,
+                einladungCode: kasse.einladungCode,
+                letzter: kasse.anzahlBierwarte == 1,
+                geraetZeit: DateTime.now(),
+              ),
+            )
+            .timeout(antwortFrist);
+      });
+
+  /// Auflösen, Schritt 1 (ADM-05, UC-10): mit abgetipptem Kassennamen.
+  /// Danach führt die App auf die Seite, die alles löscht.
+  Future<void> aufloesen(String bestaetigung) =>
+      _ausfuehren('Die Kasse ließ sich nicht auflösen', (s, kasse) {
+        if (!aufloesenBestaetigt(bestaetigung, kasse.name)) {
+          throw const VerwaltungsFehler('Der Name stimmt nicht genau.');
+        }
+        return aufloesenBatch(
+          uid: s.uid,
+          bierwartName: s.name,
+          kasseId: s.kasseId,
+          buchungId: _schreiber.neueId(),
+          bestaetigung: kasse.name,
+          geraetZeit: DateTime.now(),
+        );
+      });
+}
+
 final verwaltungAktionenProvider = Provider<VerwaltungAktionen>(
   VerwaltungAktionen.new,
 );

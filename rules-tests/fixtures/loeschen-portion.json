@@ -1,0 +1,1005 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x000",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x001",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x002",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x003",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x004",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x005",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x006",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x007",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x008",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x009",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x010",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x011",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x012",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x013",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x014",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x015",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x016",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x017",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x018",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x019",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x020",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x021",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x022",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x023",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x024",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x025",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x026",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x027",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x028",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x029",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x030",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x031",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x032",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x033",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x034",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x035",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x036",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x037",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x038",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x039",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x040",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x041",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x042",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x043",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x044",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x045",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x046",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x047",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x048",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x049",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x050",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x051",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x052",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x053",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x054",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x055",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x056",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x057",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x058",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x059",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x060",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x061",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x062",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x063",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x064",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x065",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x066",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x067",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x068",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x069",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x070",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x071",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x072",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x073",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x074",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x075",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x076",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x077",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x078",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x079",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x080",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x081",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x082",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x083",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x084",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x085",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x086",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x087",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x088",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x089",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x090",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x091",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x092",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x093",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x094",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x095",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x096",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x097",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x098",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x099",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x100",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x101",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x102",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x103",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x104",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x105",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x106",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x107",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x108",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x109",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x110",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x111",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x112",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x113",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x114",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x115",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x116",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x117",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x118",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x119",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x120",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x121",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x122",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x123",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x124",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x125",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x126",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x127",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x128",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x129",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x130",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x131",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x132",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x133",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x134",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x135",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x136",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x137",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x138",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x139",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x140",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x141",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x142",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x143",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x144",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x145",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x146",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x147",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x148",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x149",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x150",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x151",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x152",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x153",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x154",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x155",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x156",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x157",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x158",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x159",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x160",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x161",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x162",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x163",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x164",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x165",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x166",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x167",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x168",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x169",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x170",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x171",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x172",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x173",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x174",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x175",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x176",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x177",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x178",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x179",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x180",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x181",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x182",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x183",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x184",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x185",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x186",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x187",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x188",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x189",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x190",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x191",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x192",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x193",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x194",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x195",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x196",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x197",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x198",
+      "daten": {}
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/buchungen/x199",
+      "daten": {}
+    }
+  ]
+}
