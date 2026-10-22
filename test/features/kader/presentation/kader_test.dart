@@ -1,4 +1,5 @@
 import 'package:bier_wart/src/core/money/cents.dart';
+import 'package:bier_wart/src/features/geld/data/zahlung_batch.dart';
 import 'package:bier_wart/src/features/strichliste/application/strichliste.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -230,4 +231,58 @@ void main() {
       expect(find.text('Tim Richter'), findsOneWidget);
     },
   );
+
+  testWidgets('Zahlung stornieren mit Bestätigung (offene Frage 24)', (
+    tester,
+  ) async {
+    final db = await starten(tester);
+    await detailOeffnen(tester, 'Jonas Weber');
+    await tippen(tester, 'Zahlung erfassen');
+    await tester.enterText(find.byType(TextField), '5');
+    await tester.pump();
+    await tippen(tester, '${formatEuro(500)} verbuchen');
+    expect(db.docs['kassen/k1/mitglieder/jonas']!['saldoCents'], 700);
+
+    await tester.tap(find.byTooltip('Zahlung stornieren'));
+    await tester.pumpAndSettle();
+    expect(find.text('Zahlung über ${formatEuro(500)} stornieren?'), findsOne);
+    await tippen(tester, 'Stornieren');
+
+    expect(letzteBuchung(db), containsPair('bezugTyp', 'zahlung'));
+    expect(letzteBuchung(db), containsPair('ortId', 'kasse'));
+    expect(db.docs['kassen/k1/mitglieder/jonas']!['saldoCents'], 1200);
+    expect(find.byTooltip('Zahlung stornieren'), findsNothing);
+    expect(find.text('Zahlung storniert.'), findsOneWidget);
+  });
+
+  testWidgets('Zahlung aus fremdem Portemonnaie: Hinweis statt Storno', (
+    tester,
+  ) async {
+    final db = kader()..bierwart('k1', 'max', 'Max Becker', stand: 500);
+    await db.schreiben(
+      zahlungBatch(
+        uid: 'max',
+        bierwartName: 'Max Becker',
+        kasseId: 'k1',
+        buchungId: 'z9',
+        mitgliedId: 'jonas',
+        betragCents: 500,
+        ortId: 'max',
+        geraetZeit: DateTime(2026, 10, 22, 19),
+      ),
+    );
+    db.batches.clear();
+    await starten(tester, db: db);
+    await detailOeffnen(tester, 'Jonas Weber');
+    await tester.tap(find.byTooltip('Zahlung stornieren'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Das Geld liegt im Portemonnaie von Max. Stornieren kann nur, wer es '
+        'hat.',
+      ),
+      findsOneWidget,
+    );
+    expect(db.batches, isEmpty);
+  });
 }

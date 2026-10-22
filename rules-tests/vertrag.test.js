@@ -169,6 +169,14 @@ describe('Kader aus der App (KAD-01, KAD-04, KAD-08, GEL-02, GEL-03, UI-09)', ()
     expect((await lesen('kassen/k2/orte/gruender')).standCents).toBe(150);
   });
 
+  test('Zahlung stornieren: Saldo und Portemonnaie wie vorher, nur einmal', async () => {
+    await assertSucceeds(abspielen(fixture('zahlung.json')));
+    await assertSucceeds(abspielen(fixture('zahlung-storno.json')));
+    expect((await lesen('kassen/k2/mitglieder/m3')).saldoCents).toBe(150);
+    expect((await lesen('kassen/k2/orte/gruender')).standCents).toBe(0);
+    await assertFails(abspielen(fixture('zahlung-storno.json')));
+  });
+
   test('Zahlung in die Kasse als Kassenwart', async () => {
     await assertSucceeds(abspielen(fixture('zahlung-kasse.json')));
     expect((await lesen('kassen/k2/orte/kasse')).standCents).toBe(5150);

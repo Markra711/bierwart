@@ -243,12 +243,47 @@ describe('Storno (STR-04, STR-06)', () => {
     await assertFails(stornoBar({ uid: 'kw', ortId: 'anna' }));
   });
 
-  test('Zahlungen lassen sich nicht stornieren', async () => {
-    await assertSucceeds(zahlung({ id: 'z1' }));
-    await assertFails(buche('anna', 'storno-z1', { typ: 'storno', bezugId: 'z1', bezugTyp: 'zahlung', mitgliedId: 'jonas', sorteId: 's0', preisCents: 500 }, [
-      ['mitglieder/jonas', 'saldoCents', { inc: 500 }],
-      ['sorten/s0', 'bestand', { inc: 1 }],
-    ]));
+  // Zahlung stornieren (offene Frage 24): Saldo steigt wieder, das Geld geht
+  // aus dem Ort, in den es ging; nur wer diesen Ort verändern darf.
+  const stornoZahlung = ({ uid = 'anna', bezugId = 'z1', betrag = 500, ortId = 'anna', extra = {} } = {}) =>
+    buche(uid, `storno-${bezugId}`, { typ: 'storno', bezugId, bezugTyp: 'zahlung', mitgliedId: 'jonas', betragCents: betrag, ortId, ...extra }, [
+      ['mitglieder/jonas', 'saldoCents', { inc: betrag }],
+      [`orte/${ortId}`, 'standCents', { inc: -betrag }],
+    ]);
+
+  test('Zahlung stornieren stellt Saldo und Portemonnaie wieder her', async () => {
+    await assertSucceeds(zahlung());
+    await assertSucceeds(stornoZahlung());
+    expect((await lesen('mitglieder/jonas')).saldoCents).toBe(0);
+    expect((await lesen('orte/anna')).standCents).toBe(0);
+  });
+
+  test('eine Zahlung nur einmal stornieren', async () => {
+    await assertSucceeds(zahlung());
+    await assertSucceeds(stornoZahlung());
+    await assertFails(stornoZahlung());
+  });
+
+  test('Betrag und Ort müssen zur Zahlung passen', async () => {
+    await assertSucceeds(zahlung({ uid: 'kw', ortId: 'kasse' }));
+    await assertFails(stornoZahlung({ uid: 'kw', betrag: 400, ortId: 'kasse' }));
+    await assertFails(stornoZahlung({ uid: 'kw', ortId: 'kw' }));
+  });
+
+  test('nicht aus fremdem Portemonnaie', async () => {
+    await assertSucceeds(zahlung());
+    await assertFails(stornoZahlung({ uid: 'kw' }));
+  });
+
+  test('aus der Kasse storniert nur der Kassenwart', async () => {
+    await assertSucceeds(zahlung({ uid: 'kw', ortId: 'kasse' }));
+    await assertFails(stornoZahlung({ ortId: 'kasse' }));
+    await assertSucceeds(stornoZahlung({ uid: 'kw', ortId: 'kasse' }));
+  });
+
+  test('keine Felder eines Strichs am Storno einer Zahlung', async () => {
+    await assertSucceeds(zahlung());
+    await assertFails(stornoZahlung({ extra: { sorteId: 's0' } }));
   });
 });
 

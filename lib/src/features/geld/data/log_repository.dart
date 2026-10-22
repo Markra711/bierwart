@@ -43,6 +43,7 @@ Logbuchung logbuchungAus(String id, Map<String, Object?> d) {
     rolle: d['rolle'] as String?,
     zielUid: (d['nachUid'] ?? d['uid']) as String?,
     bezugBar: d['bezugTyp'] == 'strichBar',
+    bezugZahlung: d['bezugTyp'] == 'zahlung',
     aktiv: d['aktiv'] as bool? ?? true,
   );
 }

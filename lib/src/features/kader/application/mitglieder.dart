@@ -216,6 +216,44 @@ class KaderAktionen {
     return const Eingabefehler();
   }
 
+  /// Warum sich die Zahlung [e] nicht stornieren lässt, oder `null`
+  /// (offene Frage 24): Das Geld geht aus dem Ort, in den es ging, und den
+  /// darf nur verändern, wer ihn hat; die Kasse nur der Kassenwart.
+  String? zahlungStornoGeht(Eintrag e) {
+    if (e.art != EintragArt.zahlung || e.storniert) {
+      return 'Diese Zahlung ist schon storniert.';
+    }
+    final uid = _ref.read(sitzungProvider)?.uid;
+    if (e.ortId == 'kasse') {
+      return _ref.read(istKassenwartProvider)
+          ? null
+          : 'Das Geld liegt in der Kasse. Stornieren kann nur der Kassenwart.';
+    }
+    return e.ortId == uid
+        ? null
+        : 'Das Geld liegt im Portemonnaie von ${vorname(e.von)}. Stornieren '
+              'kann nur, wer es hat.';
+  }
+
+  /// Eine Zahlung stornieren (offene Frage 24): Der offene Betrag steigt
+  /// wieder, das Geld geht aus dem Ort, in den es ging.
+  void zahlungStornieren(Mitglied m, Eintrag e) {
+    assert(zahlungStornoGeht(e) == null);
+    _schreiben(
+      (s) => zahlungStornoBatch(
+        uid: s.uid,
+        bierwartName: s.name,
+        kasseId: s.kasseId,
+        zahlungId: e.buchungId,
+        mitgliedId: m.id,
+        betragCents: e.cents,
+        ortId: e.ortId!,
+        geraetZeit: DateTime.now(),
+      ),
+      'Das Storno der Zahlung von ${m.name}',
+    );
+  }
+
   /// Einen Strich im Mitglied-Detail stornieren (STR-06). Ein Bar-Strich
   /// geht aus dem Portemonnaie dessen, der storniert.
   void stornieren(Mitglied m, Eintrag e) {

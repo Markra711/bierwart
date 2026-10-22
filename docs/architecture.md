@@ -129,7 +129,7 @@ Gemeinsame Felder:
 | --- | --- | --- | --- |
 | `strich` | `mitgliedId`, `sorteId`, `preisCents` (aktueller oder vorheriger Preis der Sorte) | Saldo + Preis, Bestand − 1 | STR-02, BES-02 |
 | `strichBar` | `mitgliedId`, `sorteId`, `preisCents`, `ortId` | Bestand − 1, Ort + Preis | STR-03, KAD-03 |
-| `storno` | `bezugId`, die Felder der Ursprungsbuchung; beim Bar-Strich zusätzlich `ortId` des Stornierenden | Gegenwirkung der Ursprungsbuchung; beim Bar-Strich geht der Preis aus dem Ort des Stornierenden | STR-04, STR-06 |
+| `storno` | `bezugId`, `bezugTyp`, die Felder der Ursprungsbuchung; beim Bar-Strich zusätzlich `ortId` des Stornierenden; bei einer Zahlung `betragCents` und `ortId` der Zahlung | Gegenwirkung der Ursprungsbuchung; beim Bar-Strich geht der Preis aus dem Ort des Stornierenden, bei einer Zahlung aus dem Ort, in den sie ging | STR-04, STR-06 |
 | `zahlung` | `mitgliedId`, `betragCents`, `ortId` | Saldo − Betrag, Ort + Betrag | GEL-02, GEL-03 |
 | `einkauf` | `zeilen: {sorteId: anzahl}` (höchstens 10), `betragCents`, `ortId` | Bestand + Anzahl je Zeile, Ort − Betrag | BES-04, BES-05 |
 | `bestandKorrektur` | `sorteId`, `gezaehlt`, `differenz` | Bestand = gezählt | BES-06 |
@@ -200,6 +200,7 @@ Gemeinsame Felder:
 - Strich offen stornieren: Saldo − Preis, Bestand + 1.
 - **Bar-Strich stornieren:** Bestand + 1, und der Preis geht aus dem Portemonnaie **dessen, der storniert**. Er gibt das Bargeld zurück. Der Kassenwart kann stattdessen die Kasse wählen. Das passt zur Regel, dass jeder nur das eigene Portemonnaie verändert. Storniert der, der gebucht hat, gleicht es sich genau aus.
 - **Nur einmal:** Die Storno-Buchung hat die feste ID `storno-{bezugId}`. Ein zweites Storno derselben Buchung wäre ein Schreibvorgang auf ein bestehendes Dokument, und den lehnen die Rules ab (Buchungen: kein `update`).
+- **Zahlung stornieren** (offene Frage 24): Der Saldo steigt wieder um den Betrag, das Geld geht aus dem Ort, in den die Zahlung ging. Stornieren darf nur, wer diesen Ort verändern darf: das eigene Portemonnaie, die Kasse nur der Kassenwart. Sonst sagt die App, bei wem das Geld liegt. Weil Geld den Ort wechselt, fragt sie vorher (UI-04). Auf entfernte Mitglieder geht es nicht.
 - Stornos selbst sind nicht stornierbar. Wer sich vertan hat, bucht neu.
 
 **Rückgängig (STR-04):** Die Snackbar erscheint nur auf dem Gerät des Buchenden. Sie bleibt bis zur nächsten Buchung stehen, höchstens 8 Sekunden. Danach geht Storno nur noch über das Mitglied-Detail (STR-06), für jeden Bierwart.
@@ -245,12 +246,12 @@ Die Rules sind in Release 1 die Geschäftslogik. Grundsätze (NFA-07):
 - Jede Verwaltungsaktion schreibt ihre Log-Buchung im selben Batch. Die Rules verlangen sie (`existsAfter`).
 - `einladungen` und `wiederherstellung`: nur `get` für Angemeldete, kein `list`.
 
-Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 234 Emulator-Tests in `rules-tests/`:
-- `buchungen.test.js` (47): Strich offen und bar, Storno, Zahlung, Einkauf, Bestandskorrektur, Übergabe, Ein-/Auszahlung, Kassensturz, Fälle ohne passende Buchung, Unveränderlichkeit des Logs.
+Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 240 Emulator-Tests in `rules-tests/`:
+- `buchungen.test.js` (52): Strich offen und bar, Storno von Strichen und Zahlungen, Zahlung, Einkauf, Bestandskorrektur, Übergabe, Ein-/Auszahlung, Kassensturz, Fälle ohne passende Buchung, Unveränderlichkeit des Logs.
 - `stammdaten.test.js` (32): Mitglieder anlegen, umbenennen, entfernen, wieder aufnehmen; Namensindex; Sorten anlegen, ändern, ausblenden.
 - `verwaltung.test.js` (56): Kasse erstellen, Beitreten, Übernahme anfragen, zurückziehen und entscheiden, Austreten, `users/`, Lesen von Einladungen und Namensindex.
 - `admin.test.js` (52): Link erneuern, Bierwart entfernen, Rollen, Umbenennen, Wiederherstellungscode erneuern, Admin wiederherstellen mit und ohne Bierwart-Eintrag, Nachweis für die Wiederherstellung (ADR-0010), Auflösen und Löschen.
-- `vertrag.test.js` (47): Batches, wie die App sie baut: Einkauf aus Portemonnaie und Kasse, Preis ändern, Ausblenden, Bestandskorrektur samt Ablehnung bei veralteter Differenz; Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart; Übergabe in die Kasse und zurück, Auszahlung aus der Kasse, Einzahlung ins Portemonnaie, Kassensturz samt Ablehnung bei veralteter Differenz, Übergabe nur vom Kassenwart; Link erneuern, Bierwart entfernen, Rollen übertragen, Kasse umbenennen, jeweils nur als Admin; Austreten (nicht mit Geld im Portemonnaie, als Letzte mit `leerSeit`), Auflösen mit einer vollen Löschportion und dem Schluss-Batch; Wiederherstellungscode erneuern (nur Admin) und mit dem Code Admin werden, danach gilt der alte nicht mehr; Wiederherstellung aus dem Onboarding mit Nachweis, als bestehendes und als neues Mitglied. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
+- `vertrag.test.js` (48): Batches, wie die App sie baut: Einkauf aus Portemonnaie und Kasse, Preis ändern, Ausblenden, Bestandskorrektur samt Ablehnung bei veralteter Differenz; Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Zahlung stornieren (nur einmal), Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart; Übergabe in die Kasse und zurück, Auszahlung aus der Kasse, Einzahlung ins Portemonnaie, Kassensturz samt Ablehnung bei veralteter Differenz, Übergabe nur vom Kassenwart; Link erneuern, Bierwart entfernen, Rollen übertragen, Kasse umbenennen, jeweils nur als Admin; Austreten (nicht mit Geld im Portemonnaie, als Letzte mit `leerSeit`), Auflösen mit einer vollen Löschportion und dem Schluss-Batch; Wiederherstellungscode erneuern (nur Admin) und mit dem Code Admin werden, danach gilt der alte nicht mehr; Wiederherstellung aus dem Onboarding mit Nachweis, als bestehendes und als neues Mitglied. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
 
 Kern des Musters:
 
@@ -275,7 +276,7 @@ match /buchungen/{buchungId} {
 Zusätzlich zu den Entscheidungen oben prüfen die Rules:
 - Der Name im Stempel ist der Name des buchenden Bierwarts (`bierwarte/{uid}.name`).
 - Auf entfernte Mitglieder wird nicht gebucht, und auf „Gäste“ nicht offen.
-- Storno geht nur für Striche (`strich`, `strichBar`). Die Felder müssen zur Ursprungsbuchung passen (siehe offene Frage 24).
+- Storno geht für Striche (`strich`, `strichBar`) und Zahlungen. Die Felder müssen zur Ursprungsbuchung passen; bei einer Zahlung muss der Stornierende den Ort verändern dürfen.
 
 **Stammdaten** folgen demselben Muster: Jede Änderung an Mitglied, Sorte oder Bierwart-Namen verweist über `letzteBuchungId` auf ihre Log-Buchung im selben Batch (LOG-01). Was die Rules dabei prüfen:
 - **Mitglied anlegen** (KAD-01): Saldo 0, kein Gast, kein Bierwart, `nameKey` ist die normalisierte Form des Namens (klein, getrimmt, Leerzeichen zusammengefasst), Eintrag in `namen/` im selben Batch.
@@ -482,6 +483,6 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 21. ~~**Übernahme eines Mitglieds ohne App**~~ – entschieden: braucht dieselbe Bestätigung wie bei Bierwarten, weil der Name danach im Stempel steht (siehe [Verwaltung als Batches](#verwaltung-als-batches)).
 22. ~~**Ablauf einer Übernahme-Anfrage**~~ – entschieden: 7 Tage gültig, vorher vom neuen Gerät zurückziehbar.
 23. **Wo sehen Bierwarte offene Anfragen?** Hinweis auf der Strichliste, in den Einstellungen oder beides? Warte-Bildschirm und Anfrage-Ansicht fehlen im Design-Canvas.
-24. **Fehlerhafte Zahlung korrigieren:** STR-06 erlaubt nur, Striche zu stornieren, und die Rules lassen nur das zu. Wie wird eine versehentlich gebuchte Zahlung zurückgenommen: per Storno auch für Zahlungen (STR-06 erweitern) oder über eine Auszahlung mit Grund?
+24. ~~**Fehlerhafte Zahlung korrigieren**~~ – entschieden: Storno auch für Zahlungen (STR-06 erweitert), nur wer den Ort verändern darf, in den das Geld ging. Eine Auszahlung hätte den Saldo des Mitglieds nicht korrigiert (siehe [Buchungen](#buchungen-das-log)).
 25. ~~**Kassenwart einer leeren Kasse**~~ – entschieden: Die Wiederherstellung übernimmt auch die Kassenwart-Rolle, wenn deren UID kein aktiver Bierwart mehr ist (siehe [Verwaltung als Batches](#verwaltung-als-batches)).
 26. **Groß- und Kleinschreibung beim Umbenennen:** Die Rules verlangen beim Umbenennen einen anderen `nameKey`. „jonas weber“ lässt sich deshalb nicht in „Jonas Weber“ ändern. Soll die Rule eine reine Schreibweisen-Änderung erlauben (gleicher Schlüssel, Index bleibt), oder reicht das so?
