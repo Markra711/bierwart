@@ -35,6 +35,7 @@ class BwFeld extends StatefulWidget {
     this.autofocus = false,
     this.fokus,
     this.aufSheet = false,
+    this.schreibweise,
   });
 
   final String label;
@@ -55,6 +56,9 @@ class BwFeld extends StatefulWidget {
 
   /// Im Sheet liegt das Feld auf `surface-float` (styleguide.md, Sheet).
   final bool aufSheet;
+
+  /// Ohne Angabe: Namen mit großen Anfängen, Beträge ohne.
+  final TextCapitalization? schreibweise;
 
   @override
   State<BwFeld> createState() => _BwFeldState();
@@ -105,9 +109,11 @@ class _BwFeldState extends State<BwFeld> {
             cursorColor: BwColors.gradEnd,
             keyboardType: widget.tastatur,
             textInputAction: widget.eingabeAktion,
-            textCapitalization: widget.betrag
-                ? TextCapitalization.none
-                : TextCapitalization.words,
+            textCapitalization:
+                widget.schreibweise ??
+                (widget.betrag
+                    ? TextCapitalization.none
+                    : TextCapitalization.words),
             inputFormatters: [LengthLimitingTextInputFormatter(80)],
             onSubmitted: widget.onSubmitted,
             decoration: InputDecoration(

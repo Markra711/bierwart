@@ -1,0 +1,32 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/g5",
+      "daten": {
+        "typ": "kassensturz",
+        "gezaehltCents": 4950,
+        "differenzCents": -50,
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/orte/kasse",
+      "daten": {
+        "standCents": 4950,
+        "letzteBuchungId": "g5"
+      }
+    }
+  ]
+}
