@@ -440,3 +440,48 @@ describe('Austreten und Auflösen aus der App (UC-05, AUTH-09, ADM-05)', () => {
     await assertFails(abspielen(fixture('aufloesen-schluss.json')));
   });
 });
+
+describe('Wiederherstellungscode aus der App (ADM-06, ADM-08)', () => {
+  const kette = ['kasse-erstellen.json', 'beitreten.json'].map(fixture);
+  async function lesen(pfad) {
+    let daten;
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const snap = await getDoc(doc(ctx.firestore(), pfad));
+      daten = snap.exists() ? snap.data() : undefined;
+    });
+    return daten;
+  }
+  const ALT = 'be105af532593b07b857dbbb0012fc12a939efb515656aa111fc0120993c0609';
+
+  beforeEach(async () => {
+    for (const batch of kette) await assertSucceeds(abspielen(batch));
+  });
+
+  test('Admin erneuert den Code, der alte ist weg', async () => {
+    await assertSucceeds(abspielen(fixture('code-erneuern.json')));
+    expect(await lesen(`wiederherstellung/${ALT}`)).toBeUndefined();
+  });
+
+  test('Jonas wird mit dem Code Admin, Lena bleibt Kassenwart', async () => {
+    await assertSucceeds(abspielen(fixture('admin-wiederherstellen.json')));
+    const kasse = await lesen('kassen/k2');
+    expect([kasse.adminUid, kasse.kassenwartUid]).toEqual(['neu', 'gruender']);
+    expect(await lesen('kassen/k2/bierwarte/gruender')).toBeDefined();
+  });
+
+  test('nach dem Erneuern gilt der alte Code nicht mehr', async () => {
+    await assertSucceeds(abspielen(fixture('code-erneuern.json')));
+    await assertFails(abspielen(fixture('admin-wiederherstellen.json')));
+  });
+
+  test('Code erneuern nur als Admin', async () => {
+    const { schreibvorgaenge } = fixture('code-erneuern.json');
+    await assertFails(abspielen({
+      uid: 'neu',
+      schreibvorgaenge: schreibvorgaenge.map((s) =>
+        s.pfad.includes('/buchungen/')
+          ? { ...s, daten: { ...s.daten, stempel: { ...s.daten.stempel, uid: 'neu', name: 'Jonas Weber' } } }
+          : s),
+    }));
+  });
+});

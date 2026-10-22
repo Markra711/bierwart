@@ -1,6 +1,7 @@
 import 'package:bier_wart/src/core/firebase/schreibvorgang.dart';
 import 'package:bier_wart/src/features/einstellungen/data/verwaltung_batches.dart';
 import 'package:bier_wart/src/features/einstellungen/domain/bierwart.dart';
+import 'package:bier_wart/src/features/onboarding/domain/codes.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../helpers/fixtures.dart';
@@ -15,7 +16,8 @@ const alterCode = 'K7Q2MXA93DWFT2HC8RNP';
 const neuerCode = 'N3W7C0DE4X5Y6Z8A9B1C';
 final zeit = DateTime(2026, 10, 22);
 
-/// Hash des Wiederherstellungscodes aus kasse-erstellen.json.
+/// Wiederherstellungscode aus kasse-erstellen.json und sein Hash.
+const alterWCode = 'ABCD1234EFGH5678';
 const wiederherstellungHex =
     'be105af532593b07b857dbbb0012fc12a939efb515656aa111fc0120993c0609';
 const jonas = Bierwart(uid: 'neu', name: 'Jonas Weber', mitgliedId: 'm2');
@@ -188,6 +190,51 @@ void main() {
         ),
       );
     });
+  });
+
+  group('Vertrag: Wiederherstellungscode', () {
+    const neuerWCode = 'N3W7C0DE4X5Y6Z8A';
+
+    test('Code erneuern (ADM-08)', () {
+      vertragPruefen(
+        'code-erneuern.json',
+        batchAlsJson(
+          uid,
+          codeErneuernBatch(
+            uid: uid,
+            bierwartName: bierwart,
+            kasseId: 'k2',
+            buchungId: 'v7',
+            neuerHash: hashVon(neuerWCode),
+            altHex: wiederherstellungHex,
+            geraetZeit: zeit,
+          ),
+        ),
+      );
+    });
+
+    test('Jonas wird mit dem Code Admin (ADM-06)', () {
+      vertragPruefen(
+        'admin-wiederherstellen.json',
+        batchAlsJson(
+          'neu',
+          adminWiederherstellenBatch(
+            uid: 'neu',
+            bierwartName: 'Jonas Weber',
+            kasseId: 'k2',
+            buchungId: 'v8',
+            nachweis: alterWCode,
+            neuerHash: hashVon(neuerWCode),
+            kassenwartUid: uid,
+            geraetZeit: zeit,
+          ),
+        ),
+      );
+    });
+  });
+
+  test('der Hash der Fixture gehört zum alten Code', () {
+    expect(hexVon(hashVon(alterWCode)), wiederherstellungHex);
   });
 
   test('nur wer als letzter geht, setzt leerSeit', () {
