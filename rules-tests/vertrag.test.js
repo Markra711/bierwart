@@ -410,9 +410,14 @@ describe('Austreten und Auflösen aus der App (UC-05, AUTH-09, ADM-05)', () => {
   test('Auflösen, eine volle Portion löschen, dann der Schluss', async () => {
     await assertSucceeds(abspielen(fixture('beitreten.json')));
     await assertSucceeds(abspielen(fixture('aufloesen.json')));
-    for (let i = 0; i < 200; i++) {
-      await setzen(`kassen/k2/buchungen/x${String(i).padStart(3, '0')}`, { typ: 'test' });
-    }
+    // In einem Batch, einzeln dauert es auf der CI zu lange.
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const b = writeBatch(ctx.firestore());
+      for (let i = 0; i < 200; i++) {
+        b.set(doc(ctx.firestore(), `kassen/k2/buchungen/x${String(i).padStart(3, '0')}`), { typ: 'test' });
+      }
+      await b.commit();
+    });
     await assertSucceeds(abspielen(fixture('loeschen-portion.json')));
     expect(await lesen('kassen/k2/buchungen/x199')).toBeUndefined();
 
@@ -433,7 +438,7 @@ describe('Austreten und Auflösen aus der App (UC-05, AUTH-09, ADM-05)', () => {
     expect(await lesen('kassen/k2')).toBeUndefined();
     expect(await lesen(`einladungen/${ALT}`)).toBeUndefined();
     expect(await lesen('users/gruender')).toBeUndefined();
-  });
+  }, 30000);
 
   test('ohne Auflösen löscht niemand etwas', async () => {
     await assertFails(abspielen(fixture('loeschen-portion.json')));
