@@ -161,6 +161,7 @@ Pillen-Buttons in vier Varianten; pro Bildschirm höchstens ein primärer Button
 - Höhe 48px (Icon 46px), Radius `radius-pill`, Text im Stil `button` (Großbuchstaben). Die Hauptaktionen der Onboarding-Seiten sind im Canvas 56px hoch (`BwKnopf(gross: true)`).
 - Deaktiviert: ohne Fläche, gestrichelter Rahmen in `line-strong`, Text `ink-muted`.
 - Destruktive Aktionen („Austreten“, „Kasse auflösen“) als Outline in `negative`, mit Bestätigung.
+- Filter (Verlauf: „Alle Bierwarte ▾“): erhabene Pille `raised-sm`, Text im Stil `name`, Pfeil in `ink-muted`; die Auswahl öffnet ein Sheet.
 - Fokusring 2px in `grad-end`, 3px Abstand.
 
 ### Card

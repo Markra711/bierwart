@@ -15,6 +15,23 @@
         { "fieldPath": "typ", "order": "ASCENDING" },
         { "fieldPath": "stempel.am", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "buchungen",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "stempel.uid", "order": "ASCENDING" },
+        { "fieldPath": "stempel.am", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "buchungen",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "stempel.uid", "order": "ASCENDING" },
+        { "fieldPath": "mitgliedId", "order": "ASCENDING" },
+        { "fieldPath": "stempel.am", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

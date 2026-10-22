@@ -22,6 +22,9 @@ abstract interface class MitgliederRepository {
   /// wenn er frei ist. Ohne Netz zählt, was das Gerät kennt; den Rest prüfen
   /// die Rules.
   Future<NamensBesitzer?> nameBelegt(String kasseId, String name);
+
+  /// Namen aller Mitglieder, auch entfernter, für den Verlauf (LOG-03).
+  Stream<Map<String, String>> namen(String kasseId);
 }
 
 /// Das Mitglied, dem ein Name im Index gehört.
@@ -43,6 +46,12 @@ class FirestoreMitgliederRepository implements MitgliederRepository {
       .where('entfernt', isEqualTo: false)
       .snapshots()
       .map((q) => [for (final d in q.docs) mitgliedAus(d.id, d.data())]);
+
+  @override
+  Stream<Map<String, String>> namen(String kasseId) => _db
+      .collection('kassen/$kasseId/mitglieder')
+      .snapshots()
+      .map((q) => {for (final d in q.docs) d.id: d.data()['name'] as String});
 
   @override
   Future<NamensBesitzer?> nameBelegt(String kasseId, String name) async {

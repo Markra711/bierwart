@@ -4,6 +4,7 @@ import 'package:bier_wart/src/app.dart';
 import 'package:bier_wart/src/core/firebase/batch_schreiber.dart';
 import 'package:bier_wart/src/core/speicher/lokaler_speicher.dart';
 import 'package:bier_wart/src/core/theme/app_theme.dart';
+import 'package:bier_wart/src/features/geld/data/log_repository.dart';
 import 'package:bier_wart/src/features/geld/data/orte_repository.dart';
 import 'package:bier_wart/src/features/kader/data/mitglieder_repository.dart';
 import 'package:bier_wart/src/features/kader/data/verlauf_repository.dart';
@@ -128,6 +129,7 @@ Future<FakeKasseRepository> appStarten(
       kassenkopfRepositoryProvider.overrideWithValue(daten),
       verlaufRepositoryProvider.overrideWithValue(daten),
       orteRepositoryProvider.overrideWithValue(daten),
+      logRepositoryProvider.overrideWithValue(daten),
       lokalerSpeicherProvider.overrideWithValue(
         einstellungen ?? FakeSpeicher(),
       ),
