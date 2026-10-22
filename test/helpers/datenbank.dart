@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:bier_wart/src/core/firebase/batch_schreiber.dart';
 import 'package:bier_wart/src/core/firebase/schreibvorgang.dart';
 import 'package:bier_wart/src/core/speicher/lokaler_speicher.dart';
+import 'package:bier_wart/src/features/geld/data/orte_repository.dart';
+import 'package:bier_wart/src/features/geld/domain/ort.dart';
 import 'package:bier_wart/src/features/kader/data/mitglieder_repository.dart';
 import 'package:bier_wart/src/features/kader/data/verlauf_repository.dart';
 import 'package:bier_wart/src/features/kader/domain/mitglied.dart';
@@ -20,7 +22,8 @@ class FakeDatenbank
         Schreiber,
         SortenRepository,
         KassenkopfRepository,
-        VerlaufRepository {
+        VerlaufRepository,
+        OrteRepository {
   final docs = <String, Map<String, Object?>>{};
   final batches = <List<Schreibvorgang>>[];
   final _aenderung = StreamController<void>.broadcast();
@@ -46,9 +49,28 @@ class FakeDatenbank
     _aenderung.add(null);
   }
 
-  void bierwart(String k, String uid, String name) {
+  void bierwart(String k, String uid, String name, {int stand = 0}) {
     docs['kassen/$k/bierwarte/$uid'] = {'name': name, 'mitgliedId': uid};
+    ort(k, uid, name, stand: stand);
     mitglied(k, uid, name, bierwartUid: uid);
+  }
+
+  /// Kasse oder Portemonnaie; ehemalige gehören zu entfernten Bierwarten.
+  void ort(
+    String k,
+    String id,
+    String name, {
+    int stand = 0,
+    bool ehemalig = false,
+  }) {
+    docs['kassen/$k/orte/$id'] = {
+      'art': id == Ort.kasseId ? 'kasse' : 'portemonnaie',
+      'uid': id == Ort.kasseId ? null : id,
+      'name': name,
+      'standCents': stand,
+      'ehemalig': ehemalig,
+    };
+    _aenderung.add(null);
   }
 
   void mitglied(
@@ -216,6 +238,31 @@ class FakeDatenbank
       eintraegeAus(buchungen.take(anzahl)),
       mehr: buchungen.length > anzahl,
     );
+  });
+
+  @override
+  Stream<List<Ort>> orte(String kasseId) => _beobachten(
+    () => [
+      for (final e in _unter('kassen/$kasseId/orte'))
+        ortAus(_letzte(e.key), e.value),
+    ],
+  );
+
+  @override
+  Future<int> kasseVomServer(String kasseId) async {
+    if (serverFehler != null) throw serverFehler!;
+    return docs['kassen/$kasseId/orte/kasse']!['standCents']! as int;
+  }
+
+  @override
+  Stream<DateTime?> letzterKassensturz(String kasseId) => _beobachten(() {
+    DateTime? letzter;
+    for (final e in _unter('kassen/$kasseId/buchungen')) {
+      if (e.value['typ'] != 'kassensturz') continue;
+      final t = (e.value['stempel']! as Map)['geraetAm']! as DateTime;
+      if (letzter == null || t.isAfter(letzter)) letzter = t;
+    }
+    return letzter;
   });
 
   @override

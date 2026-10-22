@@ -242,3 +242,54 @@ describe('Lager aus der App (BES-01 bis BES-06)', () => {
   });
 });
 
+
+describe('Geld aus der App (GEL-04 bis GEL-06)', () => {
+  const kette = ['kasse-erstellen.json', 'beitreten.json'].map(fixture);
+  async function stand(ortId) {
+    let daten;
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      daten = (await getDoc(doc(ctx.firestore(), `kassen/k2/orte/${ortId}`))).data();
+    });
+    return daten.standCents;
+  }
+
+  beforeEach(async () => {
+    for (const batch of kette) await assertSucceeds(abspielen(batch));
+  });
+
+  test('Übergabe in die Kasse und zurück', async () => {
+    await assertSucceeds(abspielen(fixture('uebergabe.json')));
+    expect([await stand('neu'), await stand('kasse')]).toEqual([-1200, 6200]);
+    await assertSucceeds(abspielen(fixture('uebergabe-aus-kasse.json')));
+    expect([await stand('neu'), await stand('kasse')]).toEqual([0, 5000]);
+  });
+
+  test('Auszahlung aus der Kasse, Einzahlung ins Portemonnaie', async () => {
+    await assertSucceeds(abspielen(fixture('auszahlung-kasse.json')));
+    expect(await stand('kasse')).toBe(2500);
+    await assertSucceeds(abspielen(fixture('einzahlung.json')));
+    expect(await stand('gruender')).toBe(2500);
+  });
+
+  test('Kassensturz setzt die Kasse auf den gezählten Betrag', async () => {
+    await assertSucceeds(abspielen(fixture('kassensturz.json')));
+    expect(await stand('kasse')).toBe(4950);
+  });
+
+  test('Kassensturz mit veralteter Differenz abgelehnt', async () => {
+    await assertSucceeds(abspielen(fixture('auszahlung-kasse.json')));
+    await assertFails(abspielen(fixture('kassensturz.json')));
+  });
+
+  test('Übergabe nur vom Kassenwart', async () => {
+    const batch = fixture('uebergabe.json');
+    const alsJonas = {
+      uid: 'neu',
+      schreibvorgaenge: batch.schreibvorgaenge.map((s) =>
+        s.pfad.includes('/buchungen/')
+          ? { ...s, daten: { ...s.daten, stempel: { ...s.daten.stempel, uid: 'neu', name: 'Jonas Weber' } } }
+          : s),
+    };
+    await assertFails(abspielen(alsJonas));
+  });
+});

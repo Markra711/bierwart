@@ -154,8 +154,8 @@ Pillen-Buttons in vier Varianten; pro Bildschirm höchstens ein primärer Button
 | Variante | Aussehen | Wofür |
 | --- | --- | --- |
 | Primär | Fläche `grad-accent`, Text `on-accent` | Die Hauptaktion: „12,00 € verbuchen“, „Einkauf“, „Weiter“ |
-| Sekundär | Fläche `bg`, Schatten `raised` | Gleichwertige Nebenaktionen: „Übergabe“, „Kassensturz“ |
-| Outline | 1,5px Rahmen in `ink` | Ruhige Aktionen neben einem Primärbutton: „Liste teilen“ |
+| Sekundär | Fläche `bg`, Schatten `raised` | Gleichwertige Nebenaktionen |
+| Outline | 1,5px Rahmen in `ink` | Ruhige Aktionen neben einem Primärbutton: „Liste teilen“, „Übergabe“ und „Kassensturz“ im Geld-Tab |
 | Icon | runder Button 46px, `raised-sm` | Zahnrad, Schließen, Zurück; braucht ein Semantics-Label |
 
 - Höhe 48px (Icon 46px), Radius `radius-pill`, Text im Stil `button` (Großbuchstaben). Die Hauptaktionen der Onboarding-Seiten sind im Canvas 56px hoch (`BwKnopf(gross: true)`).
@@ -184,7 +184,10 @@ Bottom-Sheet für kurze Aktionen (UI-03): Zahlung erfassen, Ein-/Auszahlung, Üb
 - Fläche `surface-float`, obere Ecken `radius-xl`, Griff 40×4px in `line-strong`, Innenrand `space-6`.
 - Scrim Schwarz 60 %; Tippen darauf schließt.
 - Titel im Stil `page-title`, der Betrag als großes eingedrücktes Feld im Display-Font mit Tabellenziffern.
-- Schnellwahl als erhabene Chips; der gewählte Chip ist eingedrückt mit Text in `grad-end`.
+- Schnellwahl als erhabene Chips; der gewählte Chip ist eingedrückt mit Text in `grad-end`. In Flutter `BwChip`.
+- Umschalter zwischen zwei Möglichkeiten („Einzahlung“/„Auszahlung“, „In die Kasse“/„Aus der Kasse“): eingedrückte Rinne (`radius-pill`), die gewählte Seite mit Fläche `grad-accent` und Text `on-accent`, die andere in `ink-muted` (`BwUmschalter`).
+- Wahl einer Option mit Text (Ort des Geldes, Bierwart bei der Übergabe): erhabene Karte `radius-md`, gewählt eingedrückt mit Verlaufsrahmen, Betrag rechts (`BwWahlKarte`).
+- Kassendifferenz: gestrichelter Rahmen in `negative`, Betrag mit Vorzeichen in `negative`.
 - Unten genau ein Primärbutton, dessen Text den Betrag nennt: „12,00 € verbuchen“.
 - Weil `surface-float` heller ist als `bg`, nutzen Schatten im Sheet einen eigenen hellen Ton (`#363a41`). Er steht nicht in `tokens.json`; in Flutter liegt er als `BwSheet.schattenHell` in `tokens.dart`, Eingabefelder im Sheet nutzen `BwFeld(aufSheet: true)`.
 

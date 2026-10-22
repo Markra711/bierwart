@@ -1,0 +1,35 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/g4",
+      "daten": {
+        "typ": "einzahlung",
+        "ortId": "gruender",
+        "betragCents": 2500,
+        "grund": "Spende",
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/orte/gruender",
+      "daten": {
+        "standCents": {
+          "$erhoehen": 2500
+        },
+        "letzteBuchungId": "g4"
+      }
+    }
+  ]
+}

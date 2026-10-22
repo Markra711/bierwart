@@ -164,6 +164,13 @@ Gemeinsame Felder:
 - Die Bestandskorrektur geht nur mit Netz (siehe Summen, Punkt 7): Die App liest den Bestand mit `Source.server`, schreibt den gezählten Wert und die Differenz und wartet auf den Server. Lehnt er ab, weil sich der Bestand inzwischen geändert hat, bittet sie, neu zu zählen.
 - Der Einkauf ist eine eigene Seite mit Zeilen aus Sorte und Anzahl (+1, +6, +20, +24), höchstens 10 Sorten, doppelte Sorten werden zusammengezählt (BES-04). Bezahlt wird aus dem eigenen Portemonnaie; nur der Kassenwart sieht und wählt die Kasse (BES-05, UI-08). Er geht offline und wartet nicht.
 
+**Geld (GEL-01, GEL-04 bis GEL-08):**
+- Der Tab zeigt das Vermögen der Mannschaft im Kopf, die Kasse als Hauptkarte und darunter alle Portemonnaies: das eigene zuerst, dann alphabetisch, ehemalige zuletzt. Ein ehemaliges Portemonnaie verschwindet, sobald es auf 0 steht (GEL-08). Ein Portemonnaie im Minus steht in `negative` mit „Kasse schuldet Max 6,50 €“ (GEL-01). Namen kommen aus dem Kader, weil `orte/{uid}.name` beim Umbenennen nicht mitzieht.
+- Unter der Kasse steht, wer die Kassette hat (Kassenwart) und wann zuletzt ein Kassensturz war. Das Datum liest die App aus der neuesten Buchung `kassensturz` (Index `typ` + `stempel.am`).
+- **Ein- und Auszahlung** (GEL-05) darf jeder Bierwart, aus dem und in das eigene Portemonnaie. Nur der Kassenwart sieht und wählt die Kasse (UI-08). Der Grund ist Pflicht; Schnellwahl „Schiri bezahlt“, „Auslage erstattet“ (Auszahlung) und „Spende“, „Auslage zurück“ (Einzahlung), „Sonstiges“ leert das Feld zum Tippen. Geht offline und wartet nicht.
+- **Übergabe** (GEL-04) sieht nur der Kassenwart: „In die Kasse“ von einem Portemonnaie, „Aus der Kasse“ in eines. Zur Wahl stehen alle sichtbaren Portemonnaies, auch das eigene und ehemalige. Der Betrag startet mit dem, was sich ausgleichen lässt: dem Stand des Portemonnaies, beziehungsweise der Auslage. Geht offline und wartet nicht.
+- **Kassensturz** (GEL-06) sieht nur der Kassenwart. Er geht nur mit Netz, wie die Bestandskorrektur (siehe Summen, Punkt 7): Die App liest den Kassenstand mit `Source.server`. Weicht er von dem Stand ab, den das Sheet gezeigt hat, bucht sie nicht und bittet, die Differenz zu prüfen. So wird nie eine andere Differenz gebucht als die angezeigte. Sonst schreibt sie gezählten Betrag und Differenz und wartet auf den Server.
+
 **Storno (STR-04, STR-06):**
 - Das Mitglied-Detail zeigt alle Striche, auch bar bezahlte, mit dem Vermerk „bar“ (KAD-06).
 - Strich offen stornieren: Saldo − Preis, Bestand + 1.
@@ -198,11 +205,11 @@ Die Bildschirme brauchen Salden, Bestand und Ortsstände sofort, ohne jedes Mal 
 | Strichliste | `sorten where aktiv == true`, `mitglieder where entfernt == false` |
 | Kader | `mitglieder where entfernt == false` (Sortierung nach Saldo im Client, KAD-05) |
 | Mitglied-Detail | `buchungen where mitgliedId == X orderBy stempel.am desc` (Index nötig, KAD-06) |
-| Geld | `orte`, `kassen/{k}` |
+| Geld | `orte`, `kassen/{k}`, letzter Kassensturz: `buchungen where typ == "kassensturz" orderBy stempel.am desc limit 1` (Index nötig, GEL-06) |
 | Verlauf | `buchungen orderBy stempel.am desc`, optional `where stempel.uid == X` oder `mitgliedId == X`, seitenweise (LOG-03) |
 | Einstellungen | `bierwarte`, `uebernahmen where status == "offen"` |
 
-Zusammengesetzte Indizes kommen in `firestore.indexes.json`. Dort steht der Index fürs Mitglied-Detail (`mitgliedId` aufsteigend, `stempel.am` absteigend). Der Emulator braucht ihn nicht, das echte Projekt schon: Er muss vor dem ersten echten Einsatz deployt werden (`firebase deploy --only firestore:indexes`, nur mit Freigabe).
+Zusammengesetzte Indizes kommen in `firestore.indexes.json`. Dort stehen die Indizes fürs Mitglied-Detail (`mitgliedId` aufsteigend, `stempel.am` absteigend) und für den letzten Kassensturz (`typ` aufsteigend, `stempel.am` absteigend). Der Emulator braucht sie nicht, das echte Projekt schon: Sie müssen vor dem ersten echten Einsatz deployt werden (`firebase deploy --only firestore:indexes`, nur mit Freigabe).
 
 ## Security Rules
 
@@ -214,12 +221,12 @@ Die Rules sind in Release 1 die Geschäftslogik. Grundsätze (NFA-07):
 - Jede Verwaltungsaktion schreibt ihre Log-Buchung im selben Batch. Die Rules verlangen sie (`existsAfter`).
 - `einladungen` und `wiederherstellung`: nur `get` für Angemeldete, kein `list`.
 
-Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 200 Emulator-Tests in `rules-tests/`:
+Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 205 Emulator-Tests in `rules-tests/`:
 - `buchungen.test.js` (47): Strich offen und bar, Storno, Zahlung, Einkauf, Bestandskorrektur, Übergabe, Ein-/Auszahlung, Kassensturz, Fälle ohne passende Buchung, Unveränderlichkeit des Logs.
 - `stammdaten.test.js` (32): Mitglieder anlegen, umbenennen, entfernen, wieder aufnehmen; Namensindex; Sorten anlegen, ändern, ausblenden.
 - `verwaltung.test.js` (56): Kasse erstellen, Beitreten, Übernahme anfragen, zurückziehen und entscheiden, Austreten, `users/`, Lesen von Einladungen und Namensindex.
 - `admin.test.js` (43): Link erneuern, Bierwart entfernen, Rollen, Umbenennen, Wiederherstellungscode erneuern, Admin wiederherstellen mit und ohne Bierwart-Eintrag, Auflösen und Löschen.
-- `vertrag.test.js` (22): Batches, wie die App sie baut: Einkauf aus Portemonnaie und Kasse, Preis ändern, Ausblenden, Bestandskorrektur samt Ablehnung bei veralteter Differenz; Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
+- `vertrag.test.js` (27): Batches, wie die App sie baut: Einkauf aus Portemonnaie und Kasse, Preis ändern, Ausblenden, Bestandskorrektur samt Ablehnung bei veralteter Differenz; Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart; Übergabe in die Kasse und zurück, Auszahlung aus der Kasse, Einzahlung ins Portemonnaie, Kassensturz samt Ablehnung bei veralteter Differenz, Übergabe nur vom Kassenwart. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
 
 Kern des Musters:
 

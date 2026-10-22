@@ -6,8 +6,8 @@ import '../../../core/money/cents.dart';
 import '../../../core/routing/router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/tokens.dart';
-import '../../../core/widgets/eingaben.dart';
 import '../../../core/widgets/flaechen.dart';
+import '../../../core/widgets/karten.dart';
 import '../../../core/widgets/knoepfe.dart';
 import '../../../core/widgets/seite.dart';
 import '../../../core/widgets/sheet.dart';
@@ -104,7 +104,7 @@ class MitgliedDetailScreen extends ConsumerWidget {
                     ),
                   ],
                   const SizedBox(height: BwSpacing.space5),
-                  const _Abschnitt('Striche und Zahlungen'),
+                  const BwAbschnitt('Striche und Zahlungen'),
                   const SizedBox(height: BwSpacing.space3),
                   switch (verlauf) {
                     AsyncData(:final value) when value.eintraege.isEmpty =>
@@ -134,7 +134,7 @@ class MitgliedDetailScreen extends ConsumerWidget {
                   ],
                   if (saldo != 0 && !mitglied.istGast) ...[
                     const SizedBox(height: BwSpacing.space5),
-                    const _Hinweis(
+                    const BwHinweis(
                       'Entfernen geht erst, wenn nichts mehr offen ist.',
                     ),
                   ],
@@ -255,118 +255,16 @@ class _Hauptkarte extends StatelessWidget {
         ? 'Guthaben'
         : 'Ausgeglichen';
     final betrag = formatEuro(saldo.abs());
-    return BwErhaben(
-      radius: BwRadius.xl,
-      schatten: BwShadows.raisedLg,
-      padding: const EdgeInsets.all(BwSpacing.space2),
-      child: Stack(
-        clipBehavior: Clip.hardEdge,
-        children: [
-          const Positioned(
-            right: -BwSpacing.space6,
-            bottom: -BwSpacing.space6,
-            child: BwSchraffur(durchmesser: 110, winkel: 0),
-          ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: BwGradients.accent,
-              borderRadius: BorderRadius.circular(BwRadius.lg),
-            ),
-            child: Container(
-              margin: const EdgeInsets.all(1),
-              padding: const EdgeInsets.symmetric(
-                horizontal: BwSpacing.space4,
-                vertical: BwSpacing.space3,
-              ),
-              decoration: BoxDecoration(
-                color: BwColors.bg,
-                borderRadius: BorderRadius.circular(BwRadius.lg - 1),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  BwLabel(label),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: saldo < 0
-                        ? Text(
-                            '+$betrag',
-                            style: text.amountXl.copyWith(
-                              color: BwColors.positive,
-                            ),
-                          )
-                        : BwVerlaufText(betrag, style: text.amountXl),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+    return BwHauptkarte(
+      label: label,
+      betrag: saldo < 0
+          ? Text(
+              '+$betrag',
+              style: text.amountXl.copyWith(color: BwColors.positive),
+            )
+          : BwVerlaufText(betrag, style: text.amountXl),
     );
   }
-}
-
-/// Abschnittslabel mit gestrichelter Linie (styleguide.md,
-/// Wireframe-Details).
-class _Abschnitt extends StatelessWidget {
-  const _Abschnitt(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        BwLabel(text),
-        const SizedBox(width: BwSpacing.space2),
-        const Expanded(child: _Strichlinie()),
-      ],
-    );
-  }
-}
-
-class _Hinweis extends StatelessWidget {
-  const _Hinweis(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final stil = Theme.of(context).extension<BwTextStyles>()!.caption;
-    return Row(
-      children: [
-        const SizedBox(width: BwSpacing.space6, child: _Strichlinie()),
-        const SizedBox(width: BwSpacing.space2),
-        Expanded(child: Text(text, style: stil)),
-      ],
-    );
-  }
-}
-
-class _Strichlinie extends StatelessWidget {
-  const _Strichlinie();
-
-  @override
-  Widget build(BuildContext context) =>
-      const SizedBox(height: 1, child: CustomPaint(painter: _Striche()));
-}
-
-class _Striche extends CustomPainter {
-  const _Striche();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = BwColors.lineStrong
-      ..strokeWidth = 1;
-    for (var x = 0.0; x < size.width; x += 8) {
-      canvas.drawLine(Offset(x, 0), Offset(x + 4, 0), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_Striche old) => false;
 }
 
 /// Gruppierte Liste, eingedrückt, Zeilen ohne eigenen Schatten

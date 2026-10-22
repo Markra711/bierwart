@@ -6,9 +6,9 @@ import '../../../core/money/cents.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/eingaben.dart';
-import '../../../core/widgets/flaechen.dart';
 import '../../../core/widgets/knoepfe.dart';
 import '../../../core/widgets/sheet.dart';
+import '../../../core/widgets/wahl.dart';
 import '../../kader/application/kader_daten.dart';
 import '../../kader/application/mitglieder.dart';
 import '../../kader/domain/eintrag.dart';
@@ -97,7 +97,7 @@ class _ZahlungState extends ConsumerState<_Zahlung> {
             for (final (i, s) in schnell.indexed) ...[
               if (i > 0) const SizedBox(width: BwSpacing.space3),
               Expanded(
-                child: _Wahl(
+                child: BwChip(
                   text: s.text,
                   gewaehlt: betrag == s.cents,
                   onTap: () => _betrag.text = formatEuro(s.cents),
@@ -113,7 +113,7 @@ class _ZahlungState extends ConsumerState<_Zahlung> {
           Row(
             children: [
               Expanded(
-                child: _Wahl(
+                child: BwChip(
                   text: 'die Kasse',
                   gewaehlt: _inDieKasse,
                   onTap: () => setState(() => _inDieKasse = true),
@@ -121,7 +121,7 @@ class _ZahlungState extends ConsumerState<_Zahlung> {
               ),
               const SizedBox(width: BwSpacing.space4),
               Expanded(
-                child: _Wahl(
+                child: BwChip(
                   text: 'mein Portemonnaie',
                   gewaehlt: !_inDieKasse,
                   onTap: () => setState(() => _inDieKasse = false),
@@ -144,61 +144,6 @@ class _ZahlungState extends ConsumerState<_Zahlung> {
           onPressed: _verbuchen,
         ),
       ],
-    );
-  }
-}
-
-/// Schnellwahl-Chip im Sheet: erhaben, gewählt eingedrückt mit Text in
-/// `grad-end` (styleguide.md, Sheet).
-class _Wahl extends StatelessWidget {
-  const _Wahl({
-    required this.text,
-    required this.gewaehlt,
-    required this.onTap,
-  });
-
-  final String text;
-  final bool gewaehlt;
-  final VoidCallback onTap;
-
-  static const hoehe = 44.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final stil = Theme.of(context).extension<BwTextStyles>()!.name;
-    final inhalt = Center(
-      child: Text(
-        text,
-        style: stil.copyWith(color: gewaehlt ? BwColors.gradEnd : null),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-    return Semantics(
-      button: true,
-      selected: gewaehlt,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: SizedBox(
-          height: hoehe,
-          child: gewaehlt
-              ? BwEingedrueckt(
-                  radius: BwRadius.pill,
-                  grund: BwColors.surfaceFloat,
-                  schatten: BwSheet.insetSm,
-                  child: inhalt,
-                )
-              : DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: BwColors.surfaceFloat,
-                    borderRadius: BorderRadius.circular(BwRadius.pill),
-                    boxShadow: BwShadows.boxShadows(BwSheet.raisedSm),
-                  ),
-                  child: inhalt,
-                ),
-        ),
-      ),
     );
   }
 }

@@ -1,0 +1,45 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/g2",
+      "daten": {
+        "typ": "uebergabe",
+        "vonOrtId": "kasse",
+        "nachOrtId": "neu",
+        "betragCents": 1200,
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/orte/kasse",
+      "daten": {
+        "standCents": {
+          "$erhoehen": -1200
+        },
+        "letzteBuchungId": "g2"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/orte/neu",
+      "daten": {
+        "standCents": {
+          "$erhoehen": 1200
+        },
+        "letzteBuchungId": "g2"
+      }
+    }
+  ]
+}

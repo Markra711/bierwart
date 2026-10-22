@@ -12,6 +12,7 @@ import '../../../core/widgets/flaechen.dart';
 import '../../../core/widgets/knoepfe.dart';
 import '../../../core/widgets/seite.dart';
 import '../../../core/widgets/sheet.dart';
+import '../../../core/widgets/wahl.dart';
 import '../../kader/application/kader_daten.dart';
 import '../../strichliste/application/kasse_daten.dart';
 import '../application/sorten.dart';
@@ -134,7 +135,7 @@ class _EinkaufScreenState extends ConsumerState<EinkaufScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: _Wahl(
+                          child: BwWahlKarte(
                             text: 'Mein Portemonnaie',
                             gewaehlt: !_ausDerKasse,
                             onTap: () => setState(() => _ausDerKasse = false),
@@ -142,7 +143,7 @@ class _EinkaufScreenState extends ConsumerState<EinkaufScreen> {
                         ),
                         const SizedBox(width: BwSpacing.space4),
                         Expanded(
-                          child: _Wahl(
+                          child: BwWahlKarte(
                             text: 'Kasse',
                             gewaehlt: _ausDerKasse,
                             onTap: () => setState(() => _ausDerKasse = true),
@@ -358,48 +359,6 @@ class _NeueZeile extends StatelessWidget {
             painter: const GestricheltPainter(radius: BwRadius.pill),
             child: Center(child: Text('+ ZEILE', style: stil)),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Wahl der Quelle: erhaben, gewählt eingedrückt mit Verlaufsrahmen.
-class _Wahl extends StatelessWidget {
-  const _Wahl({
-    required this.text,
-    required this.gewaehlt,
-    required this.onTap,
-  });
-
-  final String text;
-  final bool gewaehlt;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final stil = Theme.of(context).extension<BwTextStyles>()!.name;
-    final inhalt = Center(child: Text(text, style: stil));
-    return Semantics(
-      button: true,
-      selected: gewaehlt,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: SizedBox(
-          height: BwKnopf.hoehe,
-          child: gewaehlt
-              ? BwEingedrueckt(
-                  radius: BwRadius.md,
-                  schatten: BwShadows.insetSm,
-                  rahmen: BwGradients.accent,
-                  child: inhalt,
-                )
-              : BwErhaben(
-                  radius: BwRadius.md,
-                  schatten: BwShadows.raisedSm,
-                  child: inhalt,
-                ),
         ),
       ),
     );
