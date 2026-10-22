@@ -85,6 +85,7 @@ service cloud.firestore {
           : b.typ == 'strich' ? b.preisCents
           : b.typ == 'zahlung' ? -b.betragCents
           : b.typ == 'storno' && b.bezugTyp == 'strich' ? -b.preisCents
+          : b.typ == 'storno' && b.bezugTyp == 'zahlung' ? b.betragCents
           : 0;
       }
 
@@ -107,6 +108,7 @@ service cloud.firestore {
           : b.get('ortId', '') != ortId ? 0
           : b.typ == 'strichBar' ? b.preisCents
           : b.typ == 'storno' && b.bezugTyp == 'strichBar' ? -b.preisCents
+          : b.typ == 'storno' && b.bezugTyp == 'zahlung' ? -b.betragCents
           : b.typ == 'zahlung' ? b.betragCents
           : b.typ == 'einkauf' ? -b.betragCents
           : b.typ == 'einzahlung' ? b.betragCents
@@ -556,14 +558,19 @@ service cloud.firestore {
           && zeileGebucht(d, 8, buchungId) && zeileGebucht(d, 9, buchungId);
       }
 
-      // Storno nur für Striche, nur einmal: feste ID storno-{bezugId} (STR-06).
+      // Storno von Strichen und Zahlungen, nur einmal: feste ID
+      // storno-{bezugId} (STR-06, offene Frage 24).
       function stornoGueltig(d, buchungId) {
         let alt = get(pfad('buchungen', d.bezugId)).data;
         return buchungId == 'storno-' + d.bezugId
-          && alt.typ in ['strich', 'strichBar']
           && d.bezugTyp == alt.typ
           && d.mitgliedId == alt.mitgliedId
-          && d.sorteId == alt.sorteId
+          && (alt.typ == 'zahlung'
+            ? zahlungsStornoGueltig(d, alt, buchungId)
+            : alt.typ in ['strich', 'strichBar'] && strichStornoGueltig(d, alt, buchungId));
+      }
+      function strichStornoGueltig(d, alt, buchungId) {
+        return d.sorteId == alt.sorteId
           && d.preisCents == alt.preisCents
           && verweistAuf('sorten', d.sorteId, buchungId)
           && (d.bezugTyp == 'strich'
@@ -572,6 +579,17 @@ service cloud.firestore {
               : felder(d, ['bezugId', 'bezugTyp', 'mitgliedId', 'sorteId', 'preisCents', 'ortId'])
                 && ortErlaubt(d.ortId)
                 && verweistAuf('orte', d.ortId, buchungId));
+      }
+      // Zahlung: Saldo steigt wieder, das Geld geht aus dem Ort, in den es
+      // ging. Das darf nur, wer diesen Ort verändern darf (ADR-0004).
+      function zahlungsStornoGueltig(d, alt, buchungId) {
+        return felder(d, ['bezugId', 'bezugTyp', 'mitgliedId', 'betragCents', 'ortId'])
+          && d.betragCents == alt.betragCents
+          && d.ortId == alt.ortId
+          && ortErlaubt(d.ortId)
+          && mitgliedBuchbar(d.mitgliedId, false)
+          && verweistAuf('mitglieder', d.mitgliedId, buchungId)
+          && verweistAuf('orte', d.ortId, buchungId);
       }
 
       function buchungGueltig(d, buchungId) {

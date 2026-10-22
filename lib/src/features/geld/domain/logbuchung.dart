@@ -60,6 +60,7 @@ class Logbuchung {
     this.rolle,
     this.zielUid,
     this.bezugBar = false,
+    this.bezugZahlung = false,
     this.aktiv = true,
   });
 
@@ -100,6 +101,9 @@ class Logbuchung {
 
   /// Storno eines Bar-Strichs.
   final bool bezugBar;
+
+  /// Storno einer Zahlung (offene Frage 24).
+  final bool bezugZahlung;
 
   /// Sichtbarkeit einer geänderten Sorte (BES-01).
   final bool aktiv;
@@ -191,6 +195,12 @@ LogZeile logZeile(Logbuchung b, LogNamen n) {
       [n.sorte(b.sorteId), 'bar ${n.inOrt(b.ortId)}'],
       betrag: formatEuro(cents),
       tendenz: Tendenz.neutral,
+    ),
+    LogTyp.storno when b.bezugZahlung => zeile(
+      'Storno · Zahlung · ${n.mitglied(b.mitgliedId)}',
+      [n.ausOrt(b.ortId)],
+      betrag: formatEuro(-cents),
+      tendenz: Tendenz.minus,
     ),
     LogTyp.storno => zeile(
       'Storno · ${n.mitglied(b.mitgliedId)}',

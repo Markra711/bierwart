@@ -6,6 +6,7 @@ import '../../../core/money/cents.dart';
 import '../../../core/routing/router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/widgets/dialog.dart';
 import '../../../core/widgets/flaechen.dart';
 import '../../../core/widgets/karten.dart';
 import '../../../core/widgets/knoepfe.dart';
@@ -286,18 +287,48 @@ class _Verlaufsliste extends ConsumerWidget {
             _EintragZeile(
               eintrag: e,
               titel: e.istStrich ? sorten[e.sorteId] ?? 'Sorte' : 'Zahlung',
-              stornieren: e.istStrich && !e.storniert
+              stornieren: e.storniert
+                  ? null
+                  : e.istStrich
                   ? () {
                       ref.read(kaderAktionenProvider).stornieren(mitglied, e);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Strich storniert.')),
                       );
                     }
-                  : null,
+                  : () => _zahlungStornieren(context, ref, e),
             ),
         ],
       ),
     );
+  }
+
+  /// Zahlung stornieren (offene Frage 24): erst sagen, wenn es nicht geht,
+  /// sonst mit Bestätigung (UI-04), weil Geld den Ort wechselt.
+  Future<void> _zahlungStornieren(
+    BuildContext context,
+    WidgetRef ref,
+    Eintrag e,
+  ) async {
+    final aktionen = ref.read(kaderAktionenProvider);
+    final boten = ScaffoldMessenger.of(context);
+    final grund = aktionen.zahlungStornoGeht(e);
+    if (grund != null) {
+      boten.showSnackBar(SnackBar(content: Text(grund)));
+      return;
+    }
+    final ja = await bestaetigen(
+      context,
+      titel: 'Zahlung über ${formatEuro(e.cents)} stornieren?',
+      text:
+          'Der Betrag kommt wieder auf das, was ${mitglied.name} offen hat, '
+          'und das Geld geht aus '
+          '${e.ortId == 'kasse' ? 'der Kasse' : 'deinem Portemonnaie'}.',
+      ja: 'Stornieren',
+    );
+    if (!ja) return;
+    aktionen.zahlungStornieren(mitglied, e);
+    boten.showSnackBar(const SnackBar(content: Text('Zahlung storniert.')));
   }
 }
 
@@ -372,7 +403,9 @@ class _EintragZeile extends StatelessWidget {
               child: stornieren == null
                   ? null
                   : IconButton(
-                      tooltip: 'Strich stornieren',
+                      tooltip: eintrag.istStrich
+                          ? 'Strich stornieren'
+                          : 'Zahlung stornieren',
                       onPressed: stornieren,
                       icon: const Icon(
                         Icons.close_rounded,

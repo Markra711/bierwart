@@ -155,6 +155,25 @@ void main() {
     expect(ohne.betrag, '—');
   });
 
+  test('Storno einer Zahlung, als Minus aus dem Ort', () {
+    final z = zeile(
+      zahlungStornoBatch(
+        uid: 'max',
+        bierwartName: 'Max Becker',
+        kasseId: 'k1',
+        zahlungId: 'z1',
+        mitgliedId: 'paul',
+        betragCents: 1000,
+        ortId: 'max',
+        geraetZeit: zeit,
+      ),
+    );
+    expect(z.titel, 'Storno · Zahlung · Paul Hoffmann');
+    expect(z.unterzeile, 'aus Portemonnaie Max · von Max');
+    expect(z.betrag, formatEuro(-1000));
+    expect(z.tendenz, Tendenz.minus);
+  });
+
   test('unbekannte Namen und Typen zeigen keine IDs', () {
     final z = logZeile(
       Logbuchung(

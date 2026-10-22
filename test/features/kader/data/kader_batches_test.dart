@@ -40,6 +40,25 @@ void main() {
       vertragPruefen('zahlung.json', batchAlsJson(uid, zahlung('z1', uid)));
     });
 
+    test('Zahlung stornieren (offene Frage 24)', () {
+      vertragPruefen(
+        'zahlung-storno.json',
+        batchAlsJson(
+          uid,
+          zahlungStornoBatch(
+            uid: uid,
+            bierwartName: bierwart,
+            kasseId: 'k2',
+            zahlungId: 'z1',
+            mitgliedId: 'm3',
+            betragCents: 150,
+            ortId: uid,
+            geraetZeit: zeit,
+          ),
+        ),
+      );
+    });
+
     test('Zahlung in die Kasse als Kassenwart (GEL-03)', () {
       vertragPruefen(
         'zahlung-kasse.json',

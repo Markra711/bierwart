@@ -11,6 +11,7 @@
 > - 2026-10-21, nach dem Einfrieren: ADM-08 neu – Admin kann einen neuen Wiederherstellungscode erzeugen (architecture.md, offene Frage 12).
 > - 2026-10-21, nach dem Einfrieren: KAD-08 neu – entfernte Mitglieder behalten ihren Namen und lassen sich wieder aufnehmen (architecture.md, offene Frage 20).
 > - 2026-10-21, nach dem Einfrieren: AUTH-07 – bei der Übernahme per Wiederherstellungscode wird das alte Portemonnaie ehemalig, weil der Stand vorher nicht lesbar ist (architecture.md, Verwaltung als Batches).
+> - 2026-10-22, nach dem Einfrieren: STR-06 – auch Zahlungen lassen sich stornieren (architecture.md, offene Frage 24).
 
 ## Vision & Abgrenzung
 
@@ -172,7 +173,7 @@ Jede Anforderung hat eine ID und ein Release. Release 1 ist das MVP für Android
 | STR-03 | mit einem langen Druck auf ein Mitglied einen sofort bar bezahlten Strich buchen | 1 |
 | STR-04 | nach jeder Buchung eine kurze Bestätigung mit „Rückgängig“ zeigen | 1 |
 | STR-05 | auch bei Bestand 0 buchen lassen | 1 |
-| STR-06 | einzelne Striche im Mitglied-Detail stornieren lassen, mit Log-Eintrag | 1 |
+| STR-06 | einzelne Striche und Zahlungen im Mitglied-Detail stornieren lassen, mit Log-Eintrag; eine Zahlung storniert nur, wer den Ort verändern darf, in den das Geld ging | 1 |
 | STR-07 | eine Runde für alle Anwesenden buchen (jeder zahlt seins) | 2 |
 | STR-08 | eine Runde buchen, die ein Mitglied für alle bezahlt | 2 |
 
