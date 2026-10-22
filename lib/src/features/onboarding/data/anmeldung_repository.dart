@@ -25,12 +25,27 @@ final meineKasseIdProvider = StreamProvider<String?>(
   (ref) async* {
     final uid = await ref.watch(anmeldungProvider.future);
     final db = ref.watch(firestoreProvider);
-    yield* db
-        .doc('users/$uid')
-        .snapshots()
-        .map((s) => s.data()?['kasseId'] as String?);
+    yield* bestaetigteKasseId(
+      db
+          .doc('users/$uid')
+          .snapshots(includeMetadataChanges: true)
+          .map(
+            (s) => (
+              ausstehend: s.metadata.hasPendingWrites,
+              kasseId: s.data()?['kasseId'] as String?,
+            ),
+          ),
+    );
   },
 );
+
+/// Die Kasse erst, wenn der Server den Eintrag angenommen hat. Sonst hört
+/// die App beim Erstellen und Beitreten schon auf die Kasse, solange der
+/// Batch unterwegs ist; der Server lehnt das Zuhören ab, weil der Nutzer
+/// dort noch kein Bierwart ist, und die App hält ihn für entfernt (ADM-02).
+Stream<String?> bestaetigteKasseId(
+  Stream<({bool ausstehend, String? kasseId})> stand,
+) => stand.where((s) => !s.ausstehend).map((s) => s.kasseId).distinct();
 
 /// Meldung für eine fehlgeschlagene Anmeldung (NFA-10).
 String anmeldeFehler(Object fehler) => switch (fehler) {
