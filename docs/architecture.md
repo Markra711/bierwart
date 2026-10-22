@@ -188,6 +188,12 @@ Gemeinsame Felder:
 - „Kasse auflösen“ sieht nur der Admin. Ein Sheet warnt und verlangt den Kassennamen genau so, wie er ist (Leerraum am Rand zählt nicht). Schritt 1 markiert die Kasse als aufgelöst; damit wechselt die Mitgliedschaft des Admins auf „Auflösen“ und die Weiterleitung führt auf eine eigene Seite.
 - Diese Seite löscht Sammlung für Sammlung in Portionen zu 200 Dokumenten, direkt vom Server gelesen, und zuletzt in einem Batch eigenen Bierwart-Eintrag, Kasse, aktuelle Einladung, Wiederherstellung und `users/{uid}`. Bricht das ab, zeigt sie die Meldung und „Weiter löschen“; nach einem Neustart setzt sie selbst fort. Eine Portion von 200 Löschungen nehmen die Rules im Emulator an.
 
+**Wiederherstellungscode und Datenschutz (ADM-06, ADM-08, NFA-09):**
+- Der Admin kann einen neuen Wiederherstellungscode erzeugen (Bestätigung, UI-04); alle anderen sehen stattdessen „Wiederherstellungscode eingeben“ und werden damit Admin (ADM-06 als Bierwart, UC-04). Die App normalisiert die Eingabe und vergleicht ihren Hash mit dem der Kasse, bevor sie schreibt; ein falscher Code meldet sich so ohne Umweg über den Server. Der Kassenwart bleibt, solange er aktiver Bierwart ist, sonst geht die Rolle mit (offene Frage 25).
+- In beiden Fällen entsteht ein neuer Code. Die App zeigt ihn genau einmal auf eigener Seite (`/neuer-code`, Code als `extra`, nach einem Neustart weg), wie beim Erstellen der Kasse: Weiter und Zurück erst nach dem Haken „Ich habe den Code sicher gespeichert“.
+- Die Wiederherstellung ohne Bierwart-Eintrag (UC-03 über den Code, aus dem Onboarding) fehlt noch; sie braucht einen Einstieg auf der Willkommensseite.
+- „Datenschutz“ ist eine Seite mit fünf kurzen Abschnitten: was gespeichert wird, anonyme Anmeldung, Firestore in `europe-west10`, wer die Daten sieht, Löschen. Der Text ist ein Entwurf (offene Frage 18).
+
 **Storno (STR-04, STR-06):**
 - Das Mitglied-Detail zeigt alle Striche, auch bar bezahlte, mit dem Vermerk „bar“ (KAD-06).
 - Strich offen stornieren: Saldo − Preis, Bestand + 1.
@@ -238,12 +244,12 @@ Die Rules sind in Release 1 die Geschäftslogik. Grundsätze (NFA-07):
 - Jede Verwaltungsaktion schreibt ihre Log-Buchung im selben Batch. Die Rules verlangen sie (`existsAfter`).
 - `einladungen` und `wiederherstellung`: nur `get` für Angemeldete, kein `list`.
 
-Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 217 Emulator-Tests in `rules-tests/`:
+Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 221 Emulator-Tests in `rules-tests/`:
 - `buchungen.test.js` (47): Strich offen und bar, Storno, Zahlung, Einkauf, Bestandskorrektur, Übergabe, Ein-/Auszahlung, Kassensturz, Fälle ohne passende Buchung, Unveränderlichkeit des Logs.
 - `stammdaten.test.js` (32): Mitglieder anlegen, umbenennen, entfernen, wieder aufnehmen; Namensindex; Sorten anlegen, ändern, ausblenden.
 - `verwaltung.test.js` (56): Kasse erstellen, Beitreten, Übernahme anfragen, zurückziehen und entscheiden, Austreten, `users/`, Lesen von Einladungen und Namensindex.
 - `admin.test.js` (43): Link erneuern, Bierwart entfernen, Rollen, Umbenennen, Wiederherstellungscode erneuern, Admin wiederherstellen mit und ohne Bierwart-Eintrag, Auflösen und Löschen.
-- `vertrag.test.js` (39): Batches, wie die App sie baut: Einkauf aus Portemonnaie und Kasse, Preis ändern, Ausblenden, Bestandskorrektur samt Ablehnung bei veralteter Differenz; Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart; Übergabe in die Kasse und zurück, Auszahlung aus der Kasse, Einzahlung ins Portemonnaie, Kassensturz samt Ablehnung bei veralteter Differenz, Übergabe nur vom Kassenwart; Link erneuern, Bierwart entfernen, Rollen übertragen, Kasse umbenennen, jeweils nur als Admin; Austreten (nicht mit Geld im Portemonnaie, als Letzte mit `leerSeit`), Auflösen mit einer vollen Löschportion und dem Schluss-Batch. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
+- `vertrag.test.js` (43): Batches, wie die App sie baut: Einkauf aus Portemonnaie und Kasse, Preis ändern, Ausblenden, Bestandskorrektur samt Ablehnung bei veralteter Differenz; Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart; Übergabe in die Kasse und zurück, Auszahlung aus der Kasse, Einzahlung ins Portemonnaie, Kassensturz samt Ablehnung bei veralteter Differenz, Übergabe nur vom Kassenwart; Link erneuern, Bierwart entfernen, Rollen übertragen, Kasse umbenennen, jeweils nur als Admin; Austreten (nicht mit Geld im Portemonnaie, als Letzte mit `leerSeit`), Auflösen mit einer vollen Löschportion und dem Schluss-Batch; Wiederherstellungscode erneuern (nur Admin) und mit dem Code Admin werden, danach gilt der alte nicht mehr. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
 
 Kern des Musters:
 
@@ -465,7 +471,7 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 15. ~~**Schriften offline**~~ – entschieden: Barlow und Barlow Condensed liegen als Assets in der App, `google_fonts` entfällt (siehe `docs/styleguide.md`, Typografie).
 16. ~~**Innere Schatten**~~ – entschieden: eigener Painter (`InnenschattenPainter`, `BwEingedrueckt` in `lib/src/core/widgets/flaechen.dart`), direkt aus den `inset`-Tokens.
 17. ~~**Routing**~~ – entschieden: `go_router`.
-18. **Datenschutzhinweis (NFA-09):** Wer liefert den Text, und reicht ein Bildschirm in den Einstellungen? Er muss erwähnen, dass verlassene Kassen in Release 1 nicht automatisch gelöscht werden.
+18. **Datenschutzhinweis (NFA-09):** Wer liefert den Text, und reicht ein Bildschirm in den Einstellungen? Er muss erwähnen, dass verlassene Kassen in Release 1 nicht automatisch gelöscht werden. Ein Entwurf steht in der App (Einstellungen → Datenschutz) und ist zu prüfen.
 19. ~~**Quelle der Wahrheit für Anforderungen**~~ – entschieden: `docs/requirements.md`; das Online-Dokument ist seit 2026-10-21 eingefroren (alle Änderungen bis dahin übertragen).
 20. ~~**Mitglied-Namen und Eindeutigkeit**~~ – entschieden: eindeutig für alle Mitglieder; entfernte behalten ihren Namen und lassen sich wieder aufnehmen (KAD-08, siehe [Dokumente](#dokumente)).
 21. ~~**Übernahme eines Mitglieds ohne App**~~ – entschieden: braucht dieselbe Bestätigung wie bei Bierwarten, weil der Name danach im Stempel steht (siehe [Verwaltung als Batches](#verwaltung-als-batches)).

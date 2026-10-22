@@ -1,0 +1,47 @@
+{
+  "uid": "neu",
+  "schreibvorgaenge": [
+    {
+      "art": "update",
+      "pfad": "kassen/k2",
+      "daten": {
+        "adminUid": "neu",
+        "kassenwartUid": "gruender",
+        "wiederherstellungHash": {
+          "$bytes": "3aaaaf11347760ee94db6c8d8b397eca34c6e3816d92071b31e260dc676468bc"
+        },
+        "letzteBuchungId": "v8"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "wiederherstellung/3aaaaf11347760ee94db6c8d8b397eca34c6e3816d92071b31e260dc676468bc",
+      "daten": {
+        "kasseId": "k2"
+      }
+    },
+    {
+      "art": "delete",
+      "pfad": "wiederherstellung/be105af532593b07b857dbbb0012fc12a939efb515656aa111fc0120993c0609",
+      "daten": {}
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/v8",
+      "daten": {
+        "typ": "adminWiederhergestellt",
+        "nachweis": "ABCD1234EFGH5678",
+        "stempel": {
+          "uid": "neu",
+          "name": "Jonas Weber",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

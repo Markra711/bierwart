@@ -116,6 +116,25 @@ class EinstellungenScreen extends ConsumerWidget {
                         text: 'Meinen Namen ändern',
                         onTap: () => zeigeUmbenennen(context, ich),
                       ),
+                    if (admin)
+                      _Kachel(
+                        text: 'Neuer Wiederherstellungs\u00adcode',
+                        unterzeile: 'nur Admin',
+                        onTap: () => _codeErneuern(context, ref),
+                      )
+                    else
+                      _Kachel(
+                        text: 'Wiederherstellungs\u00adcode eingeben',
+                        onTap: () => zeigeSheet<void>(
+                          context,
+                          titel: 'Admin werden',
+                          inhalt: (_) => const _CodeEingeben(),
+                        ),
+                      ),
+                    _Kachel(
+                      text: 'Datenschutz',
+                      onTap: () => context.push(Routen.datenschutz),
+                    ),
                   ]),
                   const SizedBox(height: BwSpacing.space6),
                   Row(
@@ -148,6 +167,29 @@ class EinstellungenScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Neuer Wiederherstellungscode (ADM-08): danach genau einmal zeigen.
+  Future<void> _codeErneuern(BuildContext context, WidgetRef ref) async {
+    final ja = await bestaetigen(
+      context,
+      titel: 'Neuen Code erzeugen?',
+      text:
+          'Der bisherige Wiederherstellungscode gilt dann sofort nicht mehr. '
+          'Den neuen siehst du nur einmal.',
+      ja: 'Erzeugen',
+      destruktiv: false,
+    );
+    if (!ja || !context.mounted) return;
+    try {
+      final code = await ref.read(verwaltungAktionenProvider).codeErneuern();
+      if (context.mounted) zeigeNeuenCode(context, ref, code);
+    } on VerwaltungsFehler catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.meldung)));
+      }
+    }
   }
 
   /// Austreten (UC-05, AUTH-09): erst sagen, was fehlt, dann bestätigen.
@@ -606,6 +648,87 @@ class _AufloesenState extends ConsumerState<_Aufloesen> {
           art: BwKnopfArt.destruktiv,
           laedt: _laeuft,
           onPressed: passt ? _aufloesen : null,
+        ),
+      ],
+    );
+  }
+}
+
+/// Den neuen Wiederherstellungscode auf eigener Seite zeigen (ADM-06,
+/// ADM-08).
+void zeigeNeuenCode(BuildContext context, WidgetRef ref, String code) =>
+    context.push(
+      Routen.neuerCode,
+      extra: (code, ref.read(kasseInfoProvider).value?.name ?? ''),
+    );
+
+/// Mit dem Wiederherstellungscode Admin werden (ADM-06, UC-04).
+class _CodeEingeben extends ConsumerStatefulWidget {
+  const _CodeEingeben();
+
+  @override
+  ConsumerState<_CodeEingeben> createState() => _CodeEingebenState();
+}
+
+class _CodeEingebenState extends ConsumerState<_CodeEingeben> {
+  final _code = TextEditingController();
+  String? _fehler;
+  bool _laeuft = false;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  Future<void> _admin() async {
+    setState(() => _laeuft = true);
+    try {
+      final neu = await ref
+          .read(verwaltungAktionenProvider)
+          .adminWiederherstellen(_code.text);
+      if (!mounted) return;
+      final seite = Navigator.of(context);
+      seite.pop();
+      if (seite.context.mounted) zeigeNeuenCode(seite.context, ref, neu);
+    } on VerwaltungsFehler catch (e) {
+      if (mounted) {
+        setState(() {
+          _laeuft = false;
+          _fehler = e.meldung;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const BwErklaerung(
+          'Mit dem Code, den der Gründer beim Erstellen der Kasse bekommen '
+          'hat, wirst du Admin. Der bisherige Admin bleibt Bierwart, und es '
+          'gibt einen neuen Code.',
+        ),
+        const SizedBox(height: BwSpacing.space4),
+        BwFeld(
+          label: 'Wiederherstellungscode',
+          controller: _code,
+          aufSheet: true,
+          autofocus: true,
+          platzhalter: 'K7QM-3XRA-9DWF-T2HC',
+          schreibweise: TextCapitalization.characters,
+          eingabeAktion: TextInputAction.done,
+          onSubmitted: (_) => _laeuft ? null : _admin(),
+          fehler: _fehler,
+        ),
+        const SizedBox(height: BwSpacing.space6),
+        BwKnopf(
+          text: 'Admin werden',
+          gross: true,
+          laedt: _laeuft,
+          onPressed: _admin,
         ),
       ],
     );

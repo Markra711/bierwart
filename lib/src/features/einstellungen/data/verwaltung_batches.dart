@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import '../../../core/firebase/schreibvorgang.dart';
+import '../../onboarding/domain/codes.dart';
 import '../domain/bierwart.dart';
 
 // Verwaltung durch den Admin (ADM-01 bis ADM-04), genau so, wie
@@ -272,4 +275,84 @@ List<Schreibvorgang> aufloesenSchlussBatch({
   Schreibvorgang.loeschen('einladungen/$einladungCode'),
   Schreibvorgang.loeschen('wiederherstellung/$wiederherstellungHex'),
   Schreibvorgang.loeschen('users/$uid'),
+];
+
+/// Neuer Wiederherstellungscode: Hash in der Kasse, neues Dokument unter
+/// `wiederherstellung/`, das alte weg; der alte Code gilt sofort nicht mehr.
+List<Schreibvorgang> _codeWechsel({
+  required String kasseId,
+  required String buchungId,
+  required Uint8List neuerHash,
+  required String altHex,
+  Map<String, Object?> kasse = const {},
+}) => [
+  Schreibvorgang.update('kassen/$kasseId', {
+    ...kasse,
+    'wiederherstellungHash': Bytes(neuerHash),
+    'letzteBuchungId': buchungId,
+  }),
+  Schreibvorgang('wiederherstellung/${hexVon(neuerHash)}', {
+    'kasseId': kasseId,
+  }),
+  Schreibvorgang.loeschen('wiederherstellung/$altHex'),
+];
+
+/// Wiederherstellungscode erneuern (ADM-08), nur der Admin.
+List<Schreibvorgang> codeErneuernBatch({
+  required String uid,
+  required String bierwartName,
+  required String kasseId,
+  required String buchungId,
+  required Uint8List neuerHash,
+  required String altHex,
+  required DateTime geraetZeit,
+}) => [
+  ..._codeWechsel(
+    kasseId: kasseId,
+    buchungId: buchungId,
+    neuerHash: neuerHash,
+    altHex: altHex,
+  ),
+  Schreibvorgang(
+    'kassen/$kasseId/buchungen/$buchungId',
+    _log(
+      'wiederherstellungscodeErneuert',
+      uid: uid,
+      bierwartName: bierwartName,
+      geraetZeit: geraetZeit,
+    ),
+  ),
+];
+
+/// Admin wiederherstellen als Bierwart (ADM-06, UC-04): Wer den Code kennt,
+/// wird Admin; der bisherige bleibt normaler Bierwart. [nachweis] ist der
+/// alte Code in normalisierter Form, er ist danach wertlos. Der Kassenwart
+/// geht nur mit, wenn er kein aktiver Bierwart mehr ist ([kassenwartUid]).
+List<Schreibvorgang> adminWiederherstellenBatch({
+  required String uid,
+  required String bierwartName,
+  required String kasseId,
+  required String buchungId,
+  required String nachweis,
+  required Uint8List neuerHash,
+  required String kassenwartUid,
+  required DateTime geraetZeit,
+}) => [
+  ..._codeWechsel(
+    kasseId: kasseId,
+    buchungId: buchungId,
+    neuerHash: neuerHash,
+    altHex: hexVon(hashVon(nachweis)),
+    kasse: {'adminUid': uid, 'kassenwartUid': kassenwartUid},
+  ),
+  Schreibvorgang(
+    'kassen/$kasseId/buchungen/$buchungId',
+    _log(
+      'adminWiederhergestellt',
+      uid: uid,
+      bierwartName: bierwartName,
+      geraetZeit: geraetZeit,
+      felder: {'nachweis': nachweis},
+    ),
+  ),
 ];

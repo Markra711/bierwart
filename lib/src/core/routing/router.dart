@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/einstellungen/presentation/aufloesen_screen.dart';
+import '../../features/einstellungen/presentation/datenschutz_screen.dart';
 import '../../features/einstellungen/presentation/einstellungen_screen.dart';
+import '../../features/einstellungen/presentation/neuer_code_screen.dart';
 import '../../features/geld/presentation/geld_screen.dart';
 import '../../features/geld/presentation/verlauf_screen.dart';
 import '../../features/kader/presentation/kader_screen.dart';
@@ -50,6 +52,12 @@ abstract final class Routen {
   static const sorte = '/sorte';
   static const verlauf = '/verlauf';
   static const aufloesen = '/aufloesen';
+  static const datenschutz = '/datenschutz';
+
+  /// Der neue Wiederherstellungscode; Code und Kassenname kommen als
+  /// `extra` und gehen bei einem Neustart verloren, so ist er nur einmal
+  /// sichtbar (ADM-08).
+  static const neuerCode = '/neuer-code';
 
   /// Sorte bearbeiten, eine Unterseite ohne Tab-Leiste.
   static String sorteBearbeiten(String id) => '$sorte/$id';
@@ -150,6 +158,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       seite(Routen.einkauf, () => const EinkaufScreen()),
       seite(Routen.verlauf, () => const VerlaufScreen()),
       seite(Routen.aufloesen, () => const AufloesenScreen()),
+      seite(Routen.datenschutz, () => const DatenschutzScreen()),
+      GoRoute(
+        path: Routen.neuerCode,
+        builder: (context, state) => switch (state.extra) {
+          (String code, String kassenName) => NeuerCodeScreen(
+            code: code,
+            kassenName: kassenName,
+          ),
+          _ => const _UnbekannteSeite(),
+        },
+      ),
       GoRoute(
         path: '${Routen.sorte}/:id',
         builder: (context, state) =>

@@ -13,113 +13,147 @@ import '../../../core/widgets/seite.dart';
 import '../application/onboarding.dart';
 import '../domain/codes.dart';
 
-/// Der Wiederherstellungscode, genau einmal angezeigt (AUTH-03). Weiter erst,
-/// wenn der Nutzer bestätigt, dass er ihn gespeichert hat.
-class WiederherstellungscodeScreen extends ConsumerStatefulWidget {
+/// Der Wiederherstellungscode nach dem Erstellen, genau einmal angezeigt
+/// (AUTH-03). Weiter geht es zum Einladen.
+class WiederherstellungscodeScreen extends ConsumerWidget {
   const WiederherstellungscodeScreen({super.key});
 
   @override
-  ConsumerState<WiederherstellungscodeScreen> createState() =>
-      _WiederherstellungscodeScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final kasse = ref.watch(ersteKasseProvider);
+    if (kasse == null) return const SizedBox.shrink();
+    return CodeEinmalZeigen(
+      code: kasse.wiederherstellungscode,
+      kassenName: kasse.kassenName,
+      weiter: () => context.go(Routen.einladen),
+    );
+  }
 }
 
-class _WiederherstellungscodeScreenState
-    extends ConsumerState<WiederherstellungscodeScreen> {
+/// Ein Wiederherstellungscode, der nur jetzt sichtbar ist (AUTH-03, ADM-06,
+/// ADM-08). [weiter] geht erst, wenn der Nutzer bestätigt, dass er ihn
+/// gespeichert hat; bis dahin führt auch „Zurück“ nicht weg.
+class CodeEinmalZeigen extends StatefulWidget {
+  const CodeEinmalZeigen({
+    super.key,
+    required this.code,
+    required this.kassenName,
+    required this.weiter,
+    this.titel = 'Dein',
+  });
+
+  /// Normalisierte Form, angezeigt in Vierergruppen.
+  final String code;
+  final String kassenName;
+  final VoidCallback weiter;
+
+  /// Erster Teil des Titels, z. B. „Dein neuer“.
+  final String titel;
+
+  @override
+  State<CodeEinmalZeigen> createState() => _CodeEinmalZeigenState();
+}
+
+class _CodeEinmalZeigenState extends State<CodeEinmalZeigen> {
   bool _gespeichert = false;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).extension<BwTextStyles>()!;
-    final kasse = ref.watch(ersteKasseProvider);
-    if (kasse == null) return const SizedBox.shrink();
-    final code = inGruppen(kasse.wiederherstellungscode);
+    final code = inGruppen(widget.code);
 
-    return BwSeite(
-      inhalt: [
-        BwVerlaufText('NUR JETZT SICHTBAR', style: text.label),
-        const BwTitel(voll: 'Dein', kontur: 'Wiederher­stellungs­code'),
-        const BwErklaerung(
-          'Damit wirst du wieder Admin, falls dein Handy verloren geht. Wer '
-          'den Code hat, kann die Kasse übernehmen. Speicher ihn sicher, z. B. '
-          'im Passwort-Manager.',
-        ),
-        _Auswahlbox(
-          child: BwEingedrueckt(
-            radius: BwRadius.lg,
-            padding: const EdgeInsets.symmetric(
-              horizontal: BwSpacing.space3,
-              vertical: BwSpacing.space5,
-            ),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: SelectableText(
-                code,
-                semanticsLabel: code.split('').join(' '),
-                style: text.amountL.copyWith(letterSpacing: 3),
-              ),
-            ),
+    return PopScope(
+      canPop: _gespeichert,
+      child: BwSeite(
+        inhalt: [
+          BwVerlaufText('NUR JETZT SICHTBAR', style: text.label),
+          BwTitel(
+            voll: widget.titel,
+            kontur: 'Wiederher\u00adstellungs\u00adcode',
           ),
-        ),
-        Row(
-          children: [
-            Expanded(
-              child: BwKnopf(
-                text: 'Kopieren',
-                art: BwKnopfArt.sekundaer,
-                onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: code));
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Code kopiert.')),
-                    );
-                  }
-                },
+          const BwErklaerung(
+            'Damit wirst du wieder Admin, falls dein Handy verloren geht. Wer '
+            'den Code hat, kann die Kasse übernehmen. Speicher ihn sicher, '
+            'z. B. im Passwort-Manager.',
+          ),
+          _Auswahlbox(
+            child: BwEingedrueckt(
+              radius: BwRadius.lg,
+              padding: const EdgeInsets.symmetric(
+                horizontal: BwSpacing.space3,
+                vertical: BwSpacing.space5,
               ),
-            ),
-            const SizedBox(width: BwSpacing.space4),
-            Expanded(
-              child: BwKnopf(
-                text: 'Teilen',
-                art: BwKnopfArt.sekundaer,
-                onPressed: () => SharePlus.instance.share(
-                  ShareParams(
-                    text:
-                        'Wiederherstellungscode für „${kasse.kassenName}“ '
-                        '(Bierwart): $code',
-                  ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: SelectableText(
+                  code,
+                  semanticsLabel: code.split('').join(' '),
+                  style: text.amountL.copyWith(letterSpacing: 3),
                 ),
               ),
             ),
-          ],
-        ),
-      ],
-      aktionen: [
-        BwErhaben(
-          schatten: BwShadows.raisedSm,
-          child: Material(
-            type: MaterialType.transparency,
-            child: CheckboxListTile(
-              value: _gespeichert,
-              onChanged: (v) => setState(() => _gespeichert = v ?? false),
-              controlAffinity: ListTileControlAffinity.leading,
-              activeColor: BwColors.gradEnd,
-              checkColor: BwColors.onAccent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(BwRadius.lg),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: BwKnopf(
+                  text: 'Kopieren',
+                  art: BwKnopfArt.sekundaer,
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: code));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Code kopiert.')),
+                      );
+                    }
+                  },
+                ),
               ),
-              title: Text(
-                'Ich habe den Code sicher gespeichert',
-                style: text.body.copyWith(fontWeight: FontWeight.w700),
+              const SizedBox(width: BwSpacing.space4),
+              Expanded(
+                child: BwKnopf(
+                  text: 'Teilen',
+                  art: BwKnopfArt.sekundaer,
+                  onPressed: () => SharePlus.instance.share(
+                    ShareParams(
+                      text:
+                          'Wiederherstellungscode für „${widget.kassenName}“ '
+                          '(Bierwart): $code',
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+        aktionen: [
+          BwErhaben(
+            schatten: BwShadows.raisedSm,
+            child: Material(
+              type: MaterialType.transparency,
+              child: CheckboxListTile(
+                value: _gespeichert,
+                onChanged: (v) => setState(() => _gespeichert = v ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                activeColor: BwColors.gradEnd,
+                checkColor: BwColors.onAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(BwRadius.lg),
+                ),
+                title: Text(
+                  'Ich habe den Code sicher gespeichert',
+                  style: text.body.copyWith(fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ),
-        ),
-        BwKnopf(
-          text: 'Weiter',
-          gross: true,
-          onPressed: _gespeichert ? () => context.go(Routen.einladen) : null,
-        ),
-      ],
+          BwKnopf(
+            text: 'Weiter',
+            gross: true,
+            onPressed: _gespeichert ? widget.weiter : null,
+          ),
+        ],
+      ),
     );
   }
 }

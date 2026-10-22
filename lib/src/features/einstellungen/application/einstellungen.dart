@@ -235,6 +235,62 @@ extension AustretenUndAufloesen on VerwaltungAktionen {
       });
 }
 
+extension Wiederherstellung on VerwaltungAktionen {
+  /// Neuer Wiederherstellungscode (ADM-08), nur der Admin. Liefert den Code
+  /// in normalisierter Form, damit die App ihn genau einmal zeigt.
+  Future<String> codeErneuern() async {
+    final code = zufallsCode(wiederherstellungscodeLaenge);
+    await _ausfuehren(
+      'Der Code ließ sich nicht erneuern',
+      (s, kasse) => codeErneuernBatch(
+        uid: s.uid,
+        bierwartName: s.name,
+        kasseId: s.kasseId,
+        buchungId: _schreiber.neueId(),
+        neuerHash: hashVon(code),
+        altHex: kasse.wiederherstellungHex,
+        geraetZeit: DateTime.now(),
+      ),
+    );
+    return code;
+  }
+
+  /// Mit dem Wiederherstellungscode Admin werden (ADM-06, UC-04). Der Code
+  /// wird dabei ersetzt; der neue kommt zurück und wird einmal gezeigt.
+  Future<String> adminWiederherstellen(String eingabe) async {
+    final nachweis = normalisiereCode(eingabe);
+    if (!istCode(nachweis, wiederherstellungscodeLaenge)) {
+      throw const VerwaltungsFehler(
+        'Der Code hat 16 Zeichen, z. B. K7QM-3XRA-9DWF-T2HC.',
+      );
+    }
+    final aktive = {
+      for (final b in _ref.read(bierwarteProvider).value ?? const <Bierwart>[])
+        b.uid,
+    };
+    final code = zufallsCode(wiederherstellungscodeLaenge);
+    await _ausfuehren('Die Wiederherstellung hat nicht geklappt', (s, kasse) {
+      if (hexVon(hashVon(nachweis)) != kasse.wiederherstellungHex) {
+        throw const VerwaltungsFehler('Der Code passt nicht zu dieser Kasse.');
+      }
+      return adminWiederherstellenBatch(
+        uid: s.uid,
+        bierwartName: s.name,
+        kasseId: s.kasseId,
+        buchungId: _schreiber.neueId(),
+        nachweis: nachweis,
+        neuerHash: hashVon(code),
+        // Ein verwaister Kassenwart geht mit (offene Frage 25).
+        kassenwartUid: aktive.contains(kasse.kassenwartUid)
+            ? kasse.kassenwartUid
+            : s.uid,
+        geraetZeit: DateTime.now(),
+      );
+    });
+    return code;
+  }
+}
+
 final verwaltungAktionenProvider = Provider<VerwaltungAktionen>(
   VerwaltungAktionen.new,
 );
