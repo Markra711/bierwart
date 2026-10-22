@@ -333,6 +333,8 @@ Die Rules werden mit `@firebase/rules-unit-testing` gegen den Firestore-Emulator
 App Check sorgt dafür, dass Firestore nur Anfragen der echten App annimmt, nicht von eigenen Programmen mit dem öffentlichen API-Key. Gegen einen Bierwart, der die echte App benutzt, hilft es nicht, dafür sind die Rules da. Ohne Server-Code ist es der einzige Schutz gegen fremde Clients (NFA-07).
 
 - **Release 1 baut App Check ein:** Paket `firebase_app_check`, im Release-Build mit dem Provider Play Integrity, beim Entwickeln mit dem Debug-Provider. Gegen die Emulatoren braucht es kein App Check.
+  - Umgesetzt in `lib/src/core/firebase/app_check.dart`: `firebaseStarten()` aktiviert App Check für die App des echten Projekts, nicht gegen die Emulatoren. Schlägt das Aktivieren fehl, startet die App trotzdem; solange nicht erzwungen wird, nimmt Firestore Anfragen auch ohne Token an.
+  - Debug-Builds gegen das echte Projekt schreiben beim ersten Start einen Debug-Token ins Logcat (`adb logcat | grep -i DebugAppCheckProvider`). Wer immer denselben Token will, setzt `--dart-define=APP_CHECK_DEBUG_TOKEN=<uuid>`. Der Token gehört in der Firebase-Konsole unter App Check zur Android-App (macht Marvin), spätestens bevor erzwungen wird.
 - **Erzwungen wird erst zum Store-Release:** Play Integrity setzt voraus, dass die App in der Play Console angelegt und mit dem Firebase-Projekt verknüpft ist. Vorher würde ein Erzwingen alle Builds außer Debug-Builds mit eingetragenen Debug-Tokens aussperren. Die Schritte stehen unter [Vor dem Store-Release](#vor-dem-store-release).
 
 ## Cloud Functions (ab Release 2)

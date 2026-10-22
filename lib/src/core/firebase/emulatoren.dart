@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../firebase_options.dart';
+import 'app_check.dart';
 
 /// `flutter run --dart-define=USE_EMULATORS=true` verbindet mit den lokalen
 /// Emulatoren. In Release-Builds ist der Schalter immer aus.
@@ -22,17 +23,21 @@ const emulatorProjekt = 'demo-bierwart';
 const authPort = 9099;
 const firestorePort = 8080;
 
-/// Startet Firebase und liefert die App, die alle Provider nutzen.
+/// Startet Firebase und liefert die App, die alle Provider nutzen. Gegen das
+/// echte Projekt mit App Check (NFA-07).
 ///
 /// Gegen die Emulatoren eine eigene App mit `demoProjectId`: Unter Android
 /// legt das native SDK aus `google-services.json` schon die Standard-App für
 /// `bier-wart` an, und FlutterFire würde andere Optionen dafür ignorieren.
 Future<FirebaseApp> firebaseStarten({bool emulatoren = useEmulators}) async {
   if (!emulatoren) {
-    return Firebase.initializeApp(
+    final app = await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    await appCheckAktivieren(app);
+    return app;
   }
+  // Die Emulatoren prüfen kein App Check.
   final app = await Firebase.initializeApp(demoProjectId: emulatorProjekt);
   await FirebaseAuth.instanceFor(app: app)
       .useAuthEmulator(emulatorHost, authPort);
