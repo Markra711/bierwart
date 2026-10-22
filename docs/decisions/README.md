@@ -15,3 +15,4 @@ Vorlage: [`template.md`](template.md). Dateiname: `NNNN-kurzer-titel.md`.
 | [0007](0007-aggregation-per-trigger.md) | Salden, Bestand und Ortsstände per Trigger aggregieren | Ersetzt durch ADR-0009 |
 | [0008](0008-uebernahme-bestaetigung.md) | Übernahme einer Mitgliedschaft braucht die Bestätigung eines Bierwarts | Angenommen |
 | [0009](0009-release-1-ohne-cloud-functions.md) | Release 1 ohne Cloud Functions | Angenommen |
+| [0010](0010-wiederherstellung-mit-nachweis.md) | Wiederherstellung ohne Bierwart-Eintrag in zwei Schritten mit Nachweis | Angenommen |

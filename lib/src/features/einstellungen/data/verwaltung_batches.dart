@@ -244,6 +244,7 @@ List<Schreibvorgang> aufloesenBatch({
 /// Sammlungen unter einer Kasse, die das Auflösen leert (architecture.md,
 /// Datenmodell).
 const kassenSammlungen = [
+  'wiederherstellungen',
   'buchungen',
   'mitglieder',
   'namen',

@@ -14,7 +14,9 @@ import 'package:bier_wart/src/features/kader/domain/name.dart';
 import 'package:bier_wart/src/features/lager/data/sorten_repository.dart';
 import 'package:bier_wart/src/features/lager/domain/sorte.dart';
 import 'package:bier_wart/src/features/onboarding/domain/codes.dart';
+import 'package:bier_wart/src/features/onboarding/data/wiederherstellung_repository.dart';
 import 'package:bier_wart/src/features/onboarding/domain/einladung.dart';
+import 'package:bier_wart/src/features/onboarding/domain/wiederherstellung.dart';
 import 'package:bier_wart/src/features/strichliste/data/kassenkopf_repository.dart';
 
 /// Dokumente im Arbeitsspeicher statt Firestore. Wendet Batches an wie der
@@ -29,11 +31,15 @@ class FakeDatenbank
         VerlaufRepository,
         OrteRepository,
         LogRepository,
-        EinstellungenRepository {
+        EinstellungenRepository,
+        WiederherstellungRepository {
   final docs = <String, Map<String, Object?>>{};
   final batches = <List<Schreibvorgang>>[];
   final _aenderung = StreamController<void>.broadcast();
   var _id = 0;
+
+  /// Meldet Änderungen an `users/uid`, wie `meineKasseIdProvider` sie sähe.
+  void Function(String? kasseId)? beiNutzer;
 
   /// Was die Fake-Datenbank als Serverzeit einsetzt.
   DateTime jetzt = DateTime(2026, 10, 22, 20);
@@ -162,6 +168,11 @@ class FakeDatenbank
       docs[s.pfad] = neu;
     }
     _aenderung.add(null);
+    for (final s in vorgaenge.where((s) => s.pfad == 'users/uid')) {
+      beiNutzer?.call(
+        s.art == Art.delete ? null : s.daten['kasseId'] as String?,
+      );
+    }
     if (schreibFehler != null) throw schreibFehler!;
   }
 
@@ -399,6 +410,43 @@ class FakeDatenbank
     return [for (final e in _unter('kassen/$kasseId/$sammlung')) e.key]
         .take(anzahl)
         .toList();
+  }
+
+  @override
+  Future<String?> kasseZumCode(String nachweis) async {
+    if (serverFehler != null) throw serverFehler!;
+    return docs['wiederherstellung/${hexVon(hashVon(nachweis))}']?['kasseId']
+        as String?;
+  }
+
+  @override
+  Future<WiederherstellungsStand> laden(String kasseId) async {
+    if (serverFehler != null) throw serverFehler!;
+    final k = docs['kassen/$kasseId']!;
+    return WiederherstellungsStand(
+      kasseId: kasseId,
+      kassenName: k['name']! as String,
+      adminUid: k['adminUid']! as String,
+      kassenwartUid: k['kassenwartUid']! as String,
+      einladungCode: k['einladungCode']! as String,
+      kandidaten: [
+        for (final e in _unter('kassen/$kasseId/mitglieder'))
+          if (e.value['istGast'] != true)
+            Kandidat(
+              mitgliedId: _letzte(e.key),
+              name: e.value['name']! as String,
+              bierwartUid: e.value['bierwartUid'] as String?,
+              entfernt: e.value['entfernt'] == true,
+            ),
+      ],
+      aktiveBierwarte: {
+        for (final e in _unter('kassen/$kasseId/bierwarte')) _letzte(e.key),
+      },
+      orte: {for (final e in _unter('kassen/$kasseId/orte')) _letzte(e.key)},
+      namenKeys: {
+        for (final e in _unter('kassen/$kasseId/namen')) _letzte(e.key),
+      },
+    );
   }
 
   @override

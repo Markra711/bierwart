@@ -8,8 +8,8 @@ rules_version = '2';
 //
 // Stand: Buchungen, Stammdaten (Mitglieder, Namen, Sorten), Mitgliedschaft
 // (Kasse erstellen, Beitreten, Übernahme, Austreten) und Admin-Funktionen
-// (Link erneuern, Bierwart entfernen, Rollen, Umbenennen, Wiederherstellung,
-// Auflösen).
+// (Link erneuern, Bierwart entfernen, Rollen, Umbenennen, Wiederherstellung
+// samt Nachweis, Auflösen).
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -36,9 +36,18 @@ service cloud.firestore {
       function aufgeloest() {
         return exists(kassePfad()) && get(kassePfad()).data.get('aufgeloest', false) == true;
       }
+      // Wer den Wiederherstellungscode kennt, aber kein Bierwart ist, darf
+      // lesen, solange sein Nachweis zum aktuellen Code passt. Er braucht die
+      // Kasse, um den Batch der Wiederherstellung zu bauen (ADR-0010).
+      function hatNachweis() {
+        return request.auth != null
+          && exists(pfad('wiederherstellungen', request.auth.uid))
+          && hashing.sha256(get(pfad('wiederherstellungen', request.auth.uid)).data.nachweis)
+            == get(kassePfad()).data.wiederherstellungHash;
+      }
       // Eine aufgelöste Kasse sieht nur noch der Admin, der sie löscht (ADM-05).
       function darfLesen() {
-        return istBierwart() && (!aufgeloest() || istAdmin());
+        return (istBierwart() || hatNachweis()) && (!aufgeloest() || istAdmin());
       }
       function istKassenwart() {
         return get(/databases/$(database)/documents/kassen/$(k)).data.kassenwartUid == request.auth.uid;
@@ -838,6 +847,25 @@ service cloud.firestore {
           && s.uid == request.auth.uid
           && s.am == request.time
           && s.name == name;
+      }
+
+      // Nachweis für die Wiederherstellung ohne Bierwart-Eintrag (ADM-06,
+      // UC-03, ADR-0010): Schritt 1 belegt den Code und gibt Lesezugriff,
+      // Schritt 2 ist die Buchung adminWiederhergestellt. Danach gilt ein
+      // neuer Code, und der Nachweis ist wertlos. Bierwarte sehen ihn nicht.
+      match /wiederherstellungen/{uid} {
+        function nachweisNeu() {
+          let d = request.resource.data;
+          return request.auth != null && request.auth.uid == uid
+            && d.keys().hasOnly(['nachweis', 'angelegtAm'])
+            && d.keys().hasAll(['nachweis', 'angelegtAm'])
+            && d.angelegtAm == request.time
+            && nachweisGueltig(d.nachweis)
+            && !aufgeloest();
+        }
+        allow read: if (request.auth != null && request.auth.uid == uid) || loeschtAdmin();
+        allow create, update: if nachweisNeu();
+        allow delete: if request.auth != null && request.auth.uid == uid;
       }
 
       match /buchungen/{buchungId} {

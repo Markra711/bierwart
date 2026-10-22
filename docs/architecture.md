@@ -78,6 +78,7 @@ users/{uid}                                  welche Kasse zu diesem Nutzer gehö
 kassen/{kasseId}
   bierwarte/{uid}
   uebernahmen/{anfrageId}                    „Das bin ich“-Anfragen (ADR-0008)
+  wiederherstellungen/{uid}                  Nachweis des Codes vor der Wiederherstellung (ADR-0010)
   mitglieder/{mitgliedId}
   namen/{nameKey}                            Eindeutigkeitsindex für Namen
   sorten/{sorteId}
@@ -95,6 +96,7 @@ wiederherstellung/{hashHex}                  Hash des Wiederherstellungscodes �
 | `kassen/{k}` | `name`, `adminUid`, `kassenwartUid`, `einladungCode`, `anzahlBierwarte`, `wiederherstellungHash` (Bytes), `leerSeit` (null oder Timestamp, für AUTH-10 in Release 2), `aufgeloest` (bool), `aufloesenBestaetigung` (abgetippter Name, ADM-05), `erstelltAm`, `letzteBuchungId` | Bierwarte; nach dem Auflösen nur der Admin |
 | `kassen/{k}/bierwarte/{uid}` | `mitgliedId`, `name` (denormalisiert für den Stempel), `beigetretenAm`, `einladungCode` (mit dem beigetreten wurde), `letzteBuchungId` | Bierwarte |
 | `kassen/{k}/mitglieder/{id}` | `name`, `nameKey`, `istGast` (KAD-03), `bierwartUid` (oder null), `entfernt` (bool), `saldoCents` (offen; negativ = Guthaben), `letzteBuchungId`, `angelegtAm` | Bierwarte |
+| `kassen/{k}/wiederherstellungen/{uid}` | `nachweis` (normalisierter Code), `angelegtAm`; gültig, solange der Hash zum Code der Kasse passt | nur die UID selbst; beim Auflösen der Admin |
 | `kassen/{k}/uebernahmen/{id}` | `neueUid`, `mitgliedId`, `einladungCode`, `status` (`offen`/`bestaetigt`/`abgelehnt`/`zurueckgezogen`), `angefragtAm` (gültig bis angefragtAm + 7 Tage), `entschiedenVon`, `entschiedenAm`, `letzteBuchungId` | Bierwarte und die anfragende UID |
 | `kassen/{k}/namen/{nameKey}` | `mitgliedId` | jeder Angemeldete per `get` (Namensprüfung beim Beitreten, AUTH-07), Abfragen nur Bierwarte |
 | `kassen/{k}/sorten/{id}` | `name`, `preisCents`, `vorherigerPreisCents` (oder null, BES-02), `aktiv` (BES-01), `bestand` (Flaschen, darf < 0, STR-05), `letzteBuchungId`, `reihenfolge` | Bierwarte |
@@ -191,7 +193,6 @@ Gemeinsame Felder:
 **Wiederherstellungscode und Datenschutz (ADM-06, ADM-08, NFA-09):**
 - Der Admin kann einen neuen Wiederherstellungscode erzeugen (Bestätigung, UI-04); alle anderen sehen stattdessen „Wiederherstellungscode eingeben“ und werden damit Admin (ADM-06 als Bierwart, UC-04). Die App normalisiert die Eingabe und vergleicht ihren Hash mit dem der Kasse, bevor sie schreibt; ein falscher Code meldet sich so ohne Umweg über den Server. Der Kassenwart bleibt, solange er aktiver Bierwart ist, sonst geht die Rolle mit (offene Frage 25).
 - In beiden Fällen entsteht ein neuer Code. Die App zeigt ihn genau einmal auf eigener Seite (`/neuer-code`, Code als `extra`, nach einem Neustart weg), wie beim Erstellen der Kasse: Weiter und Zurück erst nach dem Haken „Ich habe den Code sicher gespeichert“.
-- Die Wiederherstellung ohne Bierwart-Eintrag (UC-03 über den Code, aus dem Onboarding) fehlt noch; sie braucht einen Einstieg auf der Willkommensseite.
 - „Datenschutz“ ist eine Seite mit fünf kurzen Abschnitten: was gespeichert wird, anonyme Anmeldung, Firestore in `europe-west10`, wer die Daten sieht, Löschen. Der Text ist ein Entwurf (offene Frage 18).
 
 **Storno (STR-04, STR-06):**
@@ -238,18 +239,18 @@ Zusammengesetzte Indizes kommen in `firestore.indexes.json`. Dort stehen die Ind
 
 Die Rules sind in Release 1 die Geschäftslogik. Grundsätze (NFA-07):
 
-- Ohne Anmeldung kein Zugriff. Jeder Zugriff unter `kassen/{k}` setzt voraus, dass `kassen/{k}/bierwarte/{request.auth.uid}` existiert und die Kasse nicht `aufgeloest` ist. Eine aufgelöste Kasse liest und löscht nur noch der Admin, Buchungen entstehen dort keine mehr.
+- Ohne Anmeldung kein Zugriff. Jeder Zugriff unter `kassen/{k}` setzt voraus, dass `kassen/{k}/bierwarte/{request.auth.uid}` existiert und die Kasse nicht `aufgeloest` ist. Einzige Ausnahme ist das Lesen mit gültigem Nachweis des Wiederherstellungscodes (ADR-0010). Eine aufgelöste Kasse liest und löscht nur noch der Admin, Buchungen entstehen dort keine mehr.
 - Summenfelder (`saldoCents`, `bestand`, `standCents`) ändern sich nur zusammen mit einer passenden Buchung (siehe oben).
 - Buchungen: nur `create`, nie `update`. `delete` nur beim Auflösen (LOG-02).
 - Jede Verwaltungsaktion schreibt ihre Log-Buchung im selben Batch. Die Rules verlangen sie (`existsAfter`).
 - `einladungen` und `wiederherstellung`: nur `get` für Angemeldete, kein `list`.
 
-Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 221 Emulator-Tests in `rules-tests/`:
+Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 234 Emulator-Tests in `rules-tests/`:
 - `buchungen.test.js` (47): Strich offen und bar, Storno, Zahlung, Einkauf, Bestandskorrektur, Übergabe, Ein-/Auszahlung, Kassensturz, Fälle ohne passende Buchung, Unveränderlichkeit des Logs.
 - `stammdaten.test.js` (32): Mitglieder anlegen, umbenennen, entfernen, wieder aufnehmen; Namensindex; Sorten anlegen, ändern, ausblenden.
 - `verwaltung.test.js` (56): Kasse erstellen, Beitreten, Übernahme anfragen, zurückziehen und entscheiden, Austreten, `users/`, Lesen von Einladungen und Namensindex.
-- `admin.test.js` (43): Link erneuern, Bierwart entfernen, Rollen, Umbenennen, Wiederherstellungscode erneuern, Admin wiederherstellen mit und ohne Bierwart-Eintrag, Auflösen und Löschen.
-- `vertrag.test.js` (43): Batches, wie die App sie baut: Einkauf aus Portemonnaie und Kasse, Preis ändern, Ausblenden, Bestandskorrektur samt Ablehnung bei veralteter Differenz; Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart; Übergabe in die Kasse und zurück, Auszahlung aus der Kasse, Einzahlung ins Portemonnaie, Kassensturz samt Ablehnung bei veralteter Differenz, Übergabe nur vom Kassenwart; Link erneuern, Bierwart entfernen, Rollen übertragen, Kasse umbenennen, jeweils nur als Admin; Austreten (nicht mit Geld im Portemonnaie, als Letzte mit `leerSeit`), Auflösen mit einer vollen Löschportion und dem Schluss-Batch; Wiederherstellungscode erneuern (nur Admin) und mit dem Code Admin werden, danach gilt der alte nicht mehr. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
+- `admin.test.js` (52): Link erneuern, Bierwart entfernen, Rollen, Umbenennen, Wiederherstellungscode erneuern, Admin wiederherstellen mit und ohne Bierwart-Eintrag, Nachweis für die Wiederherstellung (ADR-0010), Auflösen und Löschen.
+- `vertrag.test.js` (47): Batches, wie die App sie baut: Einkauf aus Portemonnaie und Kasse, Preis ändern, Ausblenden, Bestandskorrektur samt Ablehnung bei veralteter Differenz; Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart; Übergabe in die Kasse und zurück, Auszahlung aus der Kasse, Einzahlung ins Portemonnaie, Kassensturz samt Ablehnung bei veralteter Differenz, Übergabe nur vom Kassenwart; Link erneuern, Bierwart entfernen, Rollen übertragen, Kasse umbenennen, jeweils nur als Admin; Austreten (nicht mit Geld im Portemonnaie, als Letzte mit `leerSeit`), Auflösen mit einer vollen Löschportion und dem Schluss-Batch; Wiederherstellungscode erneuern (nur Admin) und mit dem Code Admin werden, danach gilt der alte nicht mehr; Wiederherstellung aus dem Onboarding mit Nachweis, als bestehendes und als neues Mitglied. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
 
 Kern des Musters:
 
@@ -306,7 +307,9 @@ Zusätzlich zu den Entscheidungen oben prüfen die Rules:
 | Auflösen | Admin | 1. `kassen.aufgeloest = true` mit `aufloesenBestaetigung == name`; 2. alle Dokumente seitenweise löschen (auch die Buchungen); 3. Kasse, aktuelle Einladung, Wiederherstellung, `users/{uid}` löschen. Ersetzte Einladungen bleiben liegen, bis Release 2 sie aufräumt | Admin; Bestätigung entspricht dem Kassennamen (ADM-05); Löschen nur bei `aufgeloest` | ADM-05, UC-10 |
 
 - **Wiederherstellung:** Der gesendete alte Code steht danach in der Log-Buchung (`nachweis`). Er ist aber wertlos, weil im selben Batch ein neuer Code gesetzt wird. Die App zeigt den neuen Code einmal an.
-- **Wiederherstellung ohne Bierwart-Eintrag:** Wer nicht Bierwart ist, kann den Stand des alten Portemonnaies nicht lesen und deshalb nicht 1:1 übertragen wie bei einer bestätigten Übernahme. Das alte Portemonnaie wird `ehemalig` (GEL-08) und bleibt sichtbar, bis der Kassenwart es per Übergabe auf 0 bringt.
+- **Wiederherstellung ohne Bierwart-Eintrag** ([ADR-0010](decisions/0010-wiederherstellung-mit-nachweis.md)): Ohne Bierwart-Eintrag darf die App die Werte, die der Batch braucht (alte UID des Mitglieds, aktive Bierwarte, Kassenwart, Einladungscode), nicht lesen. Deshalb zwei Schritte: Zuerst schreibt sie einen Nachweis `wiederherstellungen/{uid}` mit dem Code; die Rules prüfen den Hash, und solange er passt, darf die UID die Kasse lesen (`darfLesen()`). Dann liest sie Kasse, Mitglieder, Bierwarte, Orte und Namen und schreibt den Batch; darin wechselt der Code, und der Nachweis geht.
+- Das alte Portemonnaie wird dabei `ehemalig` (GEL-08), statt 1:1 übertragen zu werden, und bleibt sichtbar, bis der Kassenwart es per Übergabe auf 0 bringt.
+- In der App: „Ich habe einen Wiederherstellungscode“ auf der Willkommensseite, Code eingeben, „Wer bist du?“ (alle Mitglieder außer „Gäste“, der Admin zuerst, oder „Ich bin neu dabei“ mit freiem Namen), „Admin werden“, dann der neue Code genau einmal. Bis er gesehen ist, hält die Weiterleitung den Nutzer auf der Seite, obwohl er schon in der Kasse ist.
 - **Format des Wiederherstellungscodes** (AUTH-03, ADM-06, ADM-08):
   - 16 Zeichen Crockford-Base32 (Ziffern und Großbuchstaben ohne I, L, O, U), also 80 Bit Zufall, angezeigt in Vierergruppen: `K7QM-3XRA-9DWF-T2HC`.
   - Die App erzeugt ihn mit `Random.secure()`.

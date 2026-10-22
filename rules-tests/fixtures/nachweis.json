@@ -1,0 +1,15 @@
+{
+  "uid": "zurueck",
+  "schreibvorgaenge": [
+    {
+      "art": "set",
+      "pfad": "kassen/k2/wiederherstellungen/zurueck",
+      "daten": {
+        "nachweis": "ABCD1234EFGH5678",
+        "angelegtAm": {
+          "$serverzeit": true
+        }
+      }
+    }
+  ]
+}

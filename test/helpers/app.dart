@@ -13,6 +13,7 @@ import 'package:bier_wart/src/features/lager/data/sorten_repository.dart';
 import 'package:bier_wart/src/features/onboarding/data/anmeldung_repository.dart';
 import 'package:bier_wart/src/features/onboarding/data/einladungslinks.dart';
 import 'package:bier_wart/src/features/onboarding/data/kasse_repository.dart';
+import 'package:bier_wart/src/features/onboarding/data/wiederherstellung_repository.dart';
 import 'package:bier_wart/src/features/kader/domain/name.dart';
 import 'package:bier_wart/src/features/onboarding/domain/einladung.dart';
 import 'package:bier_wart/src/features/onboarding/domain/erstellte_kasse.dart';
@@ -111,6 +112,7 @@ Future<FakeKasseRepository> appStarten(
   final kasseIds = StreamController<String?>.broadcast();
   addTearDown(kasseIds.close);
   final repo = FakeKasseRepository(kasseIds);
+  daten.beiNutzer = kasseIds.add;
   final container = ProviderContainer(
     overrides: [
       anmeldungProvider.overrideWith((ref) async {
@@ -132,6 +134,7 @@ Future<FakeKasseRepository> appStarten(
       orteRepositoryProvider.overrideWithValue(daten),
       logRepositoryProvider.overrideWithValue(daten),
       einstellungenRepositoryProvider.overrideWithValue(daten),
+      wiederherstellungRepositoryProvider.overrideWithValue(daten),
       lokalerSpeicherProvider.overrideWithValue(
         einstellungen ?? FakeSpeicher(),
       ),
