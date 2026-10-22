@@ -173,3 +173,103 @@ List<Schreibvorgang> kasseUmbenennenBatch({
     ),
   ),
 ];
+
+/// Austreten (UC-05, AUTH-09): eigener Zugang und `users/{uid}` weg, die
+/// Person bleibt Mitglied. Wer als letzter geht, setzt `leerSeit`
+/// (AUTH-10). Das Portemonnaie muss leer sein, das prüfen die Rules.
+List<Schreibvorgang> austretenBatch({
+  required String uid,
+  required String bierwartName,
+  required String kasseId,
+  required String buchungId,
+  required String mitgliedId,
+  required String einladungCode,
+  required bool letzter,
+  required DateTime geraetZeit,
+}) {
+  final k = 'kassen/$kasseId';
+  return [
+    Schreibvorgang.loeschen('$k/bierwarte/$uid'),
+    Schreibvorgang.update(k, {
+      'anzahlBierwarte': const Erhoehen(-1),
+      if (letzter) 'leerSeit': const Serverzeit(),
+      'letzteBuchungId': buchungId,
+    }),
+    Schreibvorgang.update('einladungen/$einladungCode', {
+      'anzahlBierwarte': const Erhoehen(-1),
+    }),
+    Schreibvorgang.loeschen('users/$uid'),
+    Schreibvorgang(
+      '$k/buchungen/$buchungId',
+      _log(
+        'ausgetreten',
+        uid: uid,
+        bierwartName: bierwartName,
+        geraetZeit: geraetZeit,
+        felder: {'mitgliedId': mitgliedId},
+      ),
+    ),
+  ];
+}
+
+/// Auflösen, Schritt 1 (ADM-05, UC-10): Die Kasse ist danach für niemanden
+/// außer dem Admin sichtbar. [bestaetigung] ist der abgetippte Kassenname.
+List<Schreibvorgang> aufloesenBatch({
+  required String uid,
+  required String bierwartName,
+  required String kasseId,
+  required String buchungId,
+  required String bestaetigung,
+  required DateTime geraetZeit,
+}) => [
+  Schreibvorgang.update('kassen/$kasseId', {
+    'aufgeloest': true,
+    'aufloesenBestaetigung': bestaetigung,
+    'letzteBuchungId': buchungId,
+  }),
+  Schreibvorgang(
+    'kassen/$kasseId/buchungen/$buchungId',
+    _log(
+      'kasseAufgeloest',
+      uid: uid,
+      bierwartName: bierwartName,
+      geraetZeit: geraetZeit,
+    ),
+  ),
+];
+
+/// Sammlungen unter einer Kasse, die das Auflösen leert (architecture.md,
+/// Datenmodell).
+const kassenSammlungen = [
+  'buchungen',
+  'mitglieder',
+  'namen',
+  'sorten',
+  'orte',
+  'uebernahmen',
+  'bierwarte',
+];
+
+/// So viele Dokumente löscht ein Batch beim Auflösen.
+const loeschPortion = 200;
+
+/// Auflösen, Schritt 2: eine Portion Dokumente löschen.
+List<Schreibvorgang> loeschBatch(Iterable<String> pfade) => [
+  for (final p in pfade) Schreibvorgang.loeschen(p),
+];
+
+/// Auflösen, letzter Schritt: eigener Bierwart-Eintrag, Kasse, aktuelle
+/// Einladung, Wiederherstellung und `users/{uid}`. Ersetzte Einladungen
+/// bleiben liegen, bis Release 2 sie aufräumt.
+List<Schreibvorgang> aufloesenSchlussBatch({
+  required String uid,
+  required String kasseId,
+  required String einladungCode,
+  required String wiederherstellungHex,
+}) => [
+  Schreibvorgang.loeschen('kassen/$kasseId/bierwarte/$uid'),
+  Schreibvorgang.loeschen('kassen/$kasseId'),
+  Schreibvorgang.loeschen('einladungen/$einladungCode'),
+  Schreibvorgang.loeschen('wiederherstellung/$wiederherstellungHex'),
+  Schreibvorgang.loeschen('users/$uid'),
+];

@@ -14,6 +14,10 @@ const bierwart = 'Lena Koch';
 const alterCode = 'K7Q2MXA93DWFT2HC8RNP';
 const neuerCode = 'N3W7C0DE4X5Y6Z8A9B1C';
 final zeit = DateTime(2026, 10, 22);
+
+/// Hash des Wiederherstellungscodes aus kasse-erstellen.json.
+const wiederherstellungHex =
+    'be105af532593b07b857dbbb0012fc12a939efb515656aa111fc0120993c0609';
 const jonas = Bierwart(uid: 'neu', name: 'Jonas Weber', mitgliedId: 'm2');
 
 List<Schreibvorgang> rolle(Rolle r) => rolleBatch(
@@ -99,6 +103,108 @@ void main() {
         ),
       );
     });
+  });
+
+  group('Vertrag: Austreten und Auflösen', () {
+    test('Jonas tritt aus (UC-05, AUTH-09)', () {
+      vertragPruefen(
+        'austreten.json',
+        batchAlsJson(
+          'neu',
+          austretenBatch(
+            uid: 'neu',
+            bierwartName: 'Jonas Weber',
+            kasseId: 'k2',
+            buchungId: 'v4',
+            mitgliedId: 'm2',
+            einladungCode: alterCode,
+            letzter: false,
+            geraetZeit: zeit,
+          ),
+        ),
+      );
+    });
+
+    test('die Gründerin geht als letzte, mit ihren Rollen (AUTH-10)', () {
+      vertragPruefen(
+        'austreten-letzter.json',
+        batchAlsJson(
+          uid,
+          austretenBatch(
+            uid: uid,
+            bierwartName: bierwart,
+            kasseId: 'k2',
+            buchungId: 'v5',
+            mitgliedId: 'm1',
+            einladungCode: alterCode,
+            letzter: true,
+            geraetZeit: zeit,
+          ),
+        ),
+      );
+    });
+
+    test('Auflösen (ADM-05)', () {
+      vertragPruefen(
+        'aufloesen.json',
+        batchAlsJson(
+          uid,
+          aufloesenBatch(
+            uid: uid,
+            bierwartName: bierwart,
+            kasseId: 'k2',
+            buchungId: 'v6',
+            bestaetigung: 'SV Neu',
+            geraetZeit: zeit,
+          ),
+        ),
+      );
+    });
+
+    test('eine volle Portion löschen', () {
+      vertragPruefen(
+        'loeschen-portion.json',
+        batchAlsJson(
+          uid,
+          loeschBatch([
+            for (var i = 0; i < loeschPortion; i++)
+              'kassen/k2/buchungen/x${i.toString().padLeft(3, '0')}',
+          ]),
+        ),
+      );
+    });
+
+    test('zum Schluss Kasse, Einladung, Wiederherstellung, users', () {
+      vertragPruefen(
+        'aufloesen-schluss.json',
+        batchAlsJson(
+          uid,
+          aufloesenSchlussBatch(
+            uid: uid,
+            kasseId: 'k2',
+            einladungCode: alterCode,
+            wiederherstellungHex: wiederherstellungHex,
+          ),
+        ),
+      );
+    });
+  });
+
+  test('nur wer als letzter geht, setzt leerSeit', () {
+    List<Schreibvorgang> gehen({required bool letzter}) => austretenBatch(
+      uid: 'neu',
+      bierwartName: 'Jonas Weber',
+      kasseId: 'k2',
+      buchungId: 'v4',
+      mitgliedId: 'm2',
+      einladungCode: alterCode,
+      letzter: letzter,
+      geraetZeit: zeit,
+    );
+    Map<String, Object?> kasse(List<Schreibvorgang> b) =>
+        b.firstWhere((s) => s.pfad == 'kassen/k2').daten;
+    expect(kasse(gehen(letzter: true))['leerSeit'], isA<Serverzeit>());
+    expect(kasse(gehen(letzter: false)).containsKey('leerSeit'), isFalse);
   });
 
   test('Entfernen setzt die neue Einladung auf die Anzahl danach', () {

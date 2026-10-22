@@ -117,6 +117,30 @@ class EinstellungenScreen extends ConsumerWidget {
                         onTap: () => zeigeUmbenennen(context, ich),
                       ),
                   ]),
+                  const SizedBox(height: BwSpacing.space6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: BwKnopf(
+                          text: 'Austreten',
+                          art: BwKnopfArt.destruktiv,
+                          onPressed: () => _austreten(context, ref),
+                        ),
+                      ),
+                      if (admin) ...[
+                        const SizedBox(width: BwSpacing.space3),
+                        Expanded(
+                          child: _AufloesenKnopf(
+                            onPressed: () => zeigeSheet<void>(
+                              context,
+                              titel: 'Kasse auflösen',
+                              inhalt: (_) => const _Aufloesen(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -124,6 +148,42 @@ class EinstellungenScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Austreten (UC-05, AUTH-09): erst sagen, was fehlt, dann bestätigen.
+  Future<void> _austreten(BuildContext context, WidgetRef ref) async {
+    final uid = ref.read(anmeldungProvider).value;
+    final ich = ref
+        .read(bierwarteProvider)
+        .value
+        ?.where((b) => b.uid == uid)
+        .firstOrNull;
+    final anzahl = ref.read(kasseInfoProvider).value?.anzahlBierwarte ?? 1;
+    if (ich == null) return;
+    final grund = austretenGeht(ich, anzahlBierwarte: anzahl);
+    if (grund != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(grund)));
+      return;
+    }
+    final ja = await bestaetigen(
+      context,
+      titel: 'Austreten?',
+      text: anzahl == 1
+          ? 'Du bist der letzte Bierwart. Die Kasse bleibt bestehen, aber '
+                'niemand kann mehr buchen. Zurück kommt man nur mit dem '
+                'Wiederherstellungscode.'
+          : 'Du kannst dann nicht mehr buchen und bleibst als Mitglied im '
+                'Kader. Zurück geht es nur mit einem neuen Einladungslink.',
+      ja: 'Austreten',
+    );
+    if (ja && context.mounted) {
+      await verwalten(
+        context,
+        ref.read(verwaltungAktionenProvider).austreten,
+        'Du bist ausgetreten.',
+      );
+    }
   }
 
   void _kasseUmbenennen(BuildContext context) => zeigeSheet<void>(
@@ -424,6 +484,130 @@ class _Bierwarte extends ConsumerWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// „Kasse auflösen“: gestrichelt und schraffiert in `negative`, wie im
+/// Design-Canvas; lauter als „Austreten“, weil es alles löscht.
+class _AufloesenKnopf extends StatelessWidget {
+  const _AufloesenKnopf({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final stil = Theme.of(context).extension<BwTextStyles>()!.button;
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: SizedBox(
+          height: BwKnopf.hoehe,
+          child: CustomPaint(
+            painter: const GestricheltPainter(
+              radius: BwRadius.pill,
+              farbe: BwColors.negative,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(BwRadius.pill),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Positioned(
+                    right: -BwSpacing.space4,
+                    child: BwSchraffur(
+                      durchmesser: 80,
+                      farbe: BwColors.negative,
+                    ),
+                  ),
+                  Text(
+                    'KASSE AUFLÖSEN',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: stil.copyWith(color: BwColors.negative),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Auflösen mit Warnung und abgetipptem Kassennamen (ADM-05, UC-10).
+class _Aufloesen extends ConsumerStatefulWidget {
+  const _Aufloesen();
+
+  @override
+  ConsumerState<_Aufloesen> createState() => _AufloesenState();
+}
+
+class _AufloesenState extends ConsumerState<_Aufloesen> {
+  final _name = TextEditingController();
+  String? _fehler;
+  bool _laeuft = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _name.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  Future<void> _aufloesen() async {
+    setState(() => _laeuft = true);
+    try {
+      await ref.read(verwaltungAktionenProvider).aufloesen(_name.text);
+      // Die Weiterleitung führt zur Seite, die alles löscht.
+      if (mounted) Navigator.of(context).pop();
+    } on VerwaltungsFehler catch (e) {
+      if (mounted) {
+        setState(() {
+          _laeuft = false;
+          _fehler = e.meldung;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final name = ref.watch(kasseInfoProvider).value?.name ?? '';
+    final passt = aufloesenBestaetigt(_name.text, name);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        BwFehler(
+          'Alles wird gelöscht: Kader, Striche, Lager, Geld und Verlauf. '
+          'Das lässt sich nicht rückgängig machen.',
+        ),
+        const SizedBox(height: BwSpacing.space4),
+        BwFeld(
+          label: 'Zum Bestätigen „$name“ abtippen',
+          controller: _name,
+          aufSheet: true,
+          platzhalter: name,
+          schreibweise: TextCapitalization.none,
+          eingabeAktion: TextInputAction.done,
+          fehler: _fehler,
+        ),
+        const SizedBox(height: BwSpacing.space6),
+        BwKnopf(
+          text: 'Kasse auflösen',
+          art: BwKnopfArt.destruktiv,
+          laedt: _laeuft,
+          onPressed: passt ? _aufloesen : null,
+        ),
+      ],
     );
   }
 }

@@ -183,6 +183,11 @@ Gemeinsame Felder:
 - Jede Aktion ist eine Verwaltungsaktion: Die App liest die Kasse mit `Source.server` (Name, Code, Anzahl, Rollen), baut daraus den Batch und wartet auf den Server. Erfolg und Fehler meldet eine Snackbar (NFA-10).
 - **Mitgliedschaft:** Ein entfernter Bierwart behält `users/{uid}`, darf die Kasse aber nicht mehr lesen. Die App hört deshalb auf `kassen/{k}`: Lehnt der Server ab oder gibt es die Kasse auf dem Server nicht mehr, gilt der Nutzer als ohne Kasse und landet im Onboarding. `users/{uid}` überschreibt er beim nächsten Beitritt; die Rules erlauben das, weil er dort nicht mehr Bierwart ist. Ohne Netz und ohne Cache gilt die Kasse weiter.
 
+**Austreten und Auflösen (AUTH-09, UC-05, ADM-05, UC-10):**
+- „Austreten“ sagt vorher, was fehlt: Geld im Portemonnaie (an den Kassenwart geben oder Auslage erstatten lassen), Admin- oder Kassenwart-Rolle (erst übergeben, außer als letzter Bierwart). Geprüft wird am Stand des Servers; der Batch löscht den eigenen Bierwart-Eintrag und `users/{uid}`, wer als letzter geht, setzt `leerSeit`. Danach ist der Nutzer im Onboarding.
+- „Kasse auflösen“ sieht nur der Admin. Ein Sheet warnt und verlangt den Kassennamen genau so, wie er ist (Leerraum am Rand zählt nicht). Schritt 1 markiert die Kasse als aufgelöst; damit wechselt die Mitgliedschaft des Admins auf „Auflösen“ und die Weiterleitung führt auf eine eigene Seite.
+- Diese Seite löscht Sammlung für Sammlung in Portionen zu 200 Dokumenten, direkt vom Server gelesen, und zuletzt in einem Batch eigenen Bierwart-Eintrag, Kasse, aktuelle Einladung, Wiederherstellung und `users/{uid}`. Bricht das ab, zeigt sie die Meldung und „Weiter löschen“; nach einem Neustart setzt sie selbst fort. Eine Portion von 200 Löschungen nehmen die Rules im Emulator an.
+
 **Storno (STR-04, STR-06):**
 - Das Mitglied-Detail zeigt alle Striche, auch bar bezahlte, mit dem Vermerk „bar“ (KAD-06).
 - Strich offen stornieren: Saldo − Preis, Bestand + 1.
@@ -233,12 +238,12 @@ Die Rules sind in Release 1 die Geschäftslogik. Grundsätze (NFA-07):
 - Jede Verwaltungsaktion schreibt ihre Log-Buchung im selben Batch. Die Rules verlangen sie (`existsAfter`).
 - `einladungen` und `wiederherstellung`: nur `get` für Angemeldete, kein `list`.
 
-Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 212 Emulator-Tests in `rules-tests/`:
+Die Rules für **alle Buchungsarten, die Stammdaten, die Mitgliedschaft und die Admin-Funktionen** liegen in `firestore.rules`. Abgedeckt sind sie mit 217 Emulator-Tests in `rules-tests/`:
 - `buchungen.test.js` (47): Strich offen und bar, Storno, Zahlung, Einkauf, Bestandskorrektur, Übergabe, Ein-/Auszahlung, Kassensturz, Fälle ohne passende Buchung, Unveränderlichkeit des Logs.
 - `stammdaten.test.js` (32): Mitglieder anlegen, umbenennen, entfernen, wieder aufnehmen; Namensindex; Sorten anlegen, ändern, ausblenden.
 - `verwaltung.test.js` (56): Kasse erstellen, Beitreten, Übernahme anfragen, zurückziehen und entscheiden, Austreten, `users/`, Lesen von Einladungen und Namensindex.
 - `admin.test.js` (43): Link erneuern, Bierwart entfernen, Rollen, Umbenennen, Wiederherstellungscode erneuern, Admin wiederherstellen mit und ohne Bierwart-Eintrag, Auflösen und Löschen.
-- `vertrag.test.js` (34): Batches, wie die App sie baut: Einkauf aus Portemonnaie und Kasse, Preis ändern, Ausblenden, Bestandskorrektur samt Ablehnung bei veralteter Differenz; Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart; Übergabe in die Kasse und zurück, Auszahlung aus der Kasse, Einzahlung ins Portemonnaie, Kassensturz samt Ablehnung bei veralteter Differenz, Übergabe nur vom Kassenwart; Link erneuern, Bierwart entfernen, Rollen übertragen, Kasse umbenennen, jeweils nur als Admin. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
+- `vertrag.test.js` (39): Batches, wie die App sie baut: Einkauf aus Portemonnaie und Kasse, Preis ändern, Ausblenden, Bestandskorrektur samt Ablehnung bei veralteter Differenz; Kasse erstellen, danach Beitreten in diese Kasse; Sorte und Mitglied anlegen, Strich offen und bar, jeweils mit Storno, auch doppeltes Storno; Zahlung ins Portemonnaie und in die Kasse, Entfernen (erst bei Saldo 0), Wieder aufnehmen, Umbenennen mit und ohne Bierwart; Übergabe in die Kasse und zurück, Auszahlung aus der Kasse, Einzahlung ins Portemonnaie, Kassensturz samt Ablehnung bei veralteter Differenz, Übergabe nur vom Kassenwart; Link erneuern, Bierwart entfernen, Rollen übertragen, Kasse umbenennen, jeweils nur als Admin; Austreten (nicht mit Geld im Portemonnaie, als Letzte mit `leerSeit`), Auflösen mit einer vollen Löschportion und dem Schluss-Batch. Die Dateien in `rules-tests/fixtures/` schreibt ein Dart-Test aus dem App-Code (`FIXTURES_AKTUALISIEREN=1 flutter test …`), und derselbe Dart-Test schlägt fehl, wenn der App-Code davon abweicht. So prüfen beide Seiten denselben Batch.
 
 Kern des Musters:
 

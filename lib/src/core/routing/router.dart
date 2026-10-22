@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/einstellungen/presentation/aufloesen_screen.dart';
 import '../../features/einstellungen/presentation/einstellungen_screen.dart';
 import '../../features/geld/presentation/geld_screen.dart';
 import '../../features/geld/presentation/verlauf_screen.dart';
@@ -48,6 +49,7 @@ abstract final class Routen {
   static const einkauf = '/einkauf';
   static const sorte = '/sorte';
   static const verlauf = '/verlauf';
+  static const aufloesen = '/aufloesen';
 
   /// Sorte bearbeiten, eine Unterseite ohne Tab-Leiste.
   static String sorteBearbeiten(String id) => '$sorte/$id';
@@ -76,9 +78,10 @@ const ohneKasse = {
 };
 
 /// Wohin die App den Nutzer schickt; `null` = bleiben. Ohne Kasse ins
-/// Onboarding, mit Kasse auf die Strichliste (UI-01). Wer gerade eine Kasse
-/// erstellt, bleibt im Ablauf, bis der Server sie angenommen hat und Code und
-/// Einladung gezeigt wurden (AUTH-03). Wer gerade beitritt, bleibt auf „Wie
+/// Onboarding, mit Kasse auf die Strichliste (UI-01), während des Auflösens
+/// nur auf dessen Seite (ADM-05). Wer gerade eine Kasse erstellt, bleibt im
+/// Ablauf, bis der Server sie angenommen hat und Code und Einladung gezeigt
+/// wurden (AUTH-03). Wer gerade beitritt, bleibt auf „Wie
 /// heißt du?“, bis der Server geantwortet hat. Ein offener Einladungscode
 /// führt ohne Kasse vom Start direkt zu „Kasse beitreten?“ (AUTH-06).
 String? weiterleitung(
@@ -107,6 +110,7 @@ String? weiterleitung(
       Routen.mitCode(Routen.beitreten, offenerCode),
     OhneKasse() => ohneKasse.contains(ort) ? null : Routen.willkommen,
     InKasse() => _onboarding.contains(ort) ? Routen.strichliste : null,
+    InAufloesung() => ort == Routen.aufloesen ? null : Routen.aufloesen,
   };
 }
 
@@ -145,6 +149,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       seite(Routen.einstellungen, () => const EinstellungenScreen()),
       seite(Routen.einkauf, () => const EinkaufScreen()),
       seite(Routen.verlauf, () => const VerlaufScreen()),
+      seite(Routen.aufloesen, () => const AufloesenScreen()),
       GoRoute(
         path: '${Routen.sorte}/:id',
         builder: (context, state) =>

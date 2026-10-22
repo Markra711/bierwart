@@ -1,0 +1,55 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/bierwarte/gruender",
+      "daten": {}
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2",
+      "daten": {
+        "anzahlBierwarte": {
+          "$erhoehen": -1
+        },
+        "leerSeit": {
+          "$serverzeit": true
+        },
+        "letzteBuchungId": "v5"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "einladungen/K7Q2MXA93DWFT2HC8RNP",
+      "daten": {
+        "anzahlBierwarte": {
+          "$erhoehen": -1
+        }
+      }
+    },
+    {
+      "art": "delete",
+      "pfad": "users/gruender",
+      "daten": {}
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/v5",
+      "daten": {
+        "typ": "ausgetreten",
+        "mitgliedId": "m1",
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}
