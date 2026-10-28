@@ -13,6 +13,7 @@
 > - 2026-10-21, nach dem Einfrieren: AUTH-07 – bei der Übernahme per Wiederherstellungscode wird das alte Portemonnaie ehemalig, weil der Stand vorher nicht lesbar ist (architecture.md, Verwaltung als Batches).
 > - 2026-10-22, nach dem Einfrieren: STR-06 – auch Zahlungen lassen sich stornieren (architecture.md, offene Frage 24).
 > - 2026-10-28, nach dem Einfrieren: AUTH-15 neu, UC-05 ergänzt – Austreten und Auflösen löschen das anonyme Konto; Name und Buchungen bleiben im Verlauf (LOG-02). Grund: Richtlinie von Google Play zur Kontolöschung (architecture.md, Vor dem Store-Release).
+> - 2026-10-28, nach dem Einfrieren: NFA-09 – zusätzlich Datenschutzerklärung und Löschseite im Web, weil Google Play beides als URL verlangt (architecture.md, offene Frage 18).
 
 ## Vision & Abgrenzung
 
@@ -216,7 +217,7 @@ Diese Anforderungen gelten für jedes Release.
 | NFA-06 | **Schnelligkeit:** ein Strich ist in höchstens 2 Tipps gebucht und sofort lokal sichtbar | Bedienablauf |
 | NFA-07 | **Sicherheit:** alle Rechte (Mitgliedschaft, Admin, Kassenwart, Link-Ablauf) werden serverseitig in Firestore-Rules bzw. Cloud Functions durchgesetzt | Rules-Tests im Firebase-Emulator |
 | NFA-08 | **Datensparsamkeit:** gespeichert werden nur Namen, Beträge, Zeitstempel und anonyme Nutzer-IDs | Datenmodell-Review |
-| NFA-09 | **Datenschutz:** ein kurzer Hinweis in der App erklärt, welche Daten wo liegen (Firebase, Region EU) | Hinweis vorhanden |
+| NFA-09 | **Datenschutz:** ein kurzer Hinweis in der App erklärt, welche Daten wo liegen (Firebase, Region EU); die vollständige Datenschutzerklärung und eine Seite zum Löschen des Kontos stehen öffentlich im Web | Hinweis vorhanden, `bier-wart.web.app/datenschutz` und `/konto-loeschen` erreichbar |
 | NFA-10 | **Fehlerverhalten:** jeder fehlgeschlagene Schreibvorgang erzeugt eine sichtbare Meldung; kein Bildschirm lädt endlos | manueller Test ohne Netz und ohne Zugriffsrechte |
 | NFA-11 | **Sprache:** Oberfläche auf Deutsch, Beträge im Format „1,50 €“ | UI-Review |
 | NFA-12 | **Kosten:** Betrieb im Firebase-Blaze-Tarif bei unter 1 € pro Monat für eine Mannschaft | Firebase-Kostenübersicht |

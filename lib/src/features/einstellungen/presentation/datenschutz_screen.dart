@@ -6,8 +6,9 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/eingaben.dart';
 import '../../../core/widgets/seite.dart';
 
-/// Kurzer Hinweis, welche Daten wo liegen (NFA-09). Der Text ist ein Entwurf
-/// (architecture.md, offene Frage 18).
+/// Kurzer Hinweis, welche Daten wo liegen (NFA-09). Die ausführliche
+/// Fassung steht in `hosting/public/datenschutz.html`; ändert sich eins,
+/// das andere nachziehen.
 class DatenschutzScreen extends StatelessWidget {
   const DatenschutzScreen({super.key});
 
@@ -58,6 +59,10 @@ class DatenschutzScreen extends StatelessWidget {
               BwErklaerung(text),
             ],
           ),
+        const BwErklaerung(
+          'Ausführlich, mit Kontakt und deinen Rechten: '
+          'bier-wart.web.app/datenschutz',
+        ),
       ],
     );
   }
