@@ -12,6 +12,7 @@
 > - 2026-10-21, nach dem Einfrieren: KAD-08 neu – entfernte Mitglieder behalten ihren Namen und lassen sich wieder aufnehmen (architecture.md, offene Frage 20).
 > - 2026-10-21, nach dem Einfrieren: AUTH-07 – bei der Übernahme per Wiederherstellungscode wird das alte Portemonnaie ehemalig, weil der Stand vorher nicht lesbar ist (architecture.md, Verwaltung als Batches).
 > - 2026-10-22, nach dem Einfrieren: STR-06 – auch Zahlungen lassen sich stornieren (architecture.md, offene Frage 24).
+> - 2026-10-28, nach dem Einfrieren: AUTH-15 neu, UC-05 ergänzt – Austreten und Auflösen löschen das anonyme Konto; Name und Buchungen bleiben im Verlauf (LOG-02). Grund: Richtlinie von Google Play zur Kontolöschung (architecture.md, Vor dem Store-Release).
 
 ## Vision & Abgrenzung
 
@@ -84,7 +85,7 @@ Release 1 umfasst 20 Anwendungsfälle in fünf Gruppen. Akteur ist immer ein Bie
 | UC-02 | Per Link beitreten | neuer Nutzer | nach Bestätigung „Kasse X beitreten?“ und Namenswahl ist er Bierwart und Mitglied |
 | UC-03 | Mit neuem Gerät zurückkehren | Bierwart | beim Beitritt mit vergebenem Namen wählt er „Das bin ich“; nach Bestätigung durch einen anderen aktiven Bierwart (als einziger Bierwart: per Wiederherstellungscode) übernimmt er die alte Mitgliedschaft |
 | UC-04 | Admin-Rolle wiederherstellen | Bierwart | mit dem Wiederherstellungscode wird er Admin |
-| UC-05 | Austreten | Bierwart | nur bei Portemonnaie = 0; Admin und Kassenwart übergeben vorher ihre Rolle |
+| UC-05 | Austreten | Bierwart | nur bei Portemonnaie = 0; Admin und Kassenwart übergeben vorher ihre Rolle; löscht das eigene Konto (AUTH-15) |
 | UC-06 | Einladungslink teilen | Bierwart | Link geht über das Teilen-Menü raus |
 | UC-07 | Einladungslink erneuern | Admin | neuer Link, der alte ist sofort ungültig |
 | UC-08 | Bierwart entfernen | Admin | Zugang weg, Link erneuert, Person bleibt als Mitglied im Kader |
@@ -125,6 +126,7 @@ Jede Anforderung hat eine ID und ein Release. Release 1 ist das MVP für Android
 | AUTH-12 | auf Android den Code nach Neuinstallation aus dem Play-Store-Referrer übernehmen | 1 |
 | AUTH-13 | iOS mit Universal Links unterstützen | 3 |
 | AUTH-14 | Mitgliedschaft in mehreren Kassen mit Kassenauswahl beim Start | 4 |
+| AUTH-15 | beim Austreten und nach dem Auflösen das anonyme Konto löschen; Name und Buchungen bleiben im Verlauf der Kasse (LOG-02), solange sie besteht; der Bestätigungsdialog sagt das | 1 |
 
 **Verwaltung (Admin)**
 

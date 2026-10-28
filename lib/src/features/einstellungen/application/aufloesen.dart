@@ -17,7 +17,8 @@ class Aufloesung {
 }
 
 /// Löscht eine aufgelöste Kasse portionsweise, Sammlung für Sammlung, und
-/// zuletzt Kasse, Einladung, Wiederherstellung und `users/{uid}`. Bricht es
+/// zuletzt Kasse, Einladung, Wiederherstellung und `users/{uid}`, danach das
+/// Konto (AUTH-15). Bricht es
 /// ab, bleibt die Kasse aufgelöst; der nächste Start setzt fort
 /// (architecture.md, Auflösen).
 class AufloesenNotifier extends Notifier<Aufloesung> {
@@ -66,6 +67,8 @@ class AufloesenNotifier extends Notifier<Aufloesung> {
               ),
             )
             .timeout(antwortFrist);
+        await ref.read(kontoRepositoryProvider).loeschen();
+        ref.invalidate(anmeldungProvider);
       });
       state = Aufloesung(geloescht: state.geloescht);
     } on VerwaltungsFehler catch (e) {

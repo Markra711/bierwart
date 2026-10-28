@@ -1,4 +1,5 @@
 import 'package:bier_wart/src/core/money/cents.dart';
+import 'package:bier_wart/src/features/einstellungen/domain/bierwart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,12 +43,17 @@ void main() {
     expect(db.batches, isEmpty);
   });
 
-  testWidgets('austreten, danach ohne Kasse (UC-05)', (tester) async {
-    final db = await oeffnen(tester, db: ohneRolle());
+  testWidgets('austreten, danach ohne Kasse und ohne Konto (UC-05, AUTH-15)', (
+    tester,
+  ) async {
+    final konto = FakeKonto();
+    final db = await oeffnen(tester, db: ohneRolle(), konto: konto);
     await tippen(tester, 'AUSTRETEN');
     expect(find.text('Austreten?'), findsOneWidget);
+    expect(find.textContaining(austretenLoeschtKonto), findsOneWidget);
     await tippen(tester, 'AUSTRETEN');
 
+    expect(konto.geloescht, 1);
     final log = db.batches.last.last.daten;
     expect(log['typ'], 'ausgetreten');
     expect(db.docs.containsKey('kassen/k1/bierwarte/uid'), isFalse);
@@ -57,8 +63,9 @@ void main() {
   });
 
   testWidgets('Auflösen nur mit abgetipptem Namen, dann ist alles weg '
-      '(ADM-05, UC-10)', (tester) async {
-    final db = await oeffnen(tester);
+      '(ADM-05, UC-10, AUTH-15)', (tester) async {
+    final konto = FakeKonto();
+    final db = await oeffnen(tester, konto: konto);
     expect(find.text('KASSE AUFLÖSEN'), findsOneWidget);
     await tippen(tester, 'KASSE AUFLÖSEN');
     final feld = find.byType(TextField);
@@ -72,6 +79,7 @@ void main() {
     expect(db.batches.first.last.daten['typ'], 'kasseAufgeloest');
     expect(db.docs.keys.where((p) => p.startsWith('kassen/k1')), isEmpty);
     expect(db.docs.containsKey('einladungen/K7Q2MXA93DWFT2HC8RNP'), isFalse);
+    expect(konto.geloescht, 1);
     expect(willkommen, findsOneWidget);
   });
 

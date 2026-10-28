@@ -50,6 +50,12 @@ String? entfernenGeht(Bierwart b) => b.istAdmin
     ? 'Bestimm erst einen anderen Kassenwart.'
     : null;
 
+/// Was beim Austreten mit dem Konto passiert (AUTH-15). Buchungen sind
+/// unveränderlich (LOG-02), deshalb bleibt der Name im Verlauf.
+const austretenLoeschtKonto =
+    'Dein Konto auf diesem Gerät wird gelöscht. Dein Name und deine '
+    'Buchungen bleiben im Verlauf der Kasse, damit die Abrechnung stimmt.';
+
 /// Warum [ich] nicht austreten kann, oder `null` (AUTH-09): Das Portemonnaie
 /// muss leer sein; Admin und Kassenwart übergeben vorher ihre Rolle, außer
 /// sie sind der letzte Bierwart.

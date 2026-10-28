@@ -208,15 +208,16 @@ class EinstellungenScreen extends ConsumerWidget {
           .showSnackBar(SnackBar(content: Text(grund)));
       return;
     }
+    final folge = anzahl == 1
+        ? 'Du bist der letzte Bierwart. Die Kasse bleibt bestehen, aber '
+              'niemand kann mehr buchen. Zurück kommt man nur mit dem '
+              'Wiederherstellungscode.'
+        : 'Du kannst dann nicht mehr buchen und bleibst als Mitglied im '
+              'Kader. Zurück geht es nur mit einem neuen Einladungslink.';
     final ja = await bestaetigen(
       context,
       titel: 'Austreten?',
-      text: anzahl == 1
-          ? 'Du bist der letzte Bierwart. Die Kasse bleibt bestehen, aber '
-                'niemand kann mehr buchen. Zurück kommt man nur mit dem '
-                'Wiederherstellungscode.'
-          : 'Du kannst dann nicht mehr buchen und bleibst als Mitglied im '
-                'Kader. Zurück geht es nur mit einem neuen Einladungslink.',
+      text: '$folge\n\n$austretenLoeschtKonto',
       ja: 'Austreten',
     );
     if (ja && context.mounted) {
