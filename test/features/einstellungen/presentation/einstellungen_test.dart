@@ -1,4 +1,6 @@
 import 'package:bier_wart/src/core/money/cents.dart';
+import 'package:bier_wart/src/features/einstellungen/presentation/einstellungen_screen.dart';
+import 'package:bier_wart/src/features/onboarding/domain/einladung.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -56,7 +58,10 @@ void main() {
     expect(find.text('EINSTELLUNGEN'), findsOneWidget);
     expect(find.text('bier-wart.web.app/j/$alterCode'), findsOneWidget);
     expect(
-      find.text('Gültig bis Mo, 26.10. · alle dürfen ihn teilen'),
+      find.text(
+        'Gültig bis ${gueltigBisText(FakeDatenbank.einladungErstelltAm.add(Einladung.gueltigkeit))} '
+        '· alle dürfen ihn teilen',
+      ),
       findsOneWidget,
     );
     expect(find.text('du · Admin · Kassenwart'), findsOneWidget);
