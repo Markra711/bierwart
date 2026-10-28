@@ -438,8 +438,10 @@ Erst mit Release 2 (AUTH-10, AUTH-11).
 
 Aufgaben, die erst mit dem Play-Store-Eintrag anfallen. Keine davon blockiert die Entwicklung.
 
-- [ ] Entwicklerkonto in der Play Console und App `io.github.markra711.bierwart` anlegen (Konsole, macht Marvin).
-- [ ] Upload-Key erzeugen, sicher verwahren (nicht im Repo), Signierung in `android/app/build.gradle.kts` über `key.properties` einrichten.
+- [x] Entwicklerkonto in der Play Console anlegen (Konsole, macht Marvin).
+- [ ] App `io.github.markra711.bierwart` in der Play Console anlegen, Play App Signing aktiv lassen (Konsole, macht Marvin).
+- [x] Signierung in `android/app/build.gradle.kts` über `android/key.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). Fehlt die Datei, signiert der Release-Build mit dem Debug-Key.
+- [ ] Upload-Key erzeugen und sicher verwahren, nicht im Repo (macht Marvin). Geht er verloren, lässt er sich über die Play Console zurücksetzen; der App-Signing-Key liegt bei Google.
 - [ ] SHA-256 von Upload-Key und Play App Signing in `assetlinks.json` eintragen (AUTH-04).
 - [ ] SHA-1 des Release-Keys in der Firebase-Konsole bei der Android-App hinterlegen.
 - [ ] Android-API-Key in der Google Cloud Console auf Paketname und SHA-1 (Debug + Release) einschränken. Der Key steht öffentlich in der APK; die Einschränkung verhindert, dass fremde Apps ihn benutzen.
