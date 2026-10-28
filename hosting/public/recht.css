@@ -1,0 +1,71 @@
+/* Gemeinsamer Stil für Datenschutz und Konto löschen (NFA-09, AUTH-15).
+   Farben und Schriften aus docs/design/tokens.json, wie j.html. */
+:root {
+  --bg: #25272c;
+  --shadow-dark: #18191d;
+  --shadow-light: #32353b;
+  --ink: #f1eee9;
+  --ink-muted: #a3a09b;
+  --grad-start: #ff4d86;
+  --grad-end: #ffa24a;
+  --grad-accent: linear-gradient(100deg, var(--grad-start), var(--grad-end));
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body {
+  font-family: 'Barlow', system-ui, sans-serif;
+  font-weight: 500;
+  display: flex;
+  justify-content: center;
+}
+main {
+  width: 100%;
+  max-width: 640px;
+  padding: 56px 24px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: var(--grad-accent);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+h1 {
+  margin: 0;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 42px;
+  line-height: 42px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+h1 span { font-weight: 300; color: transparent; -webkit-text-stroke: 1.2px var(--ink); }
+h2 {
+  margin: 12px 0 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+p, li { margin: 0; font-size: 15px; line-height: 22px; color: var(--ink-muted); }
+ul, ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+strong { color: var(--ink); font-weight: 700; }
+a { color: var(--grad-end); }
+a:focus-visible { outline: 2px solid var(--grad-end); outline-offset: 3px; }
+.karte {
+  padding: 18px 20px;
+  border-radius: 18px;
+  box-shadow: inset 4px 4px 9px var(--shadow-dark), inset -4px -4px 9px var(--shadow-light);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hinweis { font-size: 12px; line-height: 17px; font-weight: 600; color: var(--ink-muted); }
+footer { margin-top: 12px; display: flex; gap: 16px; flex-wrap: wrap; }

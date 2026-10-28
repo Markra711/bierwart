@@ -29,6 +29,14 @@
       {
         "source": "/j/**",
         "destination": "/j.html"
+      },
+      {
+        "source": "/datenschutz",
+        "destination": "/datenschutz.html"
+      },
+      {
+        "source": "/konto-loeschen",
+        "destination": "/konto-loeschen.html"
       }
     ],
     "headers": [

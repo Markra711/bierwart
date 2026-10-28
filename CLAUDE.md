@@ -66,7 +66,8 @@ firestore.rules             Security Rules = Geschäftslogik in Release 1 (ADR-0
 firestore.indexes.json
 rules-tests/                Emulator-Tests für die Rules (Node, Vitest)
 functions/                  Cloud Functions, erst ab Release 2
-hosting/public/             .well-known/assetlinks.json, j.html (Fallback-Seite für Einladungslinks, AUTH-04)
+hosting/public/             .well-known/assetlinks.json, j.html (Fallback-Seite für Einladungslinks, AUTH-04),
+                            datenschutz.html und konto-loeschen.html (NFA-09, AUTH-15)
 .github/workflows/ci.yml    analyze + test (Flutter), Rules-Tests (Emulator)
 ```
 

@@ -79,5 +79,9 @@ void main() {
     expect(find.text('DATENSCHUTZ'), findsOneWidget);
     expect(find.textContaining('europe-west10'), findsOneWidget);
     expect(find.textContaining('Keine E-Mail-Adresse'), findsOneWidget);
+    expect(
+      find.textContaining('bier-wart.web.app/datenschutz'),
+      findsOneWidget,
+    );
   });
 }

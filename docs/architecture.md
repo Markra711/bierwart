@@ -194,7 +194,7 @@ Gemeinsame Felder:
 **Wiederherstellungscode und Datenschutz (ADM-06, ADM-08, NFA-09):**
 - Der Admin kann einen neuen Wiederherstellungscode erzeugen (Bestätigung, UI-04); alle anderen sehen stattdessen „Wiederherstellungscode eingeben“ und werden damit Admin (ADM-06 als Bierwart, UC-04). Die App normalisiert die Eingabe und vergleicht ihren Hash mit dem der Kasse, bevor sie schreibt; ein falscher Code meldet sich so ohne Umweg über den Server. Der Kassenwart bleibt, solange er aktiver Bierwart ist, sonst geht die Rolle mit (offene Frage 25).
 - In beiden Fällen entsteht ein neuer Code. Die App zeigt ihn genau einmal auf eigener Seite (`/neuer-code`, Code als `extra`, nach einem Neustart weg), wie beim Erstellen der Kasse: Weiter und Zurück erst nach dem Haken „Ich habe den Code sicher gespeichert“.
-- „Datenschutz“ ist eine Seite mit fünf kurzen Abschnitten: was gespeichert wird, anonyme Anmeldung, Firestore in `europe-west10`, wer die Daten sieht, Löschen. Der Text ist ein Entwurf (offene Frage 18).
+- „Datenschutz“ ist eine Seite mit fünf kurzen Abschnitten: was gespeichert wird, anonyme Anmeldung, Firestore in `europe-west10`, wer die Daten sieht, Löschen. Darunter steht der Verweis auf die ausführliche Fassung `bier-wart.web.app/datenschutz` (offene Frage 18).
 
 **Storno (STR-04, STR-06):**
 - Das Mitglied-Detail zeigt alle Striche, auch bar bezahlte, mit dem Vermerk „bar“ (KAD-06).
@@ -394,6 +394,7 @@ Bausteine:
 
     Jeder Rechner hat einen eigenen Debug-Key. Wer auf einem anderen Rechner baut, muss dessen Fingerabdruck ergänzen, sonst öffnen sich Links dort im Browser statt in der App.
   - `firebase.json`-Rewrite `/j/**` → `/j.html`: eine statische Seite, die den Code aus der URL zeigt, einen Play-Store-Link mit `&referrer=code%3D{code}` anbietet und den Code zum Kopieren bereitstellt (für „Link einfügen“). Sie prüft den Code nach denselben Regeln wie die App (`codes.dart`) und meldet unvollständige Links. Ein Header liefert `assetlinks.json` als `application/json`.
+  - `/datenschutz` und `/konto-loeschen` (Rewrites auf die `.html`-Dateien, gemeinsamer Stil `recht.css`): Datenschutzerklärung und Löschseite, die Google Play als URL verlangt (NFA-09, AUTH-15). Die Löschseite beschreibt den Weg über „Austreten“ und nimmt Anfragen ohne Gerät per E-Mail an.
 - **Android**: `intent-filter` mit `android:autoVerify="true"` für `https://bier-wart.web.app/j/*` in `AndroidManifest.xml`. Flutters eigenes Deep Linking ist dort ausgeschaltet (`flutter_deeplinking_enabled = false`); sonst bekäme auch `go_router` den Pfad `/j/…`. Verifiziert ist der Link erst, wenn `assetlinks.json` auf `bier-wart.web.app` liegt, also nach dem ersten Hosting-Deploy. Bis dahin öffnet Android den Link im Browser, außer man startet ihn gezielt für die App (siehe `CLAUDE.md`).
 - **App**: Paket `app_links` empfängt eingehende Links. Paket für den Play Install Referrer (z. B. `play_install_referrer`) liest den Code nach der Erstinstallation (AUTH-12). Ein offener Code wird in `shared_preferences` gemerkt, bis die Namenswahl fertig ist (AUTH-06). Umgesetzt im `OffenerCodeNotifier` (`onboarding/application`): Ohne Kasse führt die Weiterleitung mit offenem Code vom Start direkt zu „Kasse beitreten?“, ein Link bei offener App springt sofort dorthin. Verworfen wird der Code nach dem Beitritt, bei „Nein“, bei „Anderer Link“ und wenn der Nutzer schon in einer Kasse ist. Den Referrer liest die App nur beim ersten Start.
 - **iOS** (Release 3, AUTH-13): Universal Links über `apple-app-site-association` auf derselben Domain.
@@ -447,7 +448,7 @@ Aufgaben, die erst mit dem Play-Store-Eintrag anfallen. Keine davon blockiert di
 - [ ] SHA-1 des Release-Keys in der Firebase-Konsole bei der Android-App hinterlegen.
 - [ ] Android-API-Key in der Google Cloud Console auf Paketname und SHA-1 (Debug + Release) einschränken. Der Key steht öffentlich in der APK; die Einschränkung verhindert, dass fremde Apps ihn benutzen.
 - [x] Konto löschen in der App: über „Austreten“ (AUTH-15). In der Play Console unter Datensicherheit so angeben.
-- [ ] Löschseite mit Web-Link und Datenschutzerklärung auf `bier-wart.web.app`, Kontakt `bierwart.app@gmail.com`.
+- [x] Löschseite und Datenschutzerklärung auf `bier-wart.web.app` (`/konto-loeschen`, `/datenschutz`), Kontakt `bierwart.app@gmail.com`. Wirksam erst nach dem Hosting-Deploy; die URLs in der Play Console eintragen (Store-Präsenz → Datenschutzerklärung, App-Inhalte → Datensicherheit → Kontolöschung).
 - [ ] App Links mit dem Release-Build auf einem echten Gerät prüfen (`adb shell pm get-app-links io.github.markra711.bierwart`).
 - [ ] App Check: In der Play Console unter „App-Integrität“ die Play Integrity API mit dem Firebase-Projekt verknüpfen. In der Firebase-Konsole unter App Check die Android-App mit dem SHA-256 des Play-App-Signing-Schlüssels für Play Integrity registrieren (beides Konsole, macht Marvin).
 - [ ] App-Check-Statistik in der Firebase-Konsole prüfen: Haben praktisch alle Firestore-Anfragen ein gültiges Token? Erst dann **Erzwingen für Firestore** einschalten (Konsole, macht Marvin, nur mit Freigabe).
@@ -483,7 +484,7 @@ Ich habe sie nicht entschieden. Jede braucht eine Antwort, bevor der jeweilige T
 15. ~~**Schriften offline**~~ – entschieden: Barlow und Barlow Condensed liegen als Assets in der App, `google_fonts` entfällt (siehe `docs/styleguide.md`, Typografie).
 16. ~~**Innere Schatten**~~ – entschieden: eigener Painter (`InnenschattenPainter`, `BwEingedrueckt` in `lib/src/core/widgets/flaechen.dart`), direkt aus den `inset`-Tokens.
 17. ~~**Routing**~~ – entschieden: `go_router`.
-18. **Datenschutzhinweis (NFA-09):** Wer liefert den Text, und reicht ein Bildschirm in den Einstellungen? Er muss erwähnen, dass verlassene Kassen in Release 1 nicht automatisch gelöscht werden. Ein Entwurf steht in der App (Einstellungen → Datenschutz) und ist zu prüfen.
+18. **Datenschutzhinweis (NFA-09):** Teilweise entschieden: Kurztext in der App, ausführliche Datenschutzerklärung und Löschseite im Web (`hosting/public/datenschutz.html`, `konto-loeschen.html`), Kontakt `bierwart.app@gmail.com`. Offen: Marvin prüft den Text; ob eine Postanschrift hineingehört, ist rechtlich zu klären.
 19. ~~**Quelle der Wahrheit für Anforderungen**~~ – entschieden: `docs/requirements.md`; das Online-Dokument ist seit 2026-10-21 eingefroren (alle Änderungen bis dahin übertragen).
 20. ~~**Mitglied-Namen und Eindeutigkeit**~~ – entschieden: eindeutig für alle Mitglieder; entfernte behalten ihren Namen und lassen sich wieder aufnehmen (KAD-08, siehe [Dokumente](#dokumente)).
 21. ~~**Übernahme eines Mitglieds ohne App**~~ – entschieden: braucht dieselbe Bestätigung wie bei Bierwarten, weil der Name danach im Stempel steht (siehe [Verwaltung als Batches](#verwaltung-als-batches)).
