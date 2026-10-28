@@ -1,4 +1,5 @@
-/* Gemeinsamer Stil für Datenschutz und Konto löschen (NFA-09, AUTH-15).
+/* Gemeinsamer Stil für Datenschutz, Konto löschen und Nutzungsbedingungen
+   (NFA-09, AUTH-15, NFA-13).
    Farben und Schriften aus docs/design/tokens.json, wie j.html. */
 :root {
   --bg: #25272c;

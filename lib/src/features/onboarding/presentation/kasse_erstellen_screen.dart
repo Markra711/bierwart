@@ -14,6 +14,7 @@ import '../../../core/widgets/knoepfe.dart';
 import '../../../core/widgets/seite.dart';
 import '../../kader/domain/name.dart';
 import '../application/onboarding.dart';
+import '../../../core/widgets/zustimmung.dart';
 
 /// Kasse erstellen (UC-01, AUTH-02): Kassenname, eigener Name, Startbetrag.
 class KasseErstellenScreen extends ConsumerStatefulWidget {
@@ -137,6 +138,7 @@ class _KasseErstellenScreenState extends ConsumerState<KasseErstellenScreen> {
       ],
       aktionen: [
         if (_fehler != null) BwFehler(_fehler!),
+        const BwZustimmung(knopf: 'Kasse erstellen'),
         BwKnopf(
           text: 'Kasse erstellen',
           gross: true,

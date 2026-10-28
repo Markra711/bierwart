@@ -1,4 +1,5 @@
 import 'package:bier_wart/src/core/fehler/verwaltung.dart';
+import 'package:bier_wart/src/core/links/link_oeffner.dart';
 
 import 'dart:async';
 
@@ -141,5 +142,29 @@ void main() {
     );
     expect(find.text('Für den ersten Start brauchst du Netz.'), findsOneWidget);
     expect(find.text('NOCHMAL VERSUCHEN'), findsOneWidget);
+  });
+
+  testWidgets('Kasse erstellen nennt die Nutzungsbedingungen (NFA-13)', (
+    tester,
+  ) async {
+    telefon(tester);
+    final oeffner = FakeLinkOeffner();
+    await appStarten(tester, oeffner: oeffner);
+    await tippen(tester, 'Kasse erstellen');
+    final hinweis = find.textContaining(
+      'Mit „Kasse erstellen“ stimmst du den Nutzungsbedingungen zu.',
+      findRichText: true,
+    );
+    expect(hinweis, findsOneWidget);
+
+    await tester.ensureVisible(hinweis);
+    await tester.tap(hinweis);
+    await tester.pumpAndSettle();
+    expect(oeffner.geoeffnet, [nutzungsbedingungenUrl]);
+
+    oeffner.geht = false;
+    await tester.tap(hinweis);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Kein Browser gefunden.'), findsOneWidget);
   });
 }

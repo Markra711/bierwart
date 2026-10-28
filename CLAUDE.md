@@ -58,7 +58,7 @@ lib/
   firebase_options.dart     generiert von FlutterFire, nicht von Hand ändern
   src/
     app.dart                MaterialApp, Theme, Routing
-    core/                   theme/, money/, firebase/, routing/, widgets/
+    core/                   theme/, money/, firebase/, routing/, widgets/, links/
     features/<feature>/     domain/ data/ application/ presentation/
 test/                       spiegelt lib/src/
 docs/                       requirements, architecture, styleguide, decisions/, design/
@@ -67,7 +67,7 @@ firestore.indexes.json
 rules-tests/                Emulator-Tests für die Rules (Node, Vitest)
 functions/                  Cloud Functions, erst ab Release 2
 hosting/public/             .well-known/assetlinks.json, j.html (Fallback-Seite für Einladungslinks, AUTH-04),
-                            datenschutz.html und konto-loeschen.html (NFA-09, AUTH-15)
+                            datenschutz.html, konto-loeschen.html, nutzungsbedingungen.html (NFA-09, AUTH-15, NFA-13)
 .github/workflows/ci.yml    analyze + test (Flutter), Rules-Tests (Emulator)
 ```
 

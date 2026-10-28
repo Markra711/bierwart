@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bier_wart/src/app.dart';
 import 'package:bier_wart/src/core/firebase/batch_schreiber.dart';
+import 'package:bier_wart/src/core/links/link_oeffner.dart';
 import 'package:bier_wart/src/core/speicher/lokaler_speicher.dart';
 import 'package:bier_wart/src/core/theme/app_theme.dart';
 import 'package:bier_wart/src/features/einstellungen/data/einstellungen_repository.dart';
@@ -24,6 +25,18 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'datenbank.dart';
 import 'links.dart';
+
+/// Merkt sich geöffnete Links; [geht] = false wie ohne Browser/Mail-App.
+class FakeLinkOeffner implements LinkOeffner {
+  final geoeffnet = <Uri>[];
+  var geht = true;
+
+  @override
+  Future<bool> oeffnen(Uri ziel) async {
+    geoeffnet.add(ziel);
+    return geht;
+  }
+}
 
 /// Zählt, wie oft die App das Konto löscht (AUTH-15).
 class FakeKonto implements KontoRepository {
@@ -113,6 +126,7 @@ Future<FakeKasseRepository> appStarten(
   FakeDatenbank? db,
   FakeSpeicher? einstellungen,
   FakeKonto? konto,
+  FakeLinkOeffner? oeffner,
 }) async {
   final daten = db ?? testDatenbank();
   addTearDown(daten.schliessen);
@@ -134,6 +148,7 @@ Future<FakeKasseRepository> appStarten(
       }),
       kasseRepositoryProvider.overrideWithValue(repo),
       kontoRepositoryProvider.overrideWithValue(konto ?? FakeKonto()),
+      linkOeffnerProvider.overrideWithValue(oeffner ?? FakeLinkOeffner()),
       linkQuelleProvider.overrideWithValue(quelle),
       codeSpeicherProvider.overrideWithValue(speicher ?? FakeCodeSpeicher()),
       schreiberProvider.overrideWithValue(daten),

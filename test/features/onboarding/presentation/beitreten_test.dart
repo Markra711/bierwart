@@ -75,6 +75,14 @@ void main() {
     await tippen(tester, 'Ja, beitreten');
 
     await tester.enterText(find.byType(TextField), '  Jonas Weber ');
+    // NFA-13
+    expect(
+      find.textContaining(
+        'Mit „Beitreten“ stimmst du den Nutzungsbedingungen zu.',
+        findRichText: true,
+      ),
+      findsOneWidget,
+    );
     await tippen(tester, 'Beitreten');
     expect(repo.beitritte, ['  Jonas Weber ']);
     expect(find.text('STRICHLISTE'), findsOneWidget);

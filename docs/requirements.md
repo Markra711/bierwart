@@ -14,6 +14,7 @@
 > - 2026-10-22, nach dem Einfrieren: STR-06 – auch Zahlungen lassen sich stornieren (architecture.md, offene Frage 24).
 > - 2026-10-28, nach dem Einfrieren: AUTH-15 neu, UC-05 ergänzt – Austreten und Auflösen löschen das anonyme Konto; Name und Buchungen bleiben im Verlauf (LOG-02). Grund: Richtlinie von Google Play zur Kontolöschung (architecture.md, Vor dem Store-Release).
 > - 2026-10-28, nach dem Einfrieren: NFA-09 – zusätzlich Datenschutzerklärung und Löschseite im Web, weil Google Play beides als URL verlangt (architecture.md, offene Frage 18).
+> - 2026-10-28, nach dem Einfrieren: NFA-13 neu – Nutzungsbedingungen, Zustimmung beim Erstellen und Beitreten, „Melden“. Grund: Richtlinie von Google Play zu nutzergenerierten Inhalten (architecture.md, Vor dem Store-Release).
 
 ## Vision & Abgrenzung
 
@@ -221,6 +222,7 @@ Diese Anforderungen gelten für jedes Release.
 | NFA-10 | **Fehlerverhalten:** jeder fehlgeschlagene Schreibvorgang erzeugt eine sichtbare Meldung; kein Bildschirm lädt endlos | manueller Test ohne Netz und ohne Zugriffsrechte |
 | NFA-11 | **Sprache:** Oberfläche auf Deutsch, Beträge im Format „1,50 €“ | UI-Review |
 | NFA-12 | **Kosten:** Betrieb im Firebase-Blaze-Tarif bei unter 1 € pro Monat für eine Mannschaft | Firebase-Kostenübersicht |
+| NFA-13 | **Inhalte:** Nutzungsbedingungen im Web verbieten anstößige Inhalte; beim Erstellen und Beitreten stimmt man ihnen per Hinweis über dem Knopf zu; „Melden“ in den Einstellungen öffnet eine E-Mail an den Betreiber | Widget-Tests, `bier-wart.web.app/nutzungsbedingungen` erreichbar |
 
 ## Seiten & Navigation
 
