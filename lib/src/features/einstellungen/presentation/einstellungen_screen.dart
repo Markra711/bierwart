@@ -22,6 +22,7 @@ import '../../onboarding/domain/einladung.dart';
 import '../../strichliste/application/kasse_daten.dart';
 import '../application/einstellungen.dart';
 import '../domain/bierwart.dart';
+import 'melden_sheet.dart';
 
 /// Einstellungen, erreichbar über das Zahnrad auf jedem Tab (UI-02):
 /// Einladungslink (UC-06, ADM-01), Bierwarte mit Rollen (ADM-02, ADM-03),
@@ -134,6 +135,14 @@ class EinstellungenScreen extends ConsumerWidget {
                     _Kachel(
                       text: 'Datenschutz',
                       onTap: () => context.push(Routen.datenschutz),
+                    ),
+                    _Kachel(
+                      text: 'Melden',
+                      onTap: () => zeigeSheet<void>(
+                        context,
+                        titel: 'Melden',
+                        inhalt: (_) => const MeldenSheet(),
+                      ),
                     ),
                   ]),
                   const SizedBox(height: BwSpacing.space6),

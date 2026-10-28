@@ -15,6 +15,7 @@ import '../../kader/domain/name.dart';
 import '../application/onboarding.dart';
 import '../domain/codes.dart';
 import '../domain/einladung.dart';
+import '../../../core/widgets/zustimmung.dart';
 
 /// „Wie heißt du?“: Namenswahl beim Beitreten (UC-02, AUTH-07). Ein
 /// vergebener Name wird erkannt; „Das bin ich“ (UC-03) kommt mit dem
@@ -116,6 +117,7 @@ class _NameWaehlenScreenState extends ConsumerState<NameWaehlenScreen> {
       ],
       aktionen: [
         if (_fehler != null) BwFehler(_fehler!),
+        const BwZustimmung(knopf: 'Beitreten'),
         BwKnopf(
           text: 'Beitreten',
           gross: true,

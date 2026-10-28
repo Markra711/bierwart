@@ -188,6 +188,7 @@ Bottom-Sheet für kurze Aktionen (UI-03): Zahlung erfassen, Ein-/Auszahlung, Üb
 - Titel im Stil `page-title`, der Betrag als großes eingedrücktes Feld im Display-Font mit Tabellenziffern.
 - Schnellwahl als erhabene Chips; der gewählte Chip ist eingedrückt mit Text in `grad-end`. In Flutter `BwChip`.
 - Umschalter zwischen zwei Möglichkeiten („Einzahlung“/„Auszahlung“, „In die Kasse“/„Aus der Kasse“): eingedrückte Rinne (`radius-pill`), die gewählte Seite mit Fläche `grad-accent` und Text `on-accent`, die andere in `ink-muted` (`BwUmschalter`).
+- Zustimmung zu den Nutzungsbedingungen (NFA-13): eine Zeile `caption` in `ink-muted`, zentriert direkt über dem Hauptknopf: „Mit „Kasse erstellen“ stimmst du den Nutzungsbedingungen zu.“ Das Wort „Nutzungsbedingungen“ in `ink`, fett und unterstrichen; ein Tipp öffnet die Seite im Browser (`BwZustimmung`).
 - Wahl einer Option mit Text (Ort des Geldes, Bierwart bei der Übergabe): erhabene Karte `radius-md`, gewählt eingedrückt mit Verlaufsrahmen, Betrag rechts (`BwWahlKarte`).
 - Kassendifferenz: gestrichelter Rahmen in `negative`, Betrag mit Vorzeichen in `negative`.
 - Unten genau ein Primärbutton, dessen Text den Betrag nennt: „12,00 € verbuchen“.

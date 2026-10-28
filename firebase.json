@@ -37,6 +37,10 @@
       {
         "source": "/konto-loeschen",
         "destination": "/konto-loeschen.html"
+      },
+      {
+        "source": "/nutzungsbedingungen",
+        "destination": "/nutzungsbedingungen.html"
       }
     ],
     "headers": [

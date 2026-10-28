@@ -1,3 +1,4 @@
+import 'package:bier_wart/src/core/links/link_oeffner.dart';
 import 'package:bier_wart/src/core/money/cents.dart';
 import 'package:bier_wart/src/features/einstellungen/presentation/einstellungen_screen.dart';
 import 'package:bier_wart/src/features/onboarding/domain/einladung.dart';
@@ -25,10 +26,17 @@ Future<FakeDatenbank> oeffnen(
   WidgetTester tester, {
   FakeDatenbank? db,
   FakeKonto? konto,
+  FakeLinkOeffner? oeffner,
 }) async {
   telefon(tester);
   final daten = db ?? kasse();
-  await appStarten(tester, kasseId: 'k1', db: daten, konto: konto);
+  await appStarten(
+    tester,
+    kasseId: 'k1',
+    db: daten,
+    konto: konto,
+    oeffner: oeffner,
+  );
   await tester.tap(find.byIcon(Icons.tune_rounded).hitTestable());
   await tester.pumpAndSettle();
   return daten;
@@ -207,6 +215,32 @@ void main() {
     await appStarten(tester, kasseId: 'k1', db: db);
     expect(
       find.text('Ich habe einen Einladungslink'.toUpperCase()),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Melden öffnet eine E-Mail mit der Kasse (NFA-13)', (
+    tester,
+  ) async {
+    final oeffner = FakeLinkOeffner();
+    await oeffnen(tester, oeffner: oeffner);
+    await tippen(tester, 'Melden');
+    expect(find.textContaining('Der Admin kann Namen ändern'), findsOneWidget);
+
+    await tippen(tester, 'E-MAIL SCHREIBEN');
+    final mail = oeffner.geoeffnet.single;
+    expect(mail.scheme, 'mailto');
+    expect(mail.path, kontaktEmail);
+    expect(mail.query, contains('subject=Meldung%3A%20SV%20Test'));
+    expect(mail.query, contains('(k1)'));
+
+    await tippen(tester, 'NUTZUNGSBEDINGUNGEN');
+    expect(oeffner.geoeffnet.last, nutzungsbedingungenUrl);
+
+    oeffner.geht = false;
+    await tippen(tester, 'E-MAIL SCHREIBEN');
+    expect(
+      find.text('Kein Mail-Programm gefunden. Schreib an $kontaktEmail.'),
       findsOneWidget,
     );
   });
