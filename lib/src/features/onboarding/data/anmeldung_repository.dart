@@ -47,6 +47,31 @@ Stream<String?> bestaetigteKasseId(
   Stream<({bool ausstehend, String? kasseId})> stand,
 ) => stand.where((s) => !s.ausstehend).map((s) => s.kasseId).distinct();
 
+/// Das anonyme Konto bei Firebase Authentication (AUTH-15).
+class KontoRepository {
+  KontoRepository(this._auth);
+
+  final FirebaseAuth _auth;
+
+  /// Löscht das Konto dieses Geräts, nachdem `users/{uid}` weg ist.
+  /// Verlangt Firebase eine frische Anmeldung, die es für anonyme Konten
+  /// nicht gibt, meldet sich die App nur ab; das Konto hat dann keine Daten
+  /// mehr. Danach `ref.invalidate(anmeldungProvider)` für eine neue UID.
+  Future<void> loeschen() async {
+    final nutzer = _auth.currentUser;
+    if (nutzer == null) return;
+    try {
+      await nutzer.delete();
+    } on FirebaseAuthException {
+      await _auth.signOut();
+    }
+  }
+}
+
+final kontoRepositoryProvider = Provider<KontoRepository>(
+  (ref) => KontoRepository(ref.watch(firebaseAuthProvider)),
+);
+
 /// Meldung für eine fehlgeschlagene Anmeldung (NFA-10).
 String anmeldeFehler(Object fehler) => switch (fehler) {
   FirebaseAuthException(code: 'network-request-failed') =>

@@ -35,9 +35,10 @@ class DatenschutzScreen extends StatelessWidget {
     ),
     (
       'Löschen',
-      'Der Admin kann die Kasse auflösen, dann ist alles gelöscht. Wer '
-          'austritt, bleibt mit Namen und Verlauf im Kader. Eine Kasse ohne '
-          'Bierwarte wird bisher nicht automatisch gelöscht.',
+      'Wer austritt, dessen Konto wird gelöscht. Name und Buchungen '
+          'bleiben im Verlauf der Kasse, damit die Abrechnung stimmt. Der '
+          'Admin kann die Kasse auflösen, dann ist alles gelöscht. Eine Kasse '
+          'ohne Bierwarte wird bisher nicht automatisch gelöscht.',
     ),
   ];
 

@@ -170,7 +170,8 @@ class VerwaltungAktionen {
 
 extension AustretenUndAufloesen on VerwaltungAktionen {
   /// Austreten (UC-05, AUTH-09). Prüft Portemonnaie und Rollen am Stand des
-  /// Servers; danach ist der Nutzer ohne Kasse.
+  /// Servers; danach ist das Konto gelöscht (AUTH-15) und der Nutzer mit
+  /// neuer UID ohne Kasse.
   Future<void> austreten() =>
       mitServer('Austreten hat nicht geklappt', () async {
         final s = _ref.read(sitzungProvider);
@@ -215,6 +216,8 @@ extension AustretenUndAufloesen on VerwaltungAktionen {
               ),
             )
             .timeout(antwortFrist);
+        await _ref.read(kontoRepositoryProvider).loeschen();
+        _ref.invalidate(anmeldungProvider);
       });
 
   /// Auflösen, Schritt 1 (ADM-05, UC-10): mit abgetipptem Kassennamen.

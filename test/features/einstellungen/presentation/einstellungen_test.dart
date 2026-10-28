@@ -21,10 +21,14 @@ FakeDatenbank kasse({String admin = 'uid', String kassenwart = 'uid'}) =>
       ..bierwart('k1', 'max', 'Max Becker', stand: -650)
       ..mitglied('k1', 'gaeste', 'Gäste', gast: true);
 
-Future<FakeDatenbank> oeffnen(WidgetTester tester, {FakeDatenbank? db}) async {
+Future<FakeDatenbank> oeffnen(
+  WidgetTester tester, {
+  FakeDatenbank? db,
+  FakeKonto? konto,
+}) async {
   telefon(tester);
   final daten = db ?? kasse();
-  await appStarten(tester, kasseId: 'k1', db: daten);
+  await appStarten(tester, kasseId: 'k1', db: daten, konto: konto);
   await tester.tap(find.byIcon(Icons.tune_rounded).hitTestable());
   await tester.pumpAndSettle();
   return daten;

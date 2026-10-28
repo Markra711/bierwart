@@ -25,6 +25,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'datenbank.dart';
 import 'links.dart';
 
+/// Zählt, wie oft die App das Konto löscht (AUTH-15).
+class FakeKonto implements KontoRepository {
+  var geloescht = 0;
+
+  @override
+  Future<void> loeschen() async => geloescht++;
+}
+
 /// Ersetzt Firestore beim Erstellen und Beitreten. Nach Erfolg meldet es die
 /// Kasse über [kasseIds], wie es `users/{uid}` täte.
 class FakeKasseRepository implements KasseRepository {
@@ -104,6 +112,7 @@ Future<FakeKasseRepository> appStarten(
   FakeCodeSpeicher? speicher,
   FakeDatenbank? db,
   FakeSpeicher? einstellungen,
+  FakeKonto? konto,
 }) async {
   final daten = db ?? testDatenbank();
   addTearDown(daten.schliessen);
@@ -124,6 +133,7 @@ Future<FakeKasseRepository> appStarten(
         yield* kasseIds.stream;
       }),
       kasseRepositoryProvider.overrideWithValue(repo),
+      kontoRepositoryProvider.overrideWithValue(konto ?? FakeKonto()),
       linkQuelleProvider.overrideWithValue(quelle),
       codeSpeicherProvider.overrideWithValue(speicher ?? FakeCodeSpeicher()),
       schreiberProvider.overrideWithValue(daten),
