@@ -388,8 +388,8 @@ Bausteine:
     | Schlüssel | SHA-256 | Stand |
     | --- | --- | --- |
     | Debug (`~/.android/debug.keystore` auf Marvins Rechner) | `99:AC:29:B1:25:49:3C:32:40:8A:D0:82:41:0F:A2:93:C8:71:E8:48:61:D2:32:00:00:AE:EB:5B:E8:F9:19:29` | aktiv, für Tests auf eigenen Geräten |
-    | Upload-Key | – | kommt mit dem Store-Release |
-    | Play App Signing | – | kommt mit dem Store-Release |
+    | Play App Signing (Schlüssel bei Google, Play Console → App-Integrität) | `0D:0F:9E:5C:11:D5:A5:66:E7:99:8E:48:F0:89:77:E9:7E:B7:A9:0F:7F:9C:EC:46:DB:C7:C1:22:AE:5E:1F:ED` | aktiv, für Installationen aus dem Play Store |
+    | Upload-Key (`~/bierwart-upload.jks` auf Marvins Rechner, über `android/key.properties`) | `D0:B8:56:89:A9:27:E7:80:9E:18:63:97:21:A3:76:CA:71:13:1B:B4:CD:A1:3D:96:7A:69:24:D8:D1:7E:0D:EE` | aktiv, für selbst gebaute Release-Builds |
 
     Jeder Rechner hat einen eigenen Debug-Key. Wer auf einem anderen Rechner baut, muss dessen Fingerabdruck ergänzen, sonst öffnen sich Links dort im Browser statt in der App.
   - `firebase.json`-Rewrite `/j/**` → `/j.html`: eine statische Seite, die den Code aus der URL zeigt, einen Play-Store-Link mit `&referrer=code%3D{code}` anbietet und den Code zum Kopieren bereitstellt (für „Link einfügen“). Sie prüft den Code nach denselben Regeln wie die App (`codes.dart`) und meldet unvollständige Links. Ein Header liefert `assetlinks.json` als `application/json`.
@@ -439,10 +439,10 @@ Erst mit Release 2 (AUTH-10, AUTH-11).
 Aufgaben, die erst mit dem Play-Store-Eintrag anfallen. Keine davon blockiert die Entwicklung.
 
 - [x] Entwicklerkonto in der Play Console anlegen (Konsole, macht Marvin).
-- [ ] App `io.github.markra711.bierwart` in der Play Console anlegen, Play App Signing aktiv lassen (Konsole, macht Marvin).
+- [x] App `io.github.markra711.bierwart` in der Play Console anlegen, Play App Signing aktiv lassen (Konsole, macht Marvin).
 - [x] Signierung in `android/app/build.gradle.kts` über `android/key.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). Fehlt die Datei, signiert der Release-Build mit dem Debug-Key.
 - [ ] Upload-Key erzeugen und sicher verwahren, nicht im Repo (macht Marvin). Geht er verloren, lässt er sich über die Play Console zurücksetzen; der App-Signing-Key liegt bei Google.
-- [ ] SHA-256 von Upload-Key und Play App Signing in `assetlinks.json` eintragen (AUTH-04).
+- [x] SHA-256 von Upload-Key und Play App Signing in `assetlinks.json` eintragen (AUTH-04). Wirksam erst nach dem Hosting-Deploy.
 - [ ] SHA-1 des Release-Keys in der Firebase-Konsole bei der Android-App hinterlegen.
 - [ ] Android-API-Key in der Google Cloud Console auf Paketname und SHA-1 (Debug + Release) einschränken. Der Key steht öffentlich in der APK; die Einschränkung verhindert, dass fremde Apps ihn benutzen.
 - [ ] App Links mit dem Release-Build auf einem echten Gerät prüfen (`adb shell pm get-app-links io.github.markra711.bierwart`).

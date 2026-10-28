@@ -1,10 +1,14 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "io.github.markra711.bierwart",
       "sha256_cert_fingerprints": [
+        "0D:0F:9E:5C:11:D5:A5:66:E7:99:8E:48:F0:89:77:E9:7E:B7:A9:0F:7F:9C:EC:46:DB:C7:C1:22:AE:5E:1F:ED",
+        "D0:B8:56:89:A9:27:E7:80:9E:18:63:97:21:A3:76:CA:71:13:1B:B4:CD:A1:3D:96:7A:69:24:D8:D1:7E:0D:EE",
         "99:AC:29:B1:25:49:3C:32:40:8A:D0:82:41:0F:A2:93:C8:71:E8:48:61:D2:32:00:00:AE:EB:5B:E8:F9:19:29"
       ]
     }
