@@ -44,6 +44,11 @@ class FakeDatenbank
   /// Was die Fake-Datenbank als Serverzeit einsetzt.
   DateTime jetzt = DateTime(2026, 10, 22, 20);
 
+  /// Wann die Einladung aus [neueKasse] erstellt wurde: vor drei Tagen.
+  static final einladungErstelltAm = DateTime.now().subtract(
+    const Duration(days: 3),
+  );
+
   /// Lässt [schreiben] scheitern, z. B. wie eine Ablehnung beim Sync.
   Object? schreibFehler;
 
@@ -70,7 +75,9 @@ class FakeDatenbank
       'kasseId': k,
       'kassenName': name,
       'anzahlBierwarte': 0,
-      'erstelltAm': DateTime(2026, 10, 19, 18),
+      // Relativ zur echten Uhr, weil die App den Ablauf mit DateTime.now()
+      // prüft. Ein festes Datum lässt die Einladung irgendwann ablaufen.
+      'erstelltAm': einladungErstelltAm,
       'ersetzt': false,
     };
     _aenderung.add(null);
