@@ -444,15 +444,15 @@ Aufgaben, die erst mit dem Play-Store-Eintrag anfallen. Keine davon blockiert di
 - [x] Entwicklerkonto in der Play Console anlegen (Konsole, macht Marvin).
 - [x] App `io.github.markra711.bierwart` in der Play Console anlegen, Play App Signing aktiv lassen (Konsole, macht Marvin).
 - [x] Signierung in `android/app/build.gradle.kts` über `android/key.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). Fehlt die Datei, signiert der Release-Build mit dem Debug-Key.
-- [ ] Upload-Key erzeugen und sicher verwahren, nicht im Repo (macht Marvin). Geht er verloren, lässt er sich über die Play Console zurücksetzen; der App-Signing-Key liegt bei Google.
+- [x] Upload-Key erzeugen und sicher verwahren, nicht im Repo (macht Marvin): `~/bierwart-upload.jks`. Geht er verloren, lässt er sich über die Play Console zurücksetzen; der App-Signing-Key liegt bei Google.
 - [x] SHA-256 von Upload-Key und Play App Signing in `assetlinks.json` eintragen (AUTH-04). Wirksam erst nach dem Hosting-Deploy.
-- [ ] SHA-1 des Release-Keys in der Firebase-Konsole bei der Android-App hinterlegen.
-- [ ] Android-API-Key in der Google Cloud Console auf Paketname und SHA-1 (Debug + Release) einschränken. Der Key steht öffentlich in der APK; die Einschränkung verhindert, dass fremde Apps ihn benutzen.
+- [x] SHA-1 und SHA-256 von Play App Signing, Upload-Key und Debug-Key in der Firebase-Konsole bei der Android-App hinterlegen.
+- [x] Android-API-Key (endet auf `lL9b-8`) in der Google Cloud Console auf Paketname und SHA-1 einschränken: Play App Signing, Upload-Key (`BD:E1:F0:97:74:74:B6:6D:E7:DF:AD:48:10:C9:46:DB:C4:4C:AC:87`) und Debug-Key auf Marvins Rechner (`48:18:9D:EB:EC:04:EB:AE:BC:03:6D:8A:5C:19:19:1C:6C:EB:96:B6`). Der Key steht öffentlich in der APK; die Einschränkung verhindert, dass fremde Apps ihn benutzen. Wer auf einem anderen Rechner baut, muss dessen Debug-SHA-1 ergänzen. Am 2026-10-28 mit neuer Anmeldung getestet.
 - [x] Konto löschen in der App: über „Austreten“ (AUTH-15). In der Play Console unter Datensicherheit so angeben.
-- [x] Löschseite und Datenschutzerklärung auf `bier-wart.web.app` (`/konto-loeschen`, `/datenschutz`), Kontakt `bierwart.app@gmail.com`. Wirksam erst nach dem Hosting-Deploy; die URLs in der Play Console eintragen (Store-Präsenz → Datenschutzerklärung, App-Inhalte → Datensicherheit → Kontolöschung).
+- [x] Löschseite und Datenschutzerklärung auf `bier-wart.web.app` (`/konto-loeschen`, `/datenschutz`), Kontakt `bierwart.app@gmail.com`. Wirksam erst nach dem Hosting-Deploy; die URLs in der Play Console eintragen (App-Inhalte → Datenschutzerklärung, App-Inhalte → Datensicherheit → Kontolöschung).
 - [x] Nutzungsbedingungen, Zustimmung und „Melden“ (NFA-13). Wirksam erst nach Hosting-Deploy und neuem Bundle.
 - [ ] App Links mit dem Release-Build auf einem echten Gerät prüfen (`adb shell pm get-app-links io.github.markra711.bierwart`).
-- [ ] App Check: In der Play Console unter „App-Integrität“ die Play Integrity API mit dem Firebase-Projekt verknüpfen. In der Firebase-Konsole unter App Check die Android-App mit dem SHA-256 des Play-App-Signing-Schlüssels für Play Integrity registrieren (beides Konsole, macht Marvin).
+- [x] App Check: In der Play Console unter „App-Integrität“ die Play Integrity API mit dem Firebase-Projekt verknüpfen. In der Firebase-Konsole unter App Check die Android-App mit dem SHA-256 des Play-App-Signing-Schlüssels für Play Integrity registrieren (beides Konsole, macht Marvin).
 - [ ] App-Check-Statistik in der Firebase-Konsole prüfen: Haben praktisch alle Firestore-Anfragen ein gültiges Token? Erst dann **Erzwingen für Firestore** einschalten (Konsole, macht Marvin, nur mit Freigabe).
 
 ## Kosten (grobe Schätzung, NFA-12)
