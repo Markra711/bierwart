@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="18 18 72 72">
+  <!-- Play-Icon (512 px, Google rundet selbst ab): Fünferstrich im Akzentverlauf auf bg. Raster 108 wie das adaptive Icon, sichere Zone Radius 33 um die Mitte. -->
+  <defs>
+    <linearGradient id="akzent" x1="30" y1="50" x2="78" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff4d86"/>
+      <stop offset="1" stop-color="#ffa24a"/>
+    </linearGradient>
+  </defs>
+  <rect x="18" y="18" width="72" height="72" height="108" fill="#25272c"/>
+  <g fill="none" stroke="url(#akzent)" stroke-width="5" stroke-linecap="round">
+    <path d="M39 37V71M49 37V71M59 37V71M69 37V71"/>
+    <path d="M32 65L76 43"/>
+  </g>
+</svg>
