@@ -138,6 +138,8 @@ Wireframe-Details sind Schmuck. Sie dürfen keine Information tragen, die nirgen
 
 Linien-Icons, 22px, Strichstärke 1,8, runde Enden. Inaktiv in `ink-muted`, aktiv mit Verlauf als Strichfarbe. Keine Emojis, keine gefüllten Icons.
 
+**App-Icon:** ein Fünferstrich im Verlauf auf `bg`, dasselbe Motiv wie das Tab-Icon „Striche“. Das Design System hat noch kein eigenes Logo; bis dahin ist `docs/store/icon.svg` die Quelle. Der Startbildschirm liegt auf `bg`, im hellen wie im dunklen Systemmodus. Details in [`store/store-eintrag.md`](store/store-eintrag.md).
+
 ## Bedienung
 
 - Touch-Ziele mindestens 44px.

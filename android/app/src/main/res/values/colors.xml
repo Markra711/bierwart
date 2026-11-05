@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Token bg aus docs/design/tokens.json -->
+    <color name="bierwart_bg">#25272C</color>
+</resources>
