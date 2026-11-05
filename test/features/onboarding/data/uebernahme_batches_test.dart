@@ -172,6 +172,7 @@ void main() {
     expect(_daten(batch, 'kassen/k2/orte/handy2')['standCents'], 150);
     final alt = _daten(batch, 'kassen/k2/orte/gruender')['standCents'];
     expect((alt! as Erhoehen).um, -150);
+    expect(_daten(batch, 'kassen/k2/orte/gruender')['ehemalig'], isTrue);
     expect(_daten(batch, 'kassen/k2/buchungen/u2')['standCents'], 150);
   });
 
@@ -189,21 +190,28 @@ void main() {
     );
   });
 
-  test('ohne Rollen und als aktiver Bierwart bleibt die Kasse unberührt', () {
-    final jonas = UebernahmeStand(
-      anfrage: _anfrage('a3', 'm2', 'handy4'),
-      mitgliedName: 'Jonas Weber',
-      alteUid: 'neu',
-      alteAktiv: true,
-      altesPortemonnaieCents: 0,
-      adminUid: 'gruender',
-      kassenwartUid: 'gruender',
-      einladungCode: _code,
-    );
-    final batch = _bestaetigen(jonas, uid: 'gruender', name: 'Lena Koch');
-    expect(batch.any((s) => s.pfad == 'kassen/k2'), isFalse);
-    expect(batch.any((s) => s.pfad == 'kassen/k2/orte/neu'), isFalse);
-  });
+  test(
+    'ohne Rollen bleibt die Kasse unberührt, Portemonnaie wird ehemalig',
+    () {
+      final jonas = UebernahmeStand(
+        anfrage: _anfrage('a3', 'm2', 'handy4'),
+        mitgliedName: 'Jonas Weber',
+        alteUid: 'neu',
+        alteAktiv: true,
+        altesPortemonnaieCents: 0,
+        adminUid: 'gruender',
+        kassenwartUid: 'gruender',
+        einladungCode: _code,
+      );
+      final batch = _bestaetigen(jonas, uid: 'gruender', name: 'Lena Koch');
+      expect(batch.any((s) => s.pfad == 'kassen/k2'), isFalse);
+      // Auch bei Stand 0 wird das alte Portemonnaie ehemalig, ohne Betrag.
+      expect(_daten(batch, 'kassen/k2/orte/neu'), {
+        'ehemalig': true,
+        'letzteBuchungId': 'u2',
+      });
+    },
+  );
 
   test('Mitglied ohne App zählt als neuer Bierwart mit (AUTH-05)', () {
     final batch = _bestaetigen(_tim, uid: 'gruender', name: 'Lena Koch');

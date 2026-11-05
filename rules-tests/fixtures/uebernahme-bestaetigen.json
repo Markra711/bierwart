@@ -59,6 +59,7 @@
         "standCents": {
           "$erhoehen": -150
         },
+        "ehemalig": true,
         "letzteBuchungId": "u2"
       }
     },

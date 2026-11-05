@@ -60,8 +60,20 @@ void main() {
     expect(db.docs['kassen/k1/mitglieder/jonas']!['bierwartUid'], 'neu');
     expect(db.docs['kassen/k1/orte/neu']!['standCents'], 1250);
     expect(db.docs['kassen/k1/orte/jonas']!['standCents'], 0);
+    expect(db.docs['kassen/k1/orte/jonas']!['ehemalig'], isTrue);
     expect(find.text('Jonas ist wieder drin.'), findsOneWidget);
     expect(hinweis('will mit neuem Handy rein.'), findsNothing);
+  });
+
+  testWidgets('nach der Übernahme steht der Name in „Geld“ nur einmal', (
+    tester,
+  ) async {
+    await starten(tester);
+    await tippen(tester, 'Ansehen');
+    await tippen(tester, 'Das ist Jonas');
+    await tester.tap(find.text('GELD'));
+    await tester.pumpAndSettle();
+    expect(find.text('Jonas Weber'), findsOneWidget);
   });
 
   testWidgets('ablehnen bucht und nimmt den Hinweis weg', (tester) async {
