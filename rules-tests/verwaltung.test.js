@@ -274,10 +274,10 @@ describe('Übernahme anfragen und zurückziehen (UC-03, AUTH-07)', () => {
         entschiedenVon: null, entschiedenAm: null, letzteBuchungId: 'l1',
       }],
     ], { name });
-  const zurueckziehen = (uid = 'neu') =>
+  const zurueckziehen = (uid = 'neu', name = 'Jonas Weber') =>
     batch(uid, 'l2', { typ: 'uebernahmeZurueckgezogen', uebernahmeId: 'fuerJonas', mitgliedId: 'jonas' }, [
       ['update', 'uebernahmen/fuerJonas', { status: 'zurueckgezogen', entschiedenVon: uid, entschiedenAm: serverTimestamp(), letzteBuchungId: 'l2' }],
-    ], { name: 'Jonas Weber' });
+    ], { name });
 
   test('für ein Mitglied ohne App', async () => {
     await assertSucceeds(anfragen());
@@ -308,6 +308,14 @@ describe('Übernahme anfragen und zurückziehen (UC-03, AUTH-07)', () => {
     await assertFails(anfragen({ name: 'Anna Schulz' }));
   });
 
+  test('Stempel darf anders geschrieben sein, wie eingetippt', async () => {
+    await assertSucceeds(anfragen({ name: 'jonas  WEBER' }));
+  });
+
+  test('Stempel ohne Namen abgelehnt', async () => {
+    await assertFails(anfragen({ name: '' }));
+  });
+
   test('fremde Anfragen sind nicht lesbar', async () => {
     await assertFails(getDoc(doc(db('fremd'), `${K}/uebernahmen/fuerJonas`)));
   });
@@ -315,6 +323,16 @@ describe('Übernahme anfragen und zurückziehen (UC-03, AUTH-07)', () => {
   test('zurückziehen durch das neue Gerät', async () => {
     await assertSucceeds(zurueckziehen());
     expect((await lesen('uebernahmen/fuerJonas')).status).toBe('zurueckgezogen');
+  });
+
+  test('zurückziehen mit eingetipptem Namen', async () => {
+    await assertSucceeds(zurueckziehen('neu', 'jonas weber'));
+  });
+
+  test('Bierwarte stempeln weiter genau mit ihrem Namen', async () => {
+    await assertFails(batch('kw', 'l1', { typ: 'uebernahmeAbgelehnt', uebernahmeId: 'fuerJonas', mitgliedId: 'jonas' }, [
+      ['update', 'uebernahmen/fuerJonas', { status: 'abgelehnt', entschiedenVon: 'kw', entschiedenAm: serverTimestamp(), letzteBuchungId: 'l1' }],
+    ], { name: 'karl wagner' }));
   });
 
   test('zurückziehen durch Fremde abgelehnt', async () => {

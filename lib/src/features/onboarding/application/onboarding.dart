@@ -120,7 +120,21 @@ final einladungProvider = FutureProvider.autoDispose.family<Einladung?, String>(
 );
 
 /// Ergebnis eines Beitrittsversuchs.
-enum Beitritt { erfolgreich, nameVergeben }
+sealed class Beitritt {
+  const Beitritt();
+}
+
+class BeitrittErfolgreich extends Beitritt {
+  const BeitrittErfolgreich();
+}
+
+/// Der Name gehört schon dem Mitglied [mitgliedId] (AUTH-07); vielleicht ist
+/// es der Nutzer selbst mit neuem Gerät (UC-03).
+class NameVergeben extends Beitritt {
+  const NameVergeben(this.mitgliedId);
+
+  final String mitgliedId;
+}
 
 /// Beitreten (UC-02). Der Zustand ist `true`, solange geschrieben wird; die
 /// Weiterleitung lässt den Nutzer dann auf „Wie heißt du?“, auch wenn die
@@ -136,15 +150,14 @@ class BeitrittNotifier extends Notifier<bool> {
     final meldung = einladung.zustand(DateTime.now()).meldung;
     if (meldung != null) throw VerwaltungsFehler(meldung);
     final repo = ref.read(kasseRepositoryProvider);
-    if (await repo.nameVergeben(einladung.kasseId, eigenerName)) {
-      return Beitritt.nameVergeben;
-    }
+    final besitzer = await repo.namensBesitzer(einladung.kasseId, eigenerName);
+    if (besitzer != null) return NameVergeben(besitzer);
     final uid = await ref.read(anmeldungProvider.future);
     state = true;
     try {
       await repo.beitreten(uid, einladung, eigenerName);
       ref.read(offenerCodeProvider.notifier).verwerfen();
-      return Beitritt.erfolgreich;
+      return const BeitrittErfolgreich();
     } finally {
       state = false;
     }

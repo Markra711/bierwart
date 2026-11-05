@@ -1,0 +1,92 @@
+{
+  "uid": "gruender",
+  "schreibvorgaenge": [
+    {
+      "art": "update",
+      "pfad": "kassen/k2/uebernahmen/a2",
+      "daten": {
+        "status": "bestaetigt",
+        "entschiedenVon": "gruender",
+        "entschiedenAm": {
+          "$serverzeit": true
+        },
+        "letzteBuchungId": "u4"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/mitglieder/m3",
+      "daten": {
+        "bierwartUid": "handy3",
+        "entfernt": false,
+        "letzteBuchungId": "u4"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/bierwarte/handy3",
+      "daten": {
+        "mitgliedId": "m3",
+        "name": "Tim Richter",
+        "beigetretenAm": {
+          "$serverzeit": true
+        },
+        "einladungCode": "K7Q2MXA93DWFT2HC8RNP",
+        "letzteBuchungId": "u4"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/orte/handy3",
+      "daten": {
+        "art": "portemonnaie",
+        "uid": "handy3",
+        "name": "Tim Richter",
+        "standCents": 0,
+        "ehemalig": false,
+        "letzteBuchungId": "u4"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2",
+      "daten": {
+        "anzahlBierwarte": {
+          "$erhoehen": 1
+        },
+        "letzteBuchungId": "u4"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "einladungen/K7Q2MXA93DWFT2HC8RNP",
+      "daten": {
+        "anzahlBierwarte": {
+          "$erhoehen": 1
+        }
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/u4",
+      "daten": {
+        "typ": "uebernahmeBestaetigt",
+        "uebernahmeId": "a2",
+        "mitgliedId": "m3",
+        "alteUid": null,
+        "neueUid": "handy3",
+        "standCents": 0,
+        "stempel": {
+          "uid": "gruender",
+          "name": "Lena Koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

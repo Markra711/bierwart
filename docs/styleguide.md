@@ -234,6 +234,15 @@ Antippen bucht offen, Halten bucht bar. Auf „Gäste“ buchen beide Gesten bar
 | Sheets | Zahlung erfassen, Ein-/Auszahlung, Übergabe, Kassensturz |
 | Schriftvergleich | Variante B gewählt (Barlow Condensed + Barlow) |
 
+**Noch nicht im Canvas** (gebaut aus vorhandenen Bausteinen, im Canvas nachzuziehen):
+
+| Bildschirm | Aufbau |
+| --- | --- |
+| Name wählen, Name vergeben | Karte wie bisher, darüber „Das bin ich“ (`sekundaer`), darunter „Anderen Namen wählen“ (`outline`); bei „Gäste“ nur Letzteres |
+| Warten (`/warten`, UC-03) | Verlaufs-Label „DAS BIN ICH“, Titel „Kurz *warten*“, Kassenkarte wie bei „Kasse beitreten?“ mit „als {Name}, mit neuem Handy“, Erklärung, zwei `BwHinweis` (gilt bis, einziger Bierwart); unten „Ich habe einen Wiederherstellungscode“ (`sekundaer`) und „Anfrage zurückziehen“ (`outline`), ohne Primärknopf |
+| Anfrage-Karte | Strichliste oben und Einstellungen unter „Anfragen“: erhaben, `radius-lg`, Name fett, Rest in `ink-muted`, Zweitzeile „angefragt …“ als Caption, rechts „Ansehen“ (`outline`, schmal) |
+| Anfrage-Sheet | Titel „{Name}?“, Erklärung, `BwHinweis` mit Zeitpunkt und Ablauf, „Das ist {Vorname}“ (`primaer`), „Ablehnen“ (`outline`) |
+
 Die Artboards sind 390×844 (Phone). Bei Abweichungen zwischen Canvas und diesem Styleguide gilt das Design System; Widersprüche kommen als Frage in die Anforderungsrunde.
 
 ## Umsetzung in Flutter

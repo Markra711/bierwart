@@ -13,13 +13,15 @@ import '../../../core/widgets/knoepfe.dart';
 import '../../../core/widgets/seite.dart';
 import '../../kader/domain/name.dart';
 import '../application/onboarding.dart';
+import '../application/uebernahme.dart';
+import '../data/kasse_erstellen_batch.dart' show gaesteId;
 import '../domain/codes.dart';
 import '../domain/einladung.dart';
 import '../../../core/widgets/zustimmung.dart';
 
-/// „Wie heißt du?“: Namenswahl beim Beitreten (UC-02, AUTH-07). Ein
-/// vergebener Name wird erkannt; „Das bin ich“ (UC-03) kommt mit dem
-/// Warte-Bildschirm aus dem Design-Canvas.
+/// „Wie heißt du?“: Namenswahl beim Beitreten (UC-02, AUTH-07). Ist der
+/// Name vergeben, geht es mit „Das bin ich“ als Anfrage weiter (UC-03,
+/// ADR-0008) oder mit einem anderen Namen.
 class NameWaehlenScreen extends ConsumerStatefulWidget {
   const NameWaehlenScreen({super.key, required this.code});
 
@@ -35,6 +37,9 @@ class _NameWaehlenScreenState extends ConsumerState<NameWaehlenScreen> {
   String? _nameFehler;
   String? _fehler;
   String? _vergeben;
+
+  /// Wem der vergebene Name gehört, für „Das bin ich“.
+  String? _besitzer;
   bool _laedt = false;
 
   @override
@@ -65,14 +70,35 @@ class _NameWaehlenScreenState extends ConsumerState<NameWaehlenScreen> {
       final ergebnis = await ref
           .read(beitrittProvider.notifier)
           .beitreten(einladung, _name.text);
-      if (ergebnis == Beitritt.nameVergeben && mounted) {
-        setState(() => _vergeben = nameBereinigen(_name.text));
+      if (ergebnis case NameVergeben(:final mitgliedId) when mounted) {
+        setState(() {
+          _vergeben = nameBereinigen(_name.text);
+          _besitzer = mitgliedId;
+        });
       }
       // Bei Erfolg geht es über die Weiterleitung zur Strichliste.
     } on VerwaltungsFehler catch (e) {
       if (mounted) setState(() => _fehler = e.meldung);
     } catch (_) {
       if (mounted) setState(() => _fehler = 'Der Beitritt hat nicht geklappt.');
+    } finally {
+      if (mounted) setState(() => _laedt = false);
+    }
+  }
+
+  /// „Das bin ich“: Anfrage stellen; die Weiterleitung führt danach auf den
+  /// Warte-Bildschirm.
+  Future<void> _dasBinIch(Einladung einladung) async {
+    setState(() {
+      _fehler = null;
+      _laedt = true;
+    });
+    try {
+      await ref
+          .read(uebernahmeAnfrageProvider.notifier)
+          .anfragen(einladung, mitgliedId: _besitzer!, name: _vergeben!);
+    } on VerwaltungsFehler catch (e) {
+      if (mounted) setState(() => _fehler = e.meldung);
     } finally {
       if (mounted) setState(() => _laedt = false);
     }
@@ -113,7 +139,14 @@ class _NameWaehlenScreenState extends ConsumerState<NameWaehlenScreen> {
           },
         ),
         if (_vergeben != null)
-          _NameVergeben(name: _vergeben!, andererName: _andererName),
+          _NameVergeben(
+            name: _vergeben!,
+            laedt: _laedt,
+            andererName: _andererName,
+            dasBinIch: einladung == null || _besitzer == gaesteId
+                ? null
+                : () => _dasBinIch(einladung),
+          ),
       ],
       aktionen: [
         if (_fehler != null) BwFehler(_fehler!),
@@ -121,7 +154,7 @@ class _NameWaehlenScreenState extends ConsumerState<NameWaehlenScreen> {
         BwKnopf(
           text: 'Beitreten',
           gross: true,
-          laedt: _laedt,
+          laedt: _laedt && _vergeben == null,
           onPressed: einladung == null || _vergeben != null
               ? null
               : () => _beitreten(einladung),
@@ -131,12 +164,20 @@ class _NameWaehlenScreenState extends ConsumerState<NameWaehlenScreen> {
   }
 }
 
-/// Karte, wenn der Name in der Kasse schon vergeben ist (AUTH-07).
+/// Karte, wenn der Name in der Kasse schon vergeben ist (AUTH-07). Mit
+/// „Das bin ich“, außer bei „Gäste“ (KAD-03).
 class _NameVergeben extends StatelessWidget {
-  const _NameVergeben({required this.name, required this.andererName});
+  const _NameVergeben({
+    required this.name,
+    required this.laedt,
+    required this.andererName,
+    required this.dasBinIch,
+  });
 
   final String name;
+  final bool laedt;
   final VoidCallback andererName;
+  final VoidCallback? dasBinIch;
 
   @override
   Widget build(BuildContext context) {
@@ -171,11 +212,15 @@ class _NameVergeben extends StatelessWidget {
                             text: '„$name“ gibt es hier schon. ',
                             style: const TextStyle(fontWeight: FontWeight.w800),
                           ),
-                          const TextSpan(
-                            text:
-                                'Wähl einen anderen Namen, zum Beispiel mit '
-                                'Spitznamen oder zweitem Vornamen.',
-                            style: TextStyle(color: BwColors.inkMuted),
+                          TextSpan(
+                            text: dasBinIch == null
+                                ? 'Wähl einen anderen Namen, zum Beispiel '
+                                      'mit Spitznamen oder zweitem Vornamen.'
+                                : 'Bist du das, mit neuem Handy? Dann frag '
+                                      'an, ein Bierwart bestätigt. Sonst wähl '
+                                      'einen anderen Namen, zum Beispiel mit '
+                                      'Spitznamen.',
+                            style: const TextStyle(color: BwColors.inkMuted),
                           ),
                         ],
                       ),
@@ -183,10 +228,19 @@ class _NameVergeben extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: BwSpacing.space4),
+                  if (dasBinIch != null) ...[
+                    BwKnopf(
+                      text: 'Das bin ich',
+                      art: BwKnopfArt.sekundaer,
+                      laedt: laedt,
+                      onPressed: dasBinIch,
+                    ),
+                    const SizedBox(height: BwSpacing.space3),
+                  ],
                   BwKnopf(
                     text: 'Anderen Namen wählen',
                     art: BwKnopfArt.outline,
-                    onPressed: andererName,
+                    onPressed: laedt ? null : andererName,
                   ),
                 ],
               ),

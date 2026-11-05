@@ -92,7 +92,7 @@ void main() {
     tester,
   ) async {
     final repo = await starten(tester, mit: einladung());
-    repo.vergebeneNamen.add('jonas weber');
+    repo.vergebeneNamen['jonas weber'] = 'jonas';
     await mitCode(tester, Routen.nameWaehlen);
 
     await tester.enterText(find.byType(TextField), 'jonas  WEBER');

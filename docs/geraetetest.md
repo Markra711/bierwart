@@ -1,6 +1,6 @@
 # Gerätetest vor dem ersten Deploy
 
-Checkliste für einen Durchgang auf dem Android-Emulator gegen die lokalen Firebase-Emulatoren, nie gegen das echte Projekt. Sie deckt Release 1 ab, soweit es gebaut ist (Stand 2026-10-22, `main` 23160a5). „Das bin ich (neues Gerät)“ fehlt noch (offene Frage 23).
+Checkliste für einen Durchgang auf dem Android-Emulator gegen die lokalen Firebase-Emulatoren, nie gegen das echte Projekt. Sie deckt Release 1 ab, soweit es gebaut ist (Stand 2026-10-22, `main` 23160a5).
 
 Gebraucht werden zwei Bierwarte, also zwei Geräte. Am einfachsten sind zwei virtuelle Android-Geräte (AVDs) gleichzeitig: **A** (Gründer) und **B**.
 
@@ -78,11 +78,19 @@ Gebraucht werden zwei Bierwarte, also zwei Geräte. Am einfachsten sind zwei vir
 - [ ] „Wer bist du?“ zeigt die Mitglieder, A steht als Admin zuerst. B wählt A.
 - [ ] „Admin werden“: B sieht den neuen Code genau einmal und landet dann in der Kasse. A landet im Onboarding (ADM-06, UC-03).
 
+## 10a. Das bin ich (drittes Gerät C oder B nach Neuinstallation)
+
+- [ ] Auf C den Einladungslink öffnen und den Namen von B eintippen, gern klein geschrieben. „Das bin ich“ erscheint, bei „Gäste“ nicht (UC-03, KAD-03).
+- [ ] „Das bin ich“: C wartet auf „Kurz warten“. App schließen und neu starten: C wartet weiter.
+- [ ] Auf dem anderen Gerät erscheint oben auf der Strichliste „{Name} will mit neuem Handy rein.“ und in den Einstellungen unter „Anfragen“, ohne Neuladen.
+- [ ] Einmal ablehnen: C zeigt „abgelehnt“ und „Zum Start“. Noch einmal anfragen und bestätigen: C landet auf der Strichliste, mit dem Portemonnaie und den Rollen von B; das alte Gerät von B landet im Onboarding (ADR-0008).
+- [ ] Im Verlauf stehen Anfrage, Ablehnung und Bestätigung.
+
 ## 11. Zum Schluss: Auflösen
 
-- [ ] Der Admin (jetzt B) wählt „Kasse auflösen“ und tippt den Namen ab. Ein Tippfehler muss den Knopf gesperrt lassen (ADM-05).
+- [ ] Der Admin (jetzt B, nach 10a das Gerät C) wählt „Kasse auflösen“ und tippt den Namen ab. Ein Tippfehler muss den Knopf gesperrt lassen (ADM-05).
 - [ ] Auf der Seite zum Löschen den Emulator kurz stoppen und wieder starten: Es kommt eine Meldung und „Weiter löschen“.
-- [ ] Am Ende ist die Kasse in der Emulator-Oberfläche weg, und B ist im Onboarding.
+- [ ] Am Ende ist die Kasse in der Emulator-Oberfläche weg, und der Admin ist im Onboarding.
 
 ## Wenn etwas hakt
 

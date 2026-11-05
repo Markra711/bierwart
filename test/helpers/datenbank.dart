@@ -14,7 +14,9 @@ import 'package:bier_wart/src/features/kader/domain/name.dart';
 import 'package:bier_wart/src/features/lager/data/sorten_repository.dart';
 import 'package:bier_wart/src/features/lager/domain/sorte.dart';
 import 'package:bier_wart/src/features/onboarding/domain/codes.dart';
+import 'package:bier_wart/src/features/onboarding/data/uebernahme_repository.dart';
 import 'package:bier_wart/src/features/onboarding/data/wiederherstellung_repository.dart';
+import 'package:bier_wart/src/features/onboarding/domain/uebernahme.dart';
 import 'package:bier_wart/src/features/onboarding/domain/einladung.dart';
 import 'package:bier_wart/src/features/onboarding/domain/wiederherstellung.dart';
 import 'package:bier_wart/src/features/strichliste/data/kassenkopf_repository.dart';
@@ -32,7 +34,8 @@ class FakeDatenbank
         OrteRepository,
         LogRepository,
         EinstellungenRepository,
-        WiederherstellungRepository {
+        WiederherstellungRepository,
+        UebernahmeRepository {
   final docs = <String, Map<String, Object?>>{};
   final batches = <List<Schreibvorgang>>[];
   final _aenderung = StreamController<void>.broadcast();
@@ -198,6 +201,82 @@ class FakeDatenbank
       );
 
   String _letzte(String pfad) => pfad.split('/').last;
+
+  /// Eine „Das bin ich“-Anfrage (UC-03), wie sie das neue Gerät schreibt.
+  void uebernahme(
+    String k,
+    String id, {
+    required String mitgliedId,
+    String neueUid = 'neu',
+    String status = 'offen',
+    DateTime? angefragtAm,
+  }) {
+    docs['kassen/$k/uebernahmen/$id'] = {
+      'neueUid': neueUid,
+      'mitgliedId': mitgliedId,
+      'einladungCode':
+          docs['kassen/$k']?['einladungCode'] ?? 'K7Q2MXA93DWFT2HC8RNP',
+      'status': status,
+      'angefragtAm': angefragtAm ?? DateTime.now(),
+      'entschiedenVon': null,
+      'entschiedenAm': null,
+      'letzteBuchungId': null,
+    };
+    _aenderung.add(null);
+  }
+
+  Uebernahme _uebernahmeAus(String k, String id, Map<String, Object?> d) =>
+      Uebernahme(
+        id: id,
+        kasseId: k,
+        mitgliedId: d['mitgliedId']! as String,
+        neueUid: d['neueUid']! as String,
+        einladungCode: d['einladungCode']! as String,
+        status: UebernahmeStatus.values.byName(d['status']! as String),
+        angefragtAm: d['angefragtAm'] as DateTime?,
+      );
+
+  @override
+  Stream<Uebernahme?> anfrage(String kasseId, String anfrageId) =>
+      _beobachten(() {
+        final d = docs['kassen/$kasseId/uebernahmen/$anfrageId'];
+        return d == null ? null : _uebernahmeAus(kasseId, anfrageId, d);
+      });
+
+  @override
+  Stream<List<Uebernahme>> offene(String kasseId) => _beobachten(
+    () => [
+      for (final e in _unter('kassen/$kasseId/uebernahmen'))
+        if (e.value['status'] == 'offen')
+          _uebernahmeAus(kasseId, _letzte(e.key), e.value),
+    ],
+  );
+
+  @override
+  Future<UebernahmeStand> standVomServer(
+    String kasseId,
+    String anfrageId,
+  ) async {
+    final k = 'kassen/$kasseId';
+    final a = _uebernahmeAus(
+      kasseId,
+      anfrageId,
+      docs['$k/uebernahmen/$anfrageId']!,
+    );
+    final m = docs['$k/mitglieder/${a.mitgliedId}']!;
+    final alt = m['bierwartUid'] as String?;
+    final kasse = docs[k]!;
+    return UebernahmeStand(
+      anfrage: a,
+      mitgliedName: m['name']! as String,
+      alteUid: alt,
+      alteAktiv: alt != null && docs.containsKey('$k/bierwarte/$alt'),
+      altesPortemonnaieCents: docs['$k/orte/$alt']?['standCents'] as int?,
+      adminUid: kasse['adminUid']! as String,
+      kassenwartUid: kasse['kassenwartUid']! as String,
+      einladungCode: kasse['einladungCode']! as String,
+    );
+  }
 
   @override
   Stream<List<Sorte>> aktive(String kasseId) => _beobachten(

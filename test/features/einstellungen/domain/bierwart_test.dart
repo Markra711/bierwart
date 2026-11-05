@@ -1,6 +1,6 @@
 import 'package:bier_wart/src/core/money/cents.dart';
 import 'package:bier_wart/src/features/einstellungen/domain/bierwart.dart';
-import 'package:bier_wart/src/features/einstellungen/presentation/einstellungen_screen.dart';
+import 'package:bier_wart/src/features/onboarding/domain/einladung.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const tobias = Bierwart(

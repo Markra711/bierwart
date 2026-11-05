@@ -558,3 +558,67 @@ describe('Wiederherstellung aus dem Onboarding (ADM-06, UC-03, UC-04, ADR-0010)'
     }));
   });
 });
+
+describe('„Das bin ich“ aus der App (UC-03, AUTH-07, ADR-0008)', () => {
+  const kette = ['kasse-erstellen.json', 'sorte-anlegen.json', 'mitglied-anlegen.json', 'strich.json', 'zahlung.json', 'beitreten.json'].map(fixture);
+  async function lesen(pfad) {
+    let daten;
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      daten = (await getDoc(doc(ctx.firestore(), pfad))).data();
+    });
+    return daten;
+  }
+
+  beforeEach(async () => {
+    for (const batch of kette) await assertSucceeds(abspielen(batch));
+    await assertSucceeds(abspielen(fixture('uebernahme-anfragen.json')));
+  });
+
+  test('Anfrage mit eingetipptem Namen ist offen, das neue Gerät liest sie', async () => {
+    expect((await lesen('kassen/k2/uebernahmen/a1')).status).toBe('offen');
+    const fs = env.authenticatedContext('handy2').firestore();
+    await assertSucceeds(getDoc(doc(fs, 'kassen/k2/uebernahmen/a1')));
+  });
+
+  test('vor der Bestätigung darf das neue Gerät die Kasse nicht eintragen', async () => {
+    await assertFails(abspielen(fixture('uebernahme-abschliessen.json')));
+  });
+
+  test('zurückziehen', async () => {
+    await assertSucceeds(abspielen(fixture('uebernahme-zurueckziehen.json')));
+    expect((await lesen('kassen/k2/uebernahmen/a1')).status).toBe('zurueckgezogen');
+  });
+
+  test('ablehnen', async () => {
+    await assertSucceeds(abspielen(fixture('uebernahme-ablehnen.json')));
+    expect((await lesen('kassen/k2/uebernahmen/a1')).status).toBe('abgelehnt');
+  });
+
+  test('bestätigen: Rollen und Portemonnaie gehen über, dann trägt das neue Gerät die Kasse ein', async () => {
+    await assertSucceeds(abspielen(fixture('uebernahme-bestaetigen.json')));
+    const kasse = await lesen('kassen/k2');
+    expect(kasse.adminUid).toBe('handy2');
+    expect(kasse.kassenwartUid).toBe('handy2');
+    expect(kasse.anzahlBierwarte).toBe(2);
+    expect((await lesen('kassen/k2/orte/handy2')).standCents).toBe(150);
+    expect((await lesen('kassen/k2/orte/gruender')).standCents).toBe(0);
+    expect(await lesen('kassen/k2/bierwarte/gruender')).toBeUndefined();
+    await assertSucceeds(abspielen(fixture('uebernahme-abschliessen.json')));
+  });
+
+  test('das neue Gerät bestätigt nicht selbst', async () => {
+    await assertFails(abspielen(fixture('uebernahme-bestaetigen.json'), { als: 'handy2' }));
+  });
+
+  test('ohne Löschen des alten Zugangs abgelehnt', async () => {
+    await assertFails(abspielen(fixture('uebernahme-bestaetigen.json'), { ohne: ['kassen/k2/bierwarte/gruender'] }));
+  });
+
+  test('Mitglied ohne App: zählt danach als Bierwart, in Kasse und Einladung', async () => {
+    await assertSucceeds(abspielen(fixture('uebernahme-mitglied-anfragen.json')));
+    await assertSucceeds(abspielen(fixture('uebernahme-mitglied-bestaetigen.json')));
+    expect((await lesen('kassen/k2')).anzahlBierwarte).toBe(3);
+    expect((await lesen('einladungen/K7Q2MXA93DWFT2HC8RNP')).anzahlBierwarte).toBe(3);
+    expect((await lesen('kassen/k2/mitglieder/m3')).bierwartUid).toBe('handy3');
+  });
+});

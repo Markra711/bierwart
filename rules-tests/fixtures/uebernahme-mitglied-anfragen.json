@@ -1,0 +1,40 @@
+{
+  "uid": "handy3",
+  "schreibvorgaenge": [
+    {
+      "art": "set",
+      "pfad": "kassen/k2/uebernahmen/a2",
+      "daten": {
+        "neueUid": "handy3",
+        "mitgliedId": "m3",
+        "einladungCode": "K7Q2MXA93DWFT2HC8RNP",
+        "status": "offen",
+        "angefragtAm": {
+          "$serverzeit": true
+        },
+        "entschiedenVon": null,
+        "entschiedenAm": null,
+        "letzteBuchungId": "u3"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/u3",
+      "daten": {
+        "typ": "uebernahmeAngefragt",
+        "uebernahmeId": "a2",
+        "mitgliedId": "m3",
+        "stempel": {
+          "uid": "handy3",
+          "name": "Tim Richter",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

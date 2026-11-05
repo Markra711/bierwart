@@ -22,10 +22,12 @@ import '../../onboarding/domain/einladung.dart';
 import '../../strichliste/application/kasse_daten.dart';
 import '../application/einstellungen.dart';
 import '../domain/bierwart.dart';
+import '../../onboarding/application/uebernahme.dart';
+import 'anfragen.dart';
 import 'melden_sheet.dart';
 
 /// Einstellungen, erreichbar über das Zahnrad auf jedem Tab (UI-02):
-/// Einladungslink (UC-06, ADM-01), Bierwarte mit Rollen (ADM-02, ADM-03),
+/// offene „Das bin ich“-Anfragen (UC-03), Einladungslink (UC-06, ADM-01), Bierwarte mit Rollen (ADM-02, ADM-03),
 /// Kasse umbenennen (ADM-04) und der eigene Name (UI-09). Was nur der Admin
 /// darf, sehen andere nicht.
 class EinstellungenScreen extends ConsumerWidget {
@@ -79,6 +81,10 @@ class EinstellungenScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (ref.watch(offeneAnfragenProvider).isNotEmpty) ...[
+                    const AnfragenHinweis(mitLabel: true),
+                    const SizedBox(height: BwSpacing.space5),
+                  ],
                   const BwLabel('Einladungslink'),
                   const SizedBox(height: BwSpacing.space3),
                   const _Einladungslink(),
@@ -260,13 +266,6 @@ Future<void> verwalten(
     boten.showSnackBar(SnackBar(content: Text(e.meldung)));
   }
 }
-
-const _wochentage = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-
-/// „Mo, 26.10.“
-String gueltigBisText(DateTime t) =>
-    '${_wochentage[t.weekday - 1]}, ${t.day.toString().padLeft(2, '0')}.'
-    '${t.month.toString().padLeft(2, '0')}.';
 
 /// Link mit Gültigkeit, „Teilen“ für alle, „Erneuern“ für den Admin
 /// (UC-06, ADM-01).

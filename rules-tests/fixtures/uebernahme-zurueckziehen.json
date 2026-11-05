@@ -1,0 +1,36 @@
+{
+  "uid": "handy2",
+  "schreibvorgaenge": [
+    {
+      "art": "update",
+      "pfad": "kassen/k2/uebernahmen/a1",
+      "daten": {
+        "status": "zurueckgezogen",
+        "entschiedenVon": "handy2",
+        "entschiedenAm": {
+          "$serverzeit": true
+        },
+        "letzteBuchungId": "u2"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/u2",
+      "daten": {
+        "typ": "uebernahmeZurueckgezogen",
+        "uebernahmeId": "a1",
+        "mitgliedId": "m1",
+        "stempel": {
+          "uid": "handy2",
+          "name": "lena koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

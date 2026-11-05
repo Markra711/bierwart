@@ -1,0 +1,40 @@
+{
+  "uid": "handy2",
+  "schreibvorgaenge": [
+    {
+      "art": "set",
+      "pfad": "kassen/k2/uebernahmen/a1",
+      "daten": {
+        "neueUid": "handy2",
+        "mitgliedId": "m1",
+        "einladungCode": "K7Q2MXA93DWFT2HC8RNP",
+        "status": "offen",
+        "angefragtAm": {
+          "$serverzeit": true
+        },
+        "entschiedenVon": null,
+        "entschiedenAm": null,
+        "letzteBuchungId": "u1"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/u1",
+      "daten": {
+        "typ": "uebernahmeAngefragt",
+        "uebernahmeId": "a1",
+        "mitgliedId": "m1",
+        "stempel": {
+          "uid": "handy2",
+          "name": "lena koch",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}
