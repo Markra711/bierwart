@@ -116,7 +116,8 @@ FakeDatenbank testDatenbank() => FakeDatenbank()
 /// Startet die App mit angemeldetem Nutzer `uid` und [kasseId] (oder ohne
 /// Kasse). Liefert das Fake-Repository für Erstellen und Beitreten; Links
 /// kommen über [links], ein gemerkter Code über [speicher], die Daten der
-/// Kasse aus [db] (Standard: [testDatenbank]).
+/// Kasse aus [db] (Standard: [testDatenbank]). Schriften nur für Screenshots
+/// mit [fonts] setzen; sonst rendert der Test mit der Ersatzschrift.
 Future<FakeKasseRepository> appStarten(
   WidgetTester tester, {
   String? kasseId,
@@ -127,6 +128,7 @@ Future<FakeKasseRepository> appStarten(
   FakeSpeicher? einstellungen,
   FakeKonto? konto,
   FakeLinkOeffner? oeffner,
+  BwFonts fonts = BwFonts.plain,
 }) async {
   final daten = db ?? testDatenbank();
   addTearDown(daten.schliessen);
@@ -169,7 +171,7 @@ Future<FakeKasseRepository> appStarten(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: const BierwartApp(fonts: BwFonts.plain),
+      child: BierwartApp(fonts: fonts),
     ),
   );
   await tester.pumpAndSettle();

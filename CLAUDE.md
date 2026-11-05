@@ -46,6 +46,10 @@ npm --prefix rules-tests run test:emulator
 
 # Batches der App als Vertrag mit den Rules (rules-tests/fixtures/) neu schreiben
 FIXTURES_AKTUALISIEREN=1 flutter test
+
+# Store-Eintrag (docs/store/): Icons und Feature-Grafik, Screenshots mit Demo-Daten
+python3 tool/store_grafiken.py
+SCREENSHOTS_AKTUALISIEREN=1 flutter test test/store
 ```
 
 **Nie ohne ausdrückliche Freigabe:** `firebase deploy` (egal welches Ziel), Änderungen in der Firebase- oder Play-Konsole, `git push`.
@@ -61,7 +65,9 @@ lib/
     core/                   theme/, money/, firebase/, routing/, widgets/, links/
     features/<feature>/     domain/ data/ application/ presentation/
 test/                       spiegelt lib/src/
-docs/                       requirements, architecture, styleguide, decisions/, design/
+docs/                       requirements, architecture, styleguide, decisions/, design/,
+                            store/ (Play-Store-Eintrag: Texte, Icon, Feature-Grafik, Screenshots)
+tool/                       store_grafiken.py (erzeugt die Grafiken in docs/store/)
 firestore.rules             Security Rules = Geschäftslogik in Release 1 (ADR-0009)
 firestore.indexes.json
 rules-tests/                Emulator-Tests für die Rules (Node, Vitest)

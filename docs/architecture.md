@@ -455,6 +455,17 @@ Aufgaben, die erst mit dem Play-Store-Eintrag anfallen. Keine davon blockiert di
 - [x] App Check: In der Play Console unter „App-Integrität“ die Play Integrity API mit dem Firebase-Projekt verknüpfen. In der Firebase-Konsole unter App Check die Android-App mit dem SHA-256 des Play-App-Signing-Schlüssels für Play Integrity registrieren (beides Konsole, macht Marvin).
 - [ ] App-Check-Statistik in der Firebase-Konsole prüfen: Haben praktisch alle Firestore-Anfragen ein gültiges Token? Erst dann **Erzwingen für Firestore** einschalten (Konsole, macht Marvin, nur mit Freigabe).
 
+### Geschlossener Test
+
+Der Schritt zwischen internem Test und Produktion. Anders als der interne Test prüft Google den geschlossenen Test, deshalb muss der Store-Eintrag vollständig sein. Texte und Grafiken stehen in [`store/store-eintrag.md`](store/store-eintrag.md).
+
+- [x] App-Icon (adaptiv, mit einfarbiger Ebene), Startbildschirm auf `bg`, Feature-Grafik, Screenshots, Texte (`docs/store/`).
+- [ ] Store-Eintrag in der Play Console ausfüllen: Texte, Grafiken, Kategorie, Kontakt, Zielgruppe 18+, Einstufungsfragebogen (Konsole, macht Marvin).
+- [ ] Testerliste anlegen (Google Group oder E-Mail-Liste). Bei privaten Entwicklerkonten verlangt Google vor der Produktion mindestens 12 Tester, die 14 Tage am Stück dabei sind; ob das gilt, steht in der Play Console unter „Produktion“ (Konsole, macht Marvin).
+- [ ] Bundle mit neuem Versionscode bauen (`flutter build appbundle`), im Track „Geschlossener Test“ hochladen und zur Prüfung einreichen (macht Marvin).
+- [ ] Opt-in-Link an die Tester schicken. Wer nicht auf der Liste steht, sieht die App im Play Store nicht. Das gilt auch für den Play-Store-Button auf der Fallback-Seite der Einladungslinks (`j.html`).
+- [ ] Mit der Play-Version prüfen: App Links (siehe oben), Install Referrer beim Beitritt ohne installierte App (AUTH-12), App-Check-Statistik.
+
 ## Kosten (grobe Schätzung, NFA-12)
 
 Annahme: eine Mannschaft, 5 Bierwarte, 30 Mitglieder, ca. 5.000 Buchungen pro Jahr.
