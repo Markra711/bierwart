@@ -14,6 +14,7 @@ import 'package:bier_wart/src/features/lager/data/sorten_repository.dart';
 import 'package:bier_wart/src/features/onboarding/data/anmeldung_repository.dart';
 import 'package:bier_wart/src/features/onboarding/data/einladungslinks.dart';
 import 'package:bier_wart/src/features/onboarding/data/kasse_repository.dart';
+import 'package:bier_wart/src/features/onboarding/data/uebernahme_repository.dart';
 import 'package:bier_wart/src/features/onboarding/data/wiederherstellung_repository.dart';
 import 'package:bier_wart/src/features/kader/domain/name.dart';
 import 'package:bier_wart/src/features/onboarding/domain/einladung.dart';
@@ -58,7 +59,9 @@ class FakeKasseRepository implements KasseRepository {
 
   /// Einladungen nach Code; fehlt ein Code, gibt es die Einladung nicht.
   final einladungen = <String, Einladung>{};
-  final vergebeneNamen = <String>{};
+
+  /// Vergebene Namen: Namensschlüssel → mitgliedId.
+  final vergebeneNamen = <String, String>{};
   final beitritte = <String>[];
   Object? ladeFehler;
 
@@ -93,8 +96,8 @@ class FakeKasseRepository implements KasseRepository {
   }
 
   @override
-  Future<bool> nameVergeben(String kasseId, String name) async =>
-      vergebeneNamen.contains(nameKey(name));
+  Future<String?> namensBesitzer(String kasseId, String name) async =>
+      vergebeneNamen[nameKey(name)];
 
   @override
   Future<void> beitreten(String uid, Einladung e, String eigenerName) async {
@@ -160,6 +163,7 @@ Future<FakeKasseRepository> appStarten(
       logRepositoryProvider.overrideWithValue(daten),
       einstellungenRepositoryProvider.overrideWithValue(daten),
       wiederherstellungRepositoryProvider.overrideWithValue(daten),
+      uebernahmeRepositoryProvider.overrideWithValue(daten),
       lokalerSpeicherProvider.overrideWithValue(
         einstellungen ?? FakeSpeicher(),
       ),

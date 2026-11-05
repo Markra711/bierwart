@@ -14,6 +14,7 @@ import '../../features/lager/presentation/einkauf_screen.dart';
 import '../../features/lager/presentation/lager_screen.dart';
 import '../../features/lager/presentation/sorte_bearbeiten_screen.dart';
 import '../../features/onboarding/application/onboarding.dart';
+import '../../features/onboarding/application/uebernahme.dart';
 import '../../features/onboarding/application/wiederherstellung.dart';
 import '../../features/onboarding/domain/erstellte_kasse.dart';
 import '../../features/onboarding/presentation/beitreten_screen.dart';
@@ -22,6 +23,7 @@ import '../../features/onboarding/presentation/kasse_erstellen_screen.dart';
 import '../../features/onboarding/presentation/laden_screen.dart';
 import '../../features/onboarding/presentation/link_einfuegen_screen.dart';
 import '../../features/onboarding/presentation/name_waehlen_screen.dart';
+import '../../features/onboarding/presentation/warten_screen.dart';
 import '../../features/onboarding/presentation/wiederherstellen_screen.dart';
 import '../../features/onboarding/presentation/wiederherstellungscode_screen.dart';
 import '../../features/onboarding/presentation/willkommen_screen.dart';
@@ -44,6 +46,9 @@ abstract final class Routen {
   static const beitreten = '/beitreten';
   static const nameWaehlen = '/name-waehlen';
   static const wiederherstellen = '/wiederherstellen';
+
+  /// „Das bin ich“: warten, bis ein Bierwart entscheidet (UC-03).
+  static const warten = '/warten';
 
   // Tabs (UI-02) und Seiten in der Kasse
   static const kader = '/kader';
@@ -74,6 +79,7 @@ abstract final class Routen {
 
 const _onboarding = {
   Routen.laden,
+  Routen.warten,
   Routen.wiederherstellungscode,
   Routen.einladen,
   ...ohneKasse,
@@ -97,7 +103,8 @@ const ohneKasse = {
 /// der Server geantwortet hat; wer sich mit dem Wiederherstellungscode
 /// zurückmeldet, bis er den neuen Code gesehen hat (ADR-0010). Ein offener
 /// Einladungscode führt ohne Kasse vom Start direkt zu „Kasse beitreten?“
-/// (AUTH-06).
+/// (AUTH-06). Wer „Das bin ich“ angefragt hat, wartet ohne Kasse auf dem
+/// Warte-Bildschirm, bis ein Bierwart entscheidet (UC-03).
 String? weiterleitung(
   Startzustand zustand,
   ErstellteKasse? neu,
@@ -105,6 +112,7 @@ String? weiterleitung(
   bool beitrittLaeuft = false,
   bool wiederherstellungHaeltFest = false,
   String? offenerCode,
+  bool wartet = false,
 }) {
   if (wiederherstellungHaeltFest) {
     return ort == Routen.wiederherstellen ? null : Routen.wiederherstellen;
@@ -122,6 +130,7 @@ String? weiterleitung(
   }
   return switch (zustand) {
     StartLaedt() || StartFehler() => ort == Routen.laden ? null : Routen.laden,
+    OhneKasse() when wartet => ort == Routen.warten ? null : Routen.warten,
     OhneKasse()
         when offenerCode != null &&
             (ort == Routen.willkommen || !ohneKasse.contains(ort)) =>
@@ -141,6 +150,10 @@ final routerProvider = Provider<GoRouter>((ref) {
     wiederherstellungProvider.select((w) => w.haeltFest),
     (_, _) => aenderung.value++,
   );
+  ref.listen(
+    uebernahmeAnfrageProvider.select((w) => w != null),
+    (_, _) => aenderung.value++,
+  );
 
   GoRoute seite(String pfad, Widget Function() bauen) =>
       GoRoute(path: pfad, builder: (context, state) => bauen());
@@ -155,6 +168,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       beitrittLaeuft: ref.read(beitrittProvider),
       wiederherstellungHaeltFest: ref.read(wiederherstellungProvider).haeltFest,
       offenerCode: ref.read(offenerCodeProvider),
+      wartet: ref.read(uebernahmeAnfrageProvider) != null,
     ),
     routes: [
       StatefulShellRoute.indexedStack(
@@ -204,6 +218,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       seite(Routen.einladen, () => const EinladenScreen()),
       seite(Routen.linkEinfuegen, () => const LinkEinfuegenScreen()),
       seite(Routen.wiederherstellen, () => const WiederherstellenScreen()),
+      seite(Routen.warten, () => const WartenScreen()),
       GoRoute(
         path: Routen.beitreten,
         builder: (context, state) =>
@@ -229,7 +244,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     }
   });
   ref.listen(startzustandProvider, (_, zustand) {
-    if (zustand is InKasse) ref.read(offenerCodeProvider.notifier).verwerfen();
+    if (zustand is InKasse) {
+      ref.read(offenerCodeProvider.notifier).verwerfen();
+      // Die Übernahme ist durch, sobald die Kasse da ist (UC-03).
+      ref.read(uebernahmeAnfrageProvider.notifier).verwerfen();
+    }
   });
   ref.onDispose(() {
     router.dispose();

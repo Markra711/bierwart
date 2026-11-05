@@ -1,6 +1,5 @@
 import 'package:bier_wart/src/core/links/link_oeffner.dart';
 import 'package:bier_wart/src/core/money/cents.dart';
-import 'package:bier_wart/src/features/einstellungen/presentation/einstellungen_screen.dart';
 import 'package:bier_wart/src/features/onboarding/domain/einladung.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';

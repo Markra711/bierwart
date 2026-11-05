@@ -1,0 +1,36 @@
+{
+  "uid": "neu",
+  "schreibvorgaenge": [
+    {
+      "art": "update",
+      "pfad": "kassen/k2/uebernahmen/a1",
+      "daten": {
+        "status": "abgelehnt",
+        "entschiedenVon": "neu",
+        "entschiedenAm": {
+          "$serverzeit": true
+        },
+        "letzteBuchungId": "u2"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/u2",
+      "daten": {
+        "typ": "uebernahmeAbgelehnt",
+        "uebernahmeId": "a1",
+        "mitgliedId": "m1",
+        "stempel": {
+          "uid": "neu",
+          "name": "Jonas Weber",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

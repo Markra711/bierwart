@@ -49,3 +49,10 @@ enum EinladungsZustand {
           'einem neuen.',
   };
 }
+
+const _wochentage = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+
+/// „Mo, 26.10.“, für Einladungen und Übernahme-Anfragen.
+String gueltigBisText(DateTime t) =>
+    '${_wochentage[t.weekday - 1]}, ${t.day.toString().padLeft(2, '0')}.'
+    '${t.month.toString().padLeft(2, '0')}.';

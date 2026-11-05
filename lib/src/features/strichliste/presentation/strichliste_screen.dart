@@ -17,6 +17,8 @@ import '../../lager/presentation/sorte_anlegen_sheet.dart';
 import '../application/kasse_daten.dart';
 import '../application/strichliste.dart';
 import '../domain/strich.dart';
+import '../../einstellungen/presentation/anfragen.dart';
+import '../../onboarding/application/uebernahme.dart';
 
 /// Die Strichliste, Tab 01 und Startseite (STR-01, UI-01): oben die Sorten,
 /// darunter alle Mitglieder. Tippen bucht offen, Halten bar (STR-02,
@@ -53,6 +55,9 @@ class StrichlisteScreen extends ConsumerWidget {
       kassenName: ref.watch(kassenNameProvider).value,
       einstellungen: () => context.push(Routen.einstellungen),
       kinder: [
+        // „Das bin ich“: wer wartet, soll schnell drankommen (UC-03).
+        if (ref.watch(offeneAnfragenProvider).isNotEmpty)
+          const AnfragenHinweis(),
         switch (sorten) {
           AsyncData(value: final liste) when liste.isEmpty =>
             const _OhneSorte(),

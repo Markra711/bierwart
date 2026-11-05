@@ -94,6 +94,39 @@ void main() {
       );
     });
 
+    test('„Das bin ich“: ohne Kasse auf dem Warte-Bildschirm (UC-03)', () {
+      for (final ort in ['/', Routen.willkommen, Routen.beitreten]) {
+        expect(
+          weiterleitung(const OhneKasse(), null, ort, wartet: true),
+          Routen.warten,
+        );
+      }
+      expect(
+        weiterleitung(const OhneKasse(), null, Routen.warten, wartet: true),
+        isNull,
+      );
+      // Auch ein neuer Link holt das Gerät nicht vom Warten weg.
+      expect(
+        weiterleitung(
+          const OhneKasse(),
+          null,
+          Routen.warten,
+          wartet: true,
+          offenerCode: 'K7Q2MXA93DWFT2HC8RNP',
+        ),
+        isNull,
+      );
+      // Ohne Anfrage gibt es nichts zu warten; bestätigt geht es hinein.
+      expect(
+        weiterleitung(const OhneKasse(), null, Routen.warten),
+        Routen.willkommen,
+      );
+      expect(
+        weiterleitung(const InKasse('k1'), null, Routen.warten, wartet: true),
+        Routen.strichliste,
+      );
+    });
+
     test('mit Kasse auf die Strichliste (UI-01)', () {
       expect(weiterleitung(const InKasse('k1'), null, '/'), isNull);
       expect(

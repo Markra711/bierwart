@@ -28,8 +28,9 @@ abstract interface class KasseRepository {
   /// gibt (AUTH-05, AUTH-08). Wirft [VerwaltungsFehler].
   Future<Einladung?> einladungLaden(String code);
 
-  /// Ob der Name in der Kasse schon vergeben ist (AUTH-07).
-  Future<bool> nameVergeben(String kasseId, String name);
+  /// Wem der Name in der Kasse gehört: die `mitgliedId`, oder `null`, wenn
+  /// er frei ist (AUTH-07). Die ID braucht „Das bin ich“ (UC-03).
+  Future<String?> namensBesitzer(String kasseId, String name);
 
   /// Beitreten mit gültiger Einladung (UC-02). Wirft [VerwaltungsFehler].
   Future<void> beitreten(String uid, Einladung einladung, String eigenerName);
@@ -107,13 +108,13 @@ class FirestoreKasseRepository implements KasseRepository {
       });
 
   @override
-  Future<bool> nameVergeben(String kasseId, String name) =>
+  Future<String?> namensBesitzer(String kasseId, String name) =>
       _mitServer('Der Name ließ sich nicht prüfen', () async {
         final snap = await _db
             .doc('kassen/$kasseId/namen/${nameKey(name)}')
             .get(_server)
             .timeout(antwortFrist);
-        return snap.exists;
+        return snap.data()?['mitgliedId'] as String?;
       });
 
   @override

@@ -1,0 +1,12 @@
+{
+  "uid": "handy2",
+  "schreibvorgaenge": [
+    {
+      "art": "set",
+      "pfad": "users/handy2",
+      "daten": {
+        "kasseId": "k2"
+      }
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "uid": "neu",
+  "schreibvorgaenge": [
+    {
+      "art": "update",
+      "pfad": "kassen/k2/uebernahmen/a1",
+      "daten": {
+        "status": "bestaetigt",
+        "entschiedenVon": "neu",
+        "entschiedenAm": {
+          "$serverzeit": true
+        },
+        "letzteBuchungId": "u2"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/mitglieder/m1",
+      "daten": {
+        "bierwartUid": "handy2",
+        "entfernt": false,
+        "letzteBuchungId": "u2"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/bierwarte/handy2",
+      "daten": {
+        "mitgliedId": "m1",
+        "name": "Lena Koch",
+        "beigetretenAm": {
+          "$serverzeit": true
+        },
+        "einladungCode": "K7Q2MXA93DWFT2HC8RNP",
+        "letzteBuchungId": "u2"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/orte/handy2",
+      "daten": {
+        "art": "portemonnaie",
+        "uid": "handy2",
+        "name": "Lena Koch",
+        "standCents": 150,
+        "ehemalig": false,
+        "letzteBuchungId": "u2"
+      }
+    },
+    {
+      "art": "delete",
+      "pfad": "kassen/k2/bierwarte/gruender",
+      "daten": {}
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2/orte/gruender",
+      "daten": {
+        "standCents": {
+          "$erhoehen": -150
+        },
+        "letzteBuchungId": "u2"
+      }
+    },
+    {
+      "art": "update",
+      "pfad": "kassen/k2",
+      "daten": {
+        "adminUid": "handy2",
+        "kassenwartUid": "handy2",
+        "letzteBuchungId": "u2"
+      }
+    },
+    {
+      "art": "set",
+      "pfad": "kassen/k2/buchungen/u2",
+      "daten": {
+        "typ": "uebernahmeBestaetigt",
+        "uebernahmeId": "a1",
+        "mitgliedId": "m1",
+        "alteUid": "gruender",
+        "neueUid": "handy2",
+        "standCents": 150,
+        "stempel": {
+          "uid": "neu",
+          "name": "Jonas Weber",
+          "am": {
+            "$serverzeit": true
+          },
+          "geraetAm": {
+            "$geraetzeit": true
+          }
+        }
+      }
+    }
+  ]
+}

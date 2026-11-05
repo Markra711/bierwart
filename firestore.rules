@@ -871,6 +871,18 @@ service cloud.firestore {
           && s.am == request.time
           && s.name == name;
       }
+      // Wer eine Übernahme anfragt oder zurückzieht, ist noch kein Bierwart und
+      // darf die Mitglieder nicht lesen. Er kennt den Namen nur so, wie er ihn
+      // eingetippt hat; der Stempel muss deshalb nur im Namensschlüssel passen
+      // (UC-03, AUTH-07).
+      function stempelPasst(d) {
+        return !istOderWirdBierwart()
+            && (d.typ == 'uebernahmeAngefragt' || d.typ == 'uebernahmeZurueckgezogen')
+          ? stempelGueltig(d.stempel, d.stempel.get('name', null))
+            && nameGueltig(d.stempel.name)
+            && nameKey(d.stempel.name) == get(pfad('mitglieder', d.mitgliedId)).data.nameKey
+          : stempelGueltig(d.stempel, stempelName(d));
+      }
 
       // Nachweis für die Wiederherstellung ohne Bierwart-Eintrag (ADM-06,
       // UC-03, ADR-0010): Schritt 1 belegt den Code und gibt Lesezugriff,
@@ -894,7 +906,7 @@ service cloud.firestore {
       match /buchungen/{buchungId} {
         allow read: if darfLesen();
         allow create: if request.auth != null
-          && stempelGueltig(request.resource.data.stempel, stempelName(request.resource.data))
+          && stempelPasst(request.resource.data)
           && !aufgeloest()
           && (istBierwart()
             ? buchungGueltig(request.resource.data, buchungId)
