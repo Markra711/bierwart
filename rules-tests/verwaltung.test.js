@@ -349,7 +349,7 @@ describe('Übernahme entscheiden (UC-03, AUTH-07, ADR-0008)', () => {
   // Bestätigung samt Umzug. Standard: Anna (Bierwartin, 12,50 €) auf UID „neu“.
   const bestaetigen = ({
     uid = 'kw', anfrage = 'fuerAnna', mitglied = 'anna', name = NAMEN.anna, alteUid = 'anna', stand = 1250,
-    altAktiv = true, kasse = null, weglassen = [],
+    altAktiv = true, kasse = null, weglassen = [], altEhemalig = true,
   } = {}) => {
     const aenderungen = [
       ['update', `uebernahmen/${anfrage}`, { status: 'bestaetigt', entschiedenVon: uid, entschiedenAm: serverTimestamp(), letzteBuchungId: 'l1' }],
@@ -358,7 +358,14 @@ describe('Übernahme entscheiden (UC-03, AUTH-07, ADR-0008)', () => {
       ['set', 'orte/neu', { art: 'portemonnaie', uid: 'neu', name, standCents: stand, ehemalig: false, letzteBuchungId: 'l1' }],
     ];
     if (altAktiv) aenderungen.push(['delete', `bierwarte/${alteUid}`]);
-    if (stand !== 0) aenderungen.push(['update', `orte/${alteUid}`, { standCents: increment(-stand), letzteBuchungId: 'l1' }]);
+    // Das alte Portemonnaie wird ehemalig, auch bei Stand 0.
+    if (alteUid) {
+      aenderungen.push(['update', `orte/${alteUid}`, {
+        ...(stand !== 0 ? { standCents: increment(-stand) } : {}),
+        ...(altEhemalig ? { ehemalig: true } : {}),
+        letzteBuchungId: 'l1',
+      }]);
+    }
     if (kasse) {
       aenderungen.push(['update', '/' + K, { ...kasse, letzteBuchungId: 'l1' }]);
       if (kasse.anzahlBierwarte) aenderungen.push(['update', `/einladungen/${CODE}`, { anzahlBierwarte: kasse.anzahlBierwarte }]);
@@ -387,6 +394,19 @@ describe('Übernahme entscheiden (UC-03, AUTH-07, ADR-0008)', () => {
 
   test('das alte Gerät darf selbst bestätigen', async () => {
     await assertSucceeds(bestaetigen({ uid: 'anna' }));
+  });
+
+  test('altes Portemonnaie wird ehemalig, sonst stünde der Name doppelt da', async () => {
+    await assertSucceeds(bestaetigen());
+    expect((await lesen('orte/anna')).ehemalig).toBe(true);
+  });
+
+  test('ohne ehemalig abgelehnt', async () => {
+    await assertFails(bestaetigen({ altEhemalig: false }));
+  });
+
+  test('auch bei Stand 0 nicht ohne ehemalig', async () => {
+    await assertFails(bestaetigen({ anfrage: 'fuerKw', mitglied: 'kw', name: NAMEN.kw, alteUid: 'kw', stand: 0, uid: 'anna', kasse: { adminUid: 'neu', kassenwartUid: 'neu' }, altEhemalig: false }));
   });
 
   test('alte UID muss den Zugang verlieren', async () => {

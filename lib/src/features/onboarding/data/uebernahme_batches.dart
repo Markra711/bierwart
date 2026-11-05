@@ -130,7 +130,8 @@ List<Schreibvorgang> uebernahmeAblehnenBatch({
 
 /// Ein Bierwart bestätigt: Mitgliedschaft, Portemonnaie und Rollen gehen
 /// 1:1 auf die neue UID über, die alte verliert den Zugang. Das alte
-/// Portemonnaie bleibt mit Stand 0 stehen, damit der Verlauf lesbar bleibt.
+/// Portemonnaie bleibt mit Stand 0 als ehemalig stehen, damit der Verlauf
+/// lesbar bleibt; „Geld“ blendet es aus.
 List<Schreibvorgang> uebernahmeBestaetigenBatch({
   required String uid,
   required String bierwartName,
@@ -182,9 +183,12 @@ List<Schreibvorgang> uebernahmeBestaetigenBatch({
         'letzteBuchungId': buchungId,
       }),
     if (stand.alteAktiv) Schreibvorgang.loeschen('$k/bierwarte/$alt'),
-    if (stand.umzug && stand.standCents != 0)
+    // Das alte Portemonnaie gibt seinen Stand ab und wird ehemalig (GEL-08),
+    // sonst stünde der Name neben dem neuen doppelt in „Geld“.
+    if (stand.umzug)
       Schreibvorgang.update('$k/orte/$alt', {
-        'standCents': Erhoehen(-stand.standCents),
+        if (stand.standCents != 0) 'standCents': Erhoehen(-stand.standCents),
+        'ehemalig': true,
         'letzteBuchungId': buchungId,
       }),
     // Wer vorher kein aktiver Bierwart war, zählt jetzt mit, in Kasse und

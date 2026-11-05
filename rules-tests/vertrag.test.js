@@ -602,6 +602,7 @@ describe('„Das bin ich“ aus der App (UC-03, AUTH-07, ADR-0008)', () => {
     expect(kasse.anzahlBierwarte).toBe(2);
     expect((await lesen('kassen/k2/orte/handy2')).standCents).toBe(150);
     expect((await lesen('kassen/k2/orte/gruender')).standCents).toBe(0);
+    expect((await lesen('kassen/k2/orte/gruender')).ehemalig).toBe(true);
     expect(await lesen('kassen/k2/bierwarte/gruender')).toBeUndefined();
     await assertSucceeds(abspielen(fixture('uebernahme-abschliessen.json')));
   });

@@ -471,6 +471,15 @@ service cloud.firestore {
             && ((b.typ == 'bierwartEntfernt' && b.uid == ortId)
               || (b.typ == 'adminWiederhergestellt' && b.get('alteUid', null) == ortId));
         }
+        // Übernahme (UC-03, ADR-0008): Das alte Portemonnaie gibt seinen Stand
+        // ans neue ab und wird ehemalig, sonst stünde der Name doppelt da.
+        function altesPortemonnaieUebernommen(b) {
+          return b.typ == 'uebernahmeBestaetigt'
+            && b.alteUid == ortId && b.neueUid != ortId
+            && nurFelder(['standCents', 'ehemalig', 'letzteBuchungId'])
+            && request.resource.data.ehemalig == true
+            && delta('standCents') == -b.standCents;
+        }
         allow read: if darfLesen();
         allow create: if buchungDiesesRequests() != null
           && request.resource.data.keys().hasOnly(['art', 'uid', 'name', 'standCents', 'ehemalig', 'letzteBuchungId'])
@@ -480,7 +489,8 @@ service cloud.firestore {
         allow update: if buchungDiesesRequests() != null
           && ((summeGeaendert('standCents', standWirkung(buchungDiesesRequests(), ortId))
               && standGueltig(buchungDiesesRequests()))
-            || wirdEhemalig(buchungDiesesRequests()));
+            || wirdEhemalig(buchungDiesesRequests())
+            || altesPortemonnaieUebernommen(buchungDiesesRequests()));
       }
 
       match /uebernahmen/{anfrageId} {
@@ -682,7 +692,8 @@ service cloud.firestore {
           && verweistAuf('bierwarte', d.neueUid, buchungId)
           && (!alteAktiv || !existsAfter(pfad('bierwarte', d.alteUid)))
           && d.standCents == (umzug ? get(pfad('orte', d.alteUid)).data.standCents : 0)
-          && (!umzug || d.standCents == 0 || verweistAuf('orte', d.alteUid, buchungId))
+          && (!umzug || (verweistAuf('orte', d.alteUid, buchungId)
+            && nachher('orte', d.alteUid).ehemalig == true))
           && (d.alteUid == d.neueUid || verweistAuf('orte', d.neueUid, buchungId))
           && danach.adminUid == (vorher.adminUid == d.alteUid ? d.neueUid : vorher.adminUid)
           && danach.kassenwartUid == (vorher.kassenwartUid == d.alteUid ? d.neueUid : vorher.kassenwartUid)
