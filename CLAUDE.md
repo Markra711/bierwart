@@ -34,10 +34,8 @@ firebase emulators:start --project demo-bierwart
 # App lokal ausprobieren (Android-Emulator auf demselben Rechner):
 #   1. Emulatoren starten (siehe oben), Oberfläche unter http://localhost:4000
 #   2. flutter run --dart-define=USE_EMULATORS=true
-# Ohne den Schalter spricht die App mit dem echten Projekt. Dort sind die
-# Rules noch nicht deployt, also wird alles außer der Anmeldung abgelehnt.
-#   Einladungslink auf dem Android-Emulator öffnen (vor dem Hosting-Deploy
-#   nur so, weil der App-Link noch nicht verifiziert ist):
+# Ohne den Schalter spricht die App mit dem echten Projekt und echten Daten.
+#   Einladungslink auf dem Android-Emulator direkt öffnen:
 adb shell am start -W -a android.intent.action.VIEW -d "https://bier-wart.web.app/j/<CODE>" io.github.markra711.bierwart
 
 # Rules-Tests (Node, Vitest) gegen den Firestore-Emulator
