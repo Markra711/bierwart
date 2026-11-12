@@ -1,6 +1,6 @@
 # Bierwart
 
-[![CI](https://github.com/Markra711/bier_wart/actions/workflows/ci.yml/badge.svg)](https://github.com/Markra711/bier_wart/actions/workflows/ci.yml)
+[![CI](https://github.com/Markra711/bierwart/actions/workflows/ci.yml/badge.svg)](https://github.com/Markra711/bierwart/actions/workflows/ci.yml)
 ![Flutter](https://img.shields.io/badge/Flutter-Android-02569B?logo=flutter)
 ![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%C2%B7%20Auth%20%C2%B7%20Hosting-FFCA28?logo=firebase)
 
