@@ -3,6 +3,8 @@
 > Abgeleitet aus dem [Bierwart Design System](https://claude.ai/artifact/MdRHobZdVde6Xi7uVTDMPM) (Brand Book, Tokens, Kernkomponenten), Stand 2026-10-19.
 > Alle Werte stehen maschinenlesbar in [`design/tokens.json`](design/tokens.json), einer unveränderten Kopie der `tokens.json` aus dem Design System.
 > Die Bildschirme liegen klickbar im [Design-Canvas](https://claude.ai/artifact/PNLXqS6vuCMe2gmbqYQdnf).
+>
+> Design System und Design-Canvas sind private Online-Dokumente und nur für den Projektinhaber erreichbar. Alles Verbindliche daraus steht in dieser Datei und in `design/tokens.json`.
 
 **Quelle der Wahrheit:** das Design System. Ändert sich dort etwas, wird `design/tokens.json` neu kopiert und `lib/src/core/theme/tokens.dart` nachgezogen. Ein Test (`test/core/theme/tokens_test.dart`) bricht, wenn beide auseinanderlaufen.
 

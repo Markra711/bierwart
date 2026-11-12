@@ -4,6 +4,8 @@
 >
 > Ursprung: das Online-Dokument [„Bierwart – Anforderungen“](https://claude.ai/code/artifact/2f47fa84-46ad-4910-ab27-16ca8f10dbf0) von Marvin, Stand 2026-10-19. Es ist seit 2026-10-21 **eingefroren** und wird nicht mehr gepflegt. Die IDs sind unverändert übernommen, die Diagramme als Mermaid bzw. Tabelle nachgebaut.
 >
+> Die verlinkten Online-Dokumente (Anforderungsdokument, Design System, Design-Canvas) sind privat und nur für den Projektinhaber erreichbar. Was verbindlich ist, steht in dieser Datei und in [styleguide.md](styleguide.md).
+>
 > **Änderungen seit dem Ursprung** (bis 2026-10-21 auch ins Online-Dokument übertragen):
 > - 2026-10-21: UC-03 und AUTH-07 – Übernahme braucht die Bestätigung eines Bierwarts ([ADR-0008](decisions/0008-uebernahme-bestaetigung.md)).
 > - 2026-10-21: AUTH-10 und AUTH-11 in Release 2, ADM-05 ohne „serverseitig“, Annahme zu Cloud Functions angepasst – Release 1 ohne Cloud Functions ([ADR-0009](decisions/0009-release-1-ohne-cloud-functions.md)).
